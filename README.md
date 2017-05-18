@@ -39,3 +39,6 @@ The ```json``` and ```jsonb``` types will be directly deserialized to Newtonsoft
 The test suite project for CBAM.SQL.PostgreSQL.* projects.
 In order to run the tests, add ```test_config.json``` and ```test_config_ssl.json``` configuration files to the project directory.
 These files will be used to create ```PgSQLConnectionCreationInfoData``` object required to connect to database.
+
+# TODO
+Once PostgreSQL stuff works good and solid, add CBAM.LDAP.* projects in order to provide async API for LDAP connections.
