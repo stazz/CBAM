@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
+    <PackageReference Include="UtilPack.JSON" Version="1.0.0-RC1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
+  </ItemGroup>
+
+</Project>
