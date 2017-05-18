@@ -51,6 +51,16 @@ namespace CBAM.SQL.PostgreSQL
             acquire => (PgSQLConnectionAcquireInfo) acquire
             );
       }
+
+      public static SQLConnectionPool<PgSQLConnection, TimeSpan> CreateTimeoutingConnectionPool(
+         PgSQLConnectionCreationInfo connectionConfig
+         )
+      {
+         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnection, PgSQLConnectionCreationInfo>(
+            _VendorFunctionality,
+            connectionConfig
+            );
+      }
    }
 
    public class PgSQLConnectionCreationInfoData

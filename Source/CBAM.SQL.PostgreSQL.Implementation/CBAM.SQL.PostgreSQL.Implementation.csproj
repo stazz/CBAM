@@ -26,7 +26,7 @@
   
   <PropertyGroup>
     <VersionPrefix>0.0.1</VersionPrefix>
-    <VersionSuffix></VersionSuffix>
+    <VersionSuffix>alpha</VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
     <NeutralLanguage>en-US</NeutralLanguage>
