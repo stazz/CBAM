@@ -31,7 +31,9 @@ This project provides PostgreSQL-specific implementation for CBAM.SQL and CBAM.S
 PgSQLConnectionPool is a good class to start exploring this project.
 
 Since implementation requires to communicate with backend over Sockets, this project targets .NET Standard 1.3, and also .NET Core App 1.1.
-However, this project should only be used by the code actually performing initialization of SQL connections - all the PostgreSQL-specific API is availabe in CBAM.SQL.PostgreSQL project, which targets .NET Standard 1.0.
+The .NET Core App dependency is in order to provide SSL stream functionality right in this project, however it is still possible to customize SSL stream creation via callbacks.
+
+This project should only be used by the code actually performing initialization of SQL connections - all the PostgreSQL-specific API is availabe in CBAM.SQL.PostgreSQL project, which targets .NET Standard 1.0.
 
 # CBAM.SQL.PostgreSQL.JSON
 This project provides extension methods to enable support for ```json``` and ```jsonb``` PostgreSQL types.

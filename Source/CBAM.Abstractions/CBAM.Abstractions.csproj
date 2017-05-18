@@ -15,5 +15,46 @@
     <PackageReference Include="System.ValueTuple" Version="4.4.0-preview1-25305-02" />
     <PackageReference Include="UtilPack" Version="1.0.0-RC5" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <VersionPrefix>0.0.1</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <Authors>Stanislav Muhametsin</Authors>
+    <Company>Cometa Solutions Ltd</Company>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Product>CBAM</Product>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) Abstractions assembly contains types which are common for any workflow which communicates with e.g. SQL or LDAP processes using some kind of IPC connection.</Description>
+    <Copyright>Stanislav Muhametsin</Copyright>
+    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
+  </PropertyGroup>
+  
+  <!-- Assembly signing stuff -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
+    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  
+  <!-- Disable all debug information in release mode-->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>False</DebugSymbols>
+    <!-- For some reason, both OutputPath and OutDir properties are empty at this point... go figure. Maybe renamed for MSBuild 15.0? -->
+    <!-- <DocumentationFile>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile> -->
+  </PropertyGroup>
+  
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection</PackageTags>
+    <Title>Common CBAM Abstractions</Title>
+    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
+    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+  </PropertyGroup>
 
 </Project>
