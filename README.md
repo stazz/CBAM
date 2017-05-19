@@ -64,4 +64,5 @@ In order to run the tests, add ```test_config.json``` and ```test_config_ssl.jso
 These files will be used to create ```PgSQLConnectionCreationInfoData``` object required to connect to database.
 
 # TODO
+Adding documentation is top priority now.
 Once PostgreSQL stuff works good and solid, add CBAM.LDAP.* projects in order to provide async API for LDAP connections.
