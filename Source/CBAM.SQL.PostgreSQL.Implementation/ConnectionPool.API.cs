@@ -67,6 +67,11 @@ namespace CBAM.SQL.PostgreSQL
    {
       internal static readonly Encoding PasswordByteEncoding = new UTF8Encoding( false, true );
 
+      public PgSQLConnectionCreationInfoData()
+      {
+         this.SSLProtocols = System.Security.Authentication.SslProtocols.Tls12;
+      }
+
       public String Host { get; set; }
       public Int32 Port { get; set; }
       public String LocalHost { get; set; }
