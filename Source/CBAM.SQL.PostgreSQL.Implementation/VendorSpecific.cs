@@ -19,7 +19,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using UtilPack;
+
+using TReader = UtilPack.PeekablePotentiallyAsyncReader<System.Char?>;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
@@ -69,109 +72,121 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       // Returns amount of characters read
-      internal static Int32 ParseStringForNextSQLStatement( TextReader queryParam, Boolean standardConformingStrings, out Int32[] paramIndices )
+      internal static async ValueTask<Int32[]> ParseStringForNextSQLStatement(
+         TReader reader,
+         Boolean standardConformingStrings,
+         Func<Int32> onParameter
+         )
       {
-         using ( var query = new TextReaderWrapper( queryParam ) )
-         {
-            var parenthesisLevel = 0;
-            List<Int32> paramIndicesList = null;
-            var queryEndEncountered = false;
-            Int32 prev1 = -1, prev2 = -1;
-            Int32 c;
+         var parenthesisLevel = 0;
+         List<Int32> paramIndicesList = null;
+         var queryEndEncountered = false;
+         Char? prev1 = null, prev2 = null;
+         Char? c;
 
-            while ( !queryEndEncountered && ( c = query.Read() ) != -1 )
+         while ( !queryEndEncountered && ( c = await reader.TryReadNextAsync() ).HasValue )
+         {
+            switch ( c )
             {
-               switch ( c )
-               {
-                  case '\'':
-                     ParseSingleQuotes( query, standardConformingStrings, prev1, prev2 );
-                     break;
-                  case '"':
-                     ParseDoubleQuotes( query );
-                     break;
-                  case '-':
-                     ParseLineComment( query );
-                     break;
-                  case '/':
-                     ParseBlockComment( query );
-                     break;
-                  case '$':
-                     ParseDollarQuotes( query, prev1 );
-                     break;
-                  case '(':
-                     ++parenthesisLevel;
-                     break;
-                  case ')':
-                     --parenthesisLevel;
-                     break;
-                  case '?':
+               case '\'':
+                  await ParseSingleQuotes( reader, standardConformingStrings, prev1, prev2 );
+                  break;
+               case '"':
+                  await ParseDoubleQuotes( reader );
+                  break;
+               case '-':
+                  await ParseLineComment( reader );
+                  break;
+               case '/':
+                  await ParseBlockComment( reader );
+                  break;
+               case '$':
+                  await ParseDollarQuotes( reader, prev1 );
+                  break;
+               case '(':
+                  ++parenthesisLevel;
+                  break;
+               case ')':
+                  --parenthesisLevel;
+                  break;
+               case '?':
+                  if ( onParameter != null )
+                  {
                      if ( paramIndicesList == null )
                      {
                         paramIndicesList = new List<Int32>();
                      }
-                     paramIndicesList.Add( query.CharsRead - 1 );
-                     break;
-                  case ';':
-                     if ( parenthesisLevel == 0 )
-                     {
-                        queryEndEncountered = true;
-                     }
-                     break;
-               }
-               prev1 = c;
-               prev2 = prev1;
-
+                     paramIndicesList.Add( onParameter() );
+                  }
+                  break;
+               case ';':
+                  if ( parenthesisLevel == 0 )
+                  {
+                     queryEndEncountered = true;
+                  }
+                  break;
             }
+            prev1 = c;
+            prev2 = prev1;
 
-            paramIndices = paramIndicesList == null ? null : paramIndicesList.ToArray();
-
-            return query.CharsRead;
          }
+
+         return paramIndicesList == null ? null : paramIndicesList.ToArray();
 
       }
 
 
       // See http://www.postgresql.org/docs/9.1/static/sql-syntax-lexical.html for String Constants with C-style Escapes
       // Returns index of the single quote character ending this single quote sequence
-      internal static void ParseSingleQuotes( TextReader str, Boolean standardConformingStrings, Int32 prev1, Int32 prev2 )
+      internal static async ValueTask<Boolean> ParseSingleQuotes(
+         TReader reader,
+         Boolean standardConformingStrings,
+         Char? prev1,
+         Char? prev2
+         )
       {
-         Int32 c;
+         Char? c;
          if ( !standardConformingStrings
+            && prev1.HasValue
+            && prev2.HasValue
             && ( prev1 == 'e' || prev1 == 'E' )
-            && prev2 != -1
-            && CharTerminatesIdentifier( (Char) prev2 )
+            && CharTerminatesIdentifier( prev2.Value )
             )
          {
+            // C-Style escaping
             // Treat backslashes as escape character
-            var prev = -1;
-            while ( ( c = str.Read() ) != -1 )
+            Char prev = '\0';
+            while ( ( c = await reader.TryReadNextAsync() ).HasValue )
             {
-               if ( c != '\\' && prev != '\\' && CheckSingleQuote( str, c ) )
+               if ( c != '\\' && prev != '\\' && await CheckSingleQuote( reader, c.Value ) )
                {
                   break;
                }
-               prev = c;
+               prev = c.Value;
             }
          }
          else
          {
             // Don't treat backslashes as escape character
-            while ( ( c = str.Read() ) != -1 && !CheckSingleQuote( str, c ) ) ;
+            while ( ( c = await reader.TryReadNextAsync() ).HasValue && !await CheckSingleQuote( reader, c.Value ) ) ;
          }
+
+         return true;
       }
 
-      // Returns index of the double quote character ending this double quote sequence
-      internal static void ParseDoubleQuotes( TextReader str )
+      internal static async ValueTask<Boolean> ParseDoubleQuotes(
+         TReader reader
+         )
       {
-         Int32 c;
-         while ( ( c = str.Read() ) != -1 )
+         Char? c;
+         while ( ( c = await reader.TryReadNextAsync() ).HasValue )
          {
             if ( c == '"' )
             {
                // Check for double-doublequote
-               if ( str.Peek() == '"' )
+               if ( ( await reader.TryPeekAsync() ).IsOfValue( '"' ) )
                {
-                  str.Read();
+                  await reader.ReadNextAsync();
                }
                else
                {
@@ -179,45 +194,54 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                }
             }
          }
+
+         return true;
       }
 
-      // Returns index of the character ending line comment (newline), if it is line comment (-- <comment>) in question
-      internal static void ParseLineComment( TextReader str )
+      internal static async ValueTask<Boolean> ParseLineComment(
+         TReader reader
+         )
       {
-         if ( str.Peek() == '-' )
+         if ( ( await reader.TryPeekAsync() ).IsOfValue( '-' ) )
          {
             // Line comment starting
-            Int32 c;
-            while ( ( c = str.Read() ) != -1 && c != '\r' && c != '\n' ) ;
+            Char? c;
+            while ( ( c = await reader.TryReadNextAsync() ).HasValue && c != '\r' && c != '\n' ) ;
          }
-
+         return true;
       }
 
-      // Returns index of the character ending block comment, if it is block comment (/* ... */ in question)
-      internal static void ParseBlockComment( TextReader str )
+
+      internal static async ValueTask<Boolean> ParseBlockComment(
+         TReader reader
+         )
       {
-         if ( str.Peek() == '*' )
+         if ( ( await reader.TryPeekAsync() ).IsOfValue( '*' ) )
          {
             // Block comment starting
             // SQL spec says block comments nest
             var level = 1;
-            str.Read();
-            Int32 prev = -1, cur = -1;
+            await reader.ReadNextAsync();
+            Char? prev = null;
+            Char? cur = null;
             var levelChanged = false;
-            while ( level != 0 && ( cur = str.Read() ) != -1 )
+            while ( level != 0 && ( cur = await reader.ReadNextAsync() ).HasValue )
             {
                var oldLevel = level;
                if ( !levelChanged ) // Don't process '*/*' or '/*/' twice
                {
-                  if ( prev == '*' && cur == '/' )
+                  if ( prev.HasValue )
                   {
-                     // Block comment ending
-                     --level;
-                  }
-                  else if ( prev == '/' && cur == '*' )
-                  {
-                     // Nested block comment
-                     ++level;
+                     if ( prev == '*' && cur == '/' )
+                     {
+                        // Block comment ending
+                        --level;
+                     }
+                     else if ( prev == '/' && cur == '*' )
+                     {
+                        // Nested block comment
+                        ++level;
+                     }
                   }
                }
 
@@ -225,36 +249,41 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                prev = cur;
             }
          }
+
+         return true;
       }
 
       // See http://www.postgresql.org/docs/9.1/static/sql-syntax-lexical.html for dollar quote spec
-      internal static void ParseDollarQuotes( TextReader str, Int32 prev )
+      internal static async ValueTask<Boolean> ParseDollarQuotes(
+         TReader reader,
+         Char? prev
+         )
       {
-         var c = str.Peek();
-         if ( c != -1 && ( prev == -1 || !IsIdentifierContinuationCharacter( (Char) prev ) ) )
+         var c = await reader.TryPeekAsync();
+         if ( c.HasValue && ( !prev.HasValue || !IsIdentifierContinuationCharacter( prev.Value ) ) )
          {
             Char[] tag = null;
             if ( c == '$' )
             {
                tag = Empty<Char>.Array;
             }
-            else if ( IsDollarQuoteTagStartCharacter( (Char) c ) )
+            else if ( IsDollarQuoteTagStartCharacter( c.Value ) )
             {
                var list = new List<Char>();
-               while ( ( c = str.Peek() ) != -1 )
+               while ( ( c = await reader.TryPeekAsync() ).HasValue )
                {
                   if ( c == '$' )
                   {
                      tag = list.ToArray();
                      break;
                   }
-                  else if ( !IsDollarQuoteTagContinuationCharacter( (Char) c ) )
+                  else if ( !IsDollarQuoteTagContinuationCharacter( c.Value ) )
                   {
                      break;
                   }
                   else
                   {
-                     list.Add( (Char) str.Read() );
+                     list.Add( await reader.ReadNextAsync() );
                   }
                }
             }
@@ -262,13 +291,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             if ( tag != null )
             {
                // Read the tag-ending dollar sign
-               str.Read();
+               await reader.ReadNextAsync();
                var tagLen = tag.Length;
 
                var isEmptyTag = tagLen == 0;
                var array = isEmptyTag ? null : new Char[tagLen];
                var arrayIdx = tagLen - 1;
-               while ( ( c = str.Read() ) != -1 )
+               while ( ( c = await reader.TryReadNextAsync() ).HasValue )
                {
                   if ( c == '$' )
                   {
@@ -303,32 +332,37 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                }
             }
          }
+
+         return true;
       }
 
       // Returns true if this character ends string literal
-      private static Boolean CheckSingleQuote( TextReader str, Int32 prevChar )
+      private static async ValueTask<Boolean> CheckSingleQuote(
+         TReader reader,
+         Char prevChar
+         )
       {
          var retVal = prevChar == '\'';
          if ( retVal )
          {
-            var peek = str.Peek();
-            if ( peek != -1 )
+            Char? peek;
+            if ( ( peek = await reader.TryPeekAsync() ).HasValue )
             {
                // Check for double quotes
                if ( peek == '\'' )
                {
-                  str.Read();
+                  await reader.ReadNextAsync();
                   retVal = false;
                }
                else if ( peek == '\n' || peek == '\r' )
                {
                   // Check for newline-separated string literal ( http://www.postgresql.org/docs/9.1/static/sql-syntax-lexical.html )
-                  while ( peek == '\n' || peek == '\r' )
+                  while ( peek.HasValue && peek == '\n' || peek == '\r' )
                   {
-                     peek = str.Read();
+                     peek = await reader.ReadNextAsync();
                   }
 
-                  if ( peek == '\'' )
+                  if ( peek.HasValue && peek == '\'' )
                   {
                      retVal = false;
                   }
@@ -432,5 +466,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          return true;
       }
+   }
+}
+
+public static partial class E_CBAM
+{
+   public static Boolean IsOfValue( this Char? nullable, Char value )
+   {
+      return nullable.HasValue && nullable.Value == value;
    }
 }

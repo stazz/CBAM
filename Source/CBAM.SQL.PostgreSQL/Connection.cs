@@ -15,6 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.Abstractions;
+using CBAM.SQL;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,6 +36,11 @@ namespace CBAM.SQL.PostgreSQL
       TypeRegistry TypeRegistry { get; }
 
       Int32 BackendProcessID { get; }
+   }
+
+   public interface PgSQLConnectionVendorFunctionality : SQLConnectionVendorFunctionality
+   {
+      ValueTask<Boolean> TryAdvanceReaderOverCopyInStatement( PeekablePotentiallyAsyncReader<Char?> reader );
    }
 
    public sealed class NotificationEventArgs : EventArgs
@@ -73,4 +80,28 @@ namespace CBAM.SQL.PostgreSQL
          }
       }
    }
+}
+
+public static partial class E_PgSQL
+{
+   public static async ValueTask<Int32> ExecuteStatementsFromStreamAsync(
+      this SQLConnection connection,
+      StreamReaderWithResizableBuffer reader,
+      IEncodingInfo encoding,
+      Func<SQLException, WhenExceptionInMultipleStatements> onException = null
+      )
+   {
+      return await connection.ExecuteStatementsFromStreamAsync(
+         reader,
+         encoding,
+         ( pReader, sql, item ) =>
+         {
+            // TODO detect copy-in (item is CopyInItem) and read more data from pReader
+            return new ValueTask<Boolean>( true );
+         },
+         onException
+      );
+   }
+
+
 }

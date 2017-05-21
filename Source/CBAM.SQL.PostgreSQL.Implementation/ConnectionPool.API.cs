@@ -30,9 +30,9 @@ namespace CBAM.SQL.PostgreSQL
 {
    public static class PgSQLConnectionPool
    {
-      private static readonly PgSQLConnectionVendorFunctionality _VendorFunctionality = new PgSQLConnectionVendorFunctionality();
+      private static readonly PgSQLConnectionVendorFunctionalityImpl _VendorFunctionality = new PgSQLConnectionVendorFunctionalityImpl();
 
-      public static SQLConnectionVendorFunctionality VendorFunctionality
+      public static PgSQLConnectionVendorFunctionality VendorFunctionality
       {
          get
          {
@@ -41,12 +41,14 @@ namespace CBAM.SQL.PostgreSQL
       }
 
       public static SQLConnectionPool<PgSQLConnection, Object> CreateOneTimeUseConnectionPool(
-         PgSQLConnectionCreationInfo connectionConfig
+         PgSQLConnectionCreationInfo connectionConfig,
+         Boolean unmanagedSupported = false
          )
       {
          return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo, Object>(
             _VendorFunctionality,
             connectionConfig,
+            unmanagedSupported,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
             );

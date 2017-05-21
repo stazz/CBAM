@@ -36,6 +36,8 @@ namespace CBAM.Abstractions.Implementation
    {
       ConnectionUsageInfo<TConnection> GetConnectionUsageForToken( CancellationToken token );
 
+      TConnection Connection { get; }
+
       // Return false if e.g. cancellation caused connection disposing.
       Boolean IsConnectionReturnableToPool { get; }
    }
@@ -96,7 +98,7 @@ namespace CBAM.Abstractions.Implementation
             );
       }
 
-      protected TConnection Connection { get; }
+      public TConnection Connection { get; }
       protected TConnectionFunctionality ConnectionFunctionality { get; }
       protected TStream Stream { get; }
 
@@ -142,15 +144,19 @@ namespace CBAM.Abstractions.Implementation
       where TConnection : class
       where TConnectionCreationParams : class
    {
+      private readonly Boolean _unmanagedSupported;
+
       public OneTimeUseConnectionPool(
          ConnectionFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
+         Boolean unmanagedSupported,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
       )
       {
          this.FactoryParameters = ArgumentValidator.ValidateNotNull( nameof( factoryParameters ), factoryParameters );
          this.Factory = ArgumentValidator.ValidateNotNull( nameof( factory ), factory );
+         this._unmanagedSupported = unmanagedSupported;
          this.ConnectionExtractor = ArgumentValidator.ValidateNotNull( nameof( connectionExtractor ), connectionExtractor );
          this.InstanceCreator = ArgumentValidator.ValidateNotNull( nameof( instanceCreator ), instanceCreator );
       }
@@ -179,6 +185,16 @@ namespace CBAM.Abstractions.Implementation
             await ( this.DisposeConnectionAsync( instance, token ) ?? TaskUtils.CompletedTask );
          }
 
+      }
+
+      public async Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) )
+      {
+         if ( !this._unmanagedSupported )
+         {
+            throw new NotSupportedException( "Unmanaged connections are not supported for this connection pool." );
+         }
+
+         return ( await this.Factory.AcquireConnection( this.FactoryParameters, token ) ).Connection;
       }
 
       public event EventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
@@ -258,7 +274,7 @@ namespace CBAM.Abstractions.Implementation
          TConnectionCreationParams factoryParameters,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
-         ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
+         ) : base( factory, factoryParameters, false, connectionExtractor, instanceCreator )
       {
          this.Pool = new LocklessInstancePoolForClassesNoHeapAllocations<TConnectionInstance>();
       }

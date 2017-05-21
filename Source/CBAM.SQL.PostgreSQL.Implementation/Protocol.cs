@@ -407,70 +407,111 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return (current, moveNext);
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( StatementBuilder stmt, ReservedForStatement reservedState )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
+         StatementBuilder stmt,
+         ReservedForStatement reservedState
+         )
       {
          // Send Query message
          await new QueryMessage( stmt.SQL ).SendMessageAsync( this.GetIOArgs() );
 
          // Then wait for appropriate response
-         BackendMessageObject msg = null;
-         SQLStatementExecutionResult current = null;
-         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = null;
-         RowDescription seenRD = null;
          List<PgSQLError> notices = new List<PgSQLError>();
-         while ( msg == null )
+         MoveNextAsyncDelegate<SQLStatementExecutionResult> drMoveNext = null;
+
+         // We have to always set moveNext, since we might be executing arbitrary amount of SQL statements in simple StatementBuilder.
+         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = async () =>
          {
-            msg = ( await this.ReadMessagesUntilMeaningful( notices ) ).Item1;
-
-            switch ( msg )
+            SQLStatementExecutionResult current = null;
+            if ( drMoveNext != null )
             {
-               case CommandComplete cc:
-                  // RowDescription followed immediately by CommandComplete -> treat as empty query
-                  if ( seenRD == null )
-                  {
-                     current = new SingleCommandExecutionResultImpl(
-                        cc.CommandTag,
-                        new Lazy<SQLException[]>( () => notices?.Select( n => new PgSQLException( n ) )?.ToArray() ),
-                        cc.AffectedRows ?? 0
-                        );
-                  }
-                  break;
-               case RowDescription rd:
-                  seenRD = rd;
-                  // Force to read next meaningful message (DataRow or CommandComplete)
-                  msg = null;
-                  break;
-               case DataRowObject dr:
-                  var streamArray = new PgSQLDataRowStream[seenRD.Fields.Length];
-                  var mdArray = new PgSQLDataColumnMetaDataImpl[streamArray.Length];
-                  for ( var i = 0; i < streamArray.Length; ++i )
-                  {
-                     var curField = seenRD.Fields[i];
-                     var curMD = new PgSQLDataColumnMetaDataImpl( curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
-                     var curStream = new PgSQLDataRowStream( curMD, i, streamArray, this, reservedState, seenRD );
-                     streamArray[i] = curStream;
-                     curStream.Reset( dr );
-                     mdArray[i] = curMD;
-                  }
-                  var warningsLazy = LazyFactory.NewReadOnlyResettableLazy<SQLException[]>( () => notices?.Select( n => new PgSQLException( n ) )?.ToArray(), LazyThreadSafetyMode.ExecutionAndPublication );
-                  var dataRowCurrent = new SQLDataRowImpl(
-                        new PgSQLDataRowMetaDataImpl( mdArray ),
-                        streamArray,
-                        warningsLazy
-                        );
-                  current = dataRowCurrent;
-                  moveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
-                  break;
-               default:
-                  if ( !ReferenceEquals( MessageWithNoContents.EMPTY_QUERY, msg ) )
-                  {
-                     throw new PgSQLException( "Unrecognized response at this point: " + msg.Code );
-                  }
-                  break;
+               // We are iterating over some query result, check that first.
+               var drNext = await drMoveNext();
+               if ( drNext.Item1 )
+               {
+                  current = drNext.Item2;
+               }
+               else
+               {
+                  drMoveNext = null;
+               }
             }
-         }
 
-         return (current, moveNext);
+            if ( current == null )
+            {
+               BackendMessageObject msg = null;
+               RowDescription seenRD = null;
+               while ( msg == null )
+               {
+                  msg = ( await this.ReadMessagesUntilMeaningful( notices ) ).Item1;
+
+                  switch ( msg )
+                  {
+                     case CommandComplete cc:
+                        if ( seenRD == null )
+                        {
+                           current = new SingleCommandExecutionResultImpl(
+                              cc.CommandTag,
+                              new Lazy<SQLException[]>( () => notices?.Select( n => new PgSQLException( n ) )?.ToArray() ),
+                              cc.AffectedRows ?? 0
+                              );
+                        }
+                        else
+                        {
+                           // RowDescription followed immediately by CommandComplete -> treat as empty query
+                           // Read more
+                           msg = null;
+                        }
+                        seenRD = null;
+                        break;
+                     case RowDescription rd:
+                        seenRD = rd;
+                        // Read more (DataRow or CommandComplete)
+                        msg = null;
+                        break;
+                     case DataRowObject dr:
+                        // First DataRowObject
+                        var streamArray = new PgSQLDataRowStream[seenRD.Fields.Length];
+                        var mdArray = new PgSQLDataColumnMetaDataImpl[streamArray.Length];
+                        for ( var i = 0; i < streamArray.Length; ++i )
+                        {
+                           var curField = seenRD.Fields[i];
+                           var curMD = new PgSQLDataColumnMetaDataImpl( curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
+                           var curStream = new PgSQLDataRowStream( curMD, i, streamArray, this, reservedState, seenRD );
+                           streamArray[i] = curStream;
+                           curStream.Reset( dr );
+                           mdArray[i] = curMD;
+                        }
+                        var warningsLazy = LazyFactory.NewReadOnlyResettableLazy<SQLException[]>( () => notices?.Select( n => new PgSQLException( n ) )?.ToArray(), LazyThreadSafetyMode.ExecutionAndPublication );
+                        var dataRowCurrent = new SQLDataRowImpl(
+                              new PgSQLDataRowMetaDataImpl( mdArray ),
+                              streamArray,
+                              warningsLazy
+                              );
+                        current = dataRowCurrent;
+                        drMoveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
+                        break;
+                     case ReadyForQuery rfq:
+                        ( (PgReservedForStatement) reservedState ).RFQSeen();
+                        break;
+                     default:
+                        if ( !ReferenceEquals( MessageWithNoContents.EMPTY_QUERY, msg ) )
+                        {
+                           throw new PgSQLException( "Unrecognized response at this point: " + msg.Code );
+                        }
+                        // Read more
+                        msg = null;
+                        break;
+                  }
+               }
+            }
+
+            return (current != null, current);
+         };
+
+         var firstResult = await moveNext();
+
+         return (firstResult.Item1 ? firstResult.Item2 : null, moveNext);
 
       }
 
@@ -529,7 +570,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //   }
       //}
 
-      protected override async Task PerformDisposeStatementAsync( ReservedForStatement reservationObject )
+      protected override async Task PerformDisposeStatementAsync(
+         ReservedForStatement reservationObject
+         )
       {
          var ioArgs = this.GetIOArgs();
          var pgReserved = (PgReservedForStatement) reservationObject;
@@ -539,20 +582,26 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             await new CloseMessage( true, pgReserved.StatementName ).SendMessageAsync( ioArgs, true );
          }
 
-         if ( !( (PgReservedForStatement) reservationObject ).IsSimple )
+         // Simple statement already received RFQ in its MoveNext method
+         if ( !pgReserved.IsSimple )
          {
             // Need to send SYNC
             await FrontEndMessageWithNoContent.SYNC.SendMessageAsync( ioArgs );
+
          }
 
-         // Then wait for RFQ
-         BackendMessageObject msg; Int32 remaining;
-         while ( ( (msg, remaining) = ( await this.ReadMessagesUntilMeaningful( null, dontThrowExceptions: true ) ) ).Item1.Code != BackendMessageCode.ReadyForQuery )
+         if ( !pgReserved.RFQEncountered )
          {
-            if ( remaining > 0 )
+            // Then wait for RFQ
+            // This happens for non-simple statements, or simple statements which cause exception when iterated over.
+            BackendMessageObject msg; Int32 remaining;
+            while ( ( (msg, remaining) = ( await this.ReadMessagesUntilMeaningful( null, dontThrowExceptions: true ) ) ).Item1.Code != BackendMessageCode.ReadyForQuery )
             {
-               ioArgs.Item4.CurrentMaxCapacity = remaining;
-               await ioArgs.Item2.ReadSpecificAmountAsync( ioArgs.Item4.Array, 0, remaining, ioArgs.Item3 );
+               if ( remaining > 0 )
+               {
+                  ioArgs.Item4.CurrentMaxCapacity = remaining;
+                  await ioArgs.Item2.ReadSpecificAmountAsync( ioArgs.Item4.Array, 0, remaining, ioArgs.Item3 );
+               }
             }
          }
       }
@@ -578,35 +627,35 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( this.TypeRegistry.TryGetTypeInfo( typeID, out typeInfo ) )
          {
 
-            using ( var limitedStream = StreamFactory.CreateLimitedReader(
+            var limitedStream = StreamFactory.CreateLimitedReader(
                   this.Stream,
                   byteCount,
                   this.CurrentCancellationToken,
                   this.Buffer
-                  ) )
+                  );
+
+            try
+            {
+               return await typeInfo.UnboundInfo.ReadBackendValue(
+                  dataFormat,
+                  typeInfo.BoundData,
+                  this.MessageIOArgs,
+                  limitedStream
+                  );
+            }
+            finally
             {
                try
                {
-                  return await typeInfo.UnboundInfo.ReadBackendValue(
-                     dataFormat,
-                     typeInfo.BoundData,
-                     this.MessageIOArgs,
-                     limitedStream
-                     );
+                  await limitedStream.SkipThroughRemainingBytes();
                }
-               finally
+               catch
                {
-                  try
-                  {
-                     await limitedStream.SkipThroughRemainingBytes();
-                  }
-                  catch
-                  {
-                     // Ignore this one.
-                  }
-
+                  // Ignore this one.
                }
+
             }
+
          }
          else if ( dataFormat == DataFormat.Text )
          {
@@ -1022,6 +1071,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    internal class PgReservedForStatement : ReservedForStatement
    {
+      private Int32 _rfqEncountered;
+
       public PgReservedForStatement(
          Boolean isSimple,
          String statementName
@@ -1029,11 +1080,19 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          this.IsSimple = isSimple;
          this.StatementName = statementName;
+         this._rfqEncountered = Convert.ToInt32( false );
       }
 
       public Boolean IsSimple { get; }
 
       public String StatementName { get; }
+
+      public Boolean RFQEncountered => Convert.ToBoolean( this._rfqEncountered );
+
+      public void RFQSeen()
+      {
+         Interlocked.Exchange( ref this._rfqEncountered, Convert.ToInt32( true ) );
+      }
    }
 
    public enum TransactionStatus

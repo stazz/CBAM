@@ -30,9 +30,10 @@ namespace CBAM.SQL.Implementation
       public OneTimeUseSQLConnectionPool(
          ConnectionFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
+         Boolean unmanagedSupported,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
-         ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
+         ) : base( factory, factoryParameters, unmanagedSupported, connectionExtractor, instanceCreator )
       {
       }
    }

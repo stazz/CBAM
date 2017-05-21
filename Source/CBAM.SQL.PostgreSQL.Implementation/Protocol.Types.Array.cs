@@ -382,7 +382,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var charReader = helper.CharacterReader;
          do
          {
-            curChar = await charReader.ReadNextCharacterAsync( stream );
+            curChar = await charReader.ReadNextAsync( stream );
             if ( curChar == DIM_SEPARATOR )
             {
                ++rank;
@@ -421,7 +421,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             ++rank;
             prevIdx = stream.ReadBytesCount;
-            curChar = await charReader.ReadNextCharacterAsync( stream );
+            curChar = await charReader.ReadNextAsync( stream );
          } while ( curChar == ARRAY_START );
 
          if ( retVal != null && rank != retVal.Rank )
@@ -465,7 +465,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             }
 
             // Read next character
-            curChar = await charReader.ReadNextCharacterAsync( stream );
+            curChar = await charReader.ReadNextAsync( stream );
             wasArrayEnd = curChar == ARRAY_END;
          }
 
@@ -476,7 +476,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Read until we are at innermost array level again
             while ( curArrayIndex < innermostArrayIndex )
             {
-               curChar = await charReader.ReadNextCharacterAsync( stream );
+               curChar = await charReader.ReadNextAsync( stream );
                if ( curChar == ARRAY_START )
                {
                   ++curArrayIndex;
@@ -540,7 +540,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          do
          {
             prevIdx = stream.ReadBytesCount;
-            var charNullable = await charReader.TryReadNextCharacterAsync( stream );
+            var charNullable = await charReader.TryReadNextAsync( stream );
             continueReading = charNullable.HasValue;
             curChar = charNullable.GetValueOrDefault();
             if ( continueReading )
@@ -553,7 +553,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                {
                   if ( delimLength > 1 && Char.IsHighSurrogate( curChar ) )
                   {
-                     curChar2 = await charReader.TryReadNextCharacterAsync( stream ) ?? '\0';
+                     curChar2 = await charReader.TryReadNextAsync( stream ) ?? '\0';
                   }
 
                   switch ( curChar )

@@ -110,6 +110,26 @@ namespace CBAM.SQL.PostgreSQL.Tests
          } );
       }
 
+      [DataTestMethod,
+         DataRow(
+         DEFAULT_CONFIG_FILE_LOCATION
+         ),
+         Timeout( DEFAULT_TIMEOUT )
+         ]
+      public async Task TestMultipleSimpleStatements(
+         String connectionConfigFileLocation
+         )
+      {
+         await PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseConnectionAsync( async conn =>
+         {
+            var enumerator = conn.PrepareStatementForExecution( "SELECT 1; SELECT 2;" );
+            Assert.IsTrue( await enumerator.MoveNextAsync() );
+            Assert.AreEqual( await enumerator.GetDataRow().GetValueAsync<Int32>( 0 ), 1 );
+            Assert.IsTrue( await enumerator.MoveNextAsync() );
+            Assert.AreEqual( await enumerator.GetDataRow().GetValueAsync<Int32>( 0 ), 2 );
+         } );
+      }
+
 
    }
 }

@@ -43,10 +43,16 @@ namespace CBAM.Abstractions
       Task CleanUpAsync( TCleanUpParameters cleanupParameters, CancellationToken token );
    }
 
+   public interface ConnectionPoolUnsafe<TConnection>
+   {
+      Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) );
+   }
+
    public interface ConnectionPool<TConnection, in TCleanUpParameters>
       : ConnectionPoolUsage<TConnection>,
         ConnectionPoolCleanUp<TCleanUpParameters>,
-        ConnectionPoolObservable<TConnection>
+        ConnectionPoolObservable<TConnection>,
+        ConnectionPoolUnsafe<TConnection>
       where TConnection : class
    {
 

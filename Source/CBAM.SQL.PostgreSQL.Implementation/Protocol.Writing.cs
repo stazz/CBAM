@@ -491,12 +491,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             var thisSizeTuple = this._preCreatedParamSizes[i];
             var thisType = this._types[i];
-            using ( var thisStream = StreamFactory.CreateLimitedWriter(
+            var thisStream = StreamFactory.CreateLimitedWriter(
                stream,
                thisSizeTuple.Item1 + sizeof( Int32 ),
                token,
                array
-               ) )
+               );
+            try
             {
                await thisType.UnboundInfo.WriteBackendValueCheckNull(
                   formatCodes == null ? DataFormat.Text : formatCodes[i >= formatCodes.Length ? 0 : i],
@@ -508,6 +509,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   false
                   );
 
+
+            }
+            finally
+            {
                await thisStream.FlushAsync();
             }
          }

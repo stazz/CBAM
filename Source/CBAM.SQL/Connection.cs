@@ -45,6 +45,8 @@ namespace CBAM.SQL
    public interface SQLConnectionVendorFunctionality : ConnectionVendorFunctionality<StatementBuilder, String>
    {
       void AppendEscapedLiteral( StringBuilder builder, String literal );
+
+      ValueTask<Boolean> TryAdvanceReaderOverSingleStatement( PeekablePotentiallyAsyncReader<Char?> reader );
    }
 
    public enum TransactionIsolationLevel
@@ -77,6 +79,14 @@ namespace CBAM.SQL
    {
 
    }
+
+   public enum WhenExceptionInMultipleStatements
+   {
+      Rethrow, // Rethrow the exception
+      Rollback, // Rollback transaction and continue
+      RollbackAndStartNew // Rollback transaction and start a new one
+   }
+
 }
 
 public static partial class E_CBAM
@@ -238,5 +248,73 @@ public static partial class E_CBAM
       return args.Current as SQLDataRow;
    }
 
+   // If you have big sql dump file, this method can be used to execute it.
+   // It will read one SQL statement at a time and execute them sequentially.
+   public static async ValueTask<Int32> ExecuteStatementsFromStreamAsync(
+      this SQLConnection connection,
+      StreamReaderWithResizableBuffer reader,
+      IEncodingInfo encoding,
+      Func<BoundPeekablePotentiallyAsyncReader<Char?, StreamReaderWithResizableBuffer>, String, SQLStatementExecutionResult, ValueTask<Boolean>> statementUser,
+      Func<SQLException, WhenExceptionInMultipleStatements> onException = null
+      )
+   {
+      if ( encoding == null )
+      {
+         encoding = new UTF8EncodingInfo();
+      }
+
+      var peekableReader = new BoundPeekablePotentiallyAsyncReader<Char?, StreamReaderWithResizableBuffer>(
+         PeekableReaderFactory.NewNullableValueReader( new StreamCharacterReader( encoding ) ),
+         reader );
+
+      Int32 bytesRead;
+      var totalStatements = 0;
+      do
+      {
+         reader.EraseReadBytesFromBuffer();
+         await connection.VendorFunctionality.TryAdvanceReaderOverSingleStatement( peekableReader );
+         bytesRead = reader.ReadBytesCount;
+         reader.EraseReadBytesFromBuffer();
+         if ( bytesRead > 0 )
+         {
+            WhenExceptionInMultipleStatements? whenException = null;
+            var sql = encoding.Encoding.GetString( reader.Buffer, 0, bytesRead );
+            var enumerator = connection.PrepareStatementForExecution( sql );
+            try
+            {
+               while ( await enumerator.MoveNextAsync() )
+               {
+                  await statementUser( peekableReader, sql, enumerator.Current );
+               }
+
+            }
+            catch ( SQLException sqle )
+            {
+               whenException = onException?.Invoke( sqle );
+               if ( !whenException.HasValue || whenException == WhenExceptionInMultipleStatements.Rethrow )
+               {
+                  throw;
+               }
+            }
+
+            if ( whenException.HasValue )
+            {
+               // Have to issue ROLLBACK statement in order to continue from errors
+               await connection.ExecuteNonQueryAsync( "ROLLBACK" );
+
+               if ( whenException.Value == WhenExceptionInMultipleStatements.RollbackAndStartNew )
+               {
+                  // TODO additional optional parameter to specify additional parameters to BEGIN TRANSACTION (isolation level etc)
+                  await connection.ExecuteNonQueryAsync( "BEGIN TRANSACTION" );
+               }
+            }
+
+            ++totalStatements;
+         }
+
+      } while ( bytesRead > 0 );
+
+      return totalStatements;
+   }
 
 }

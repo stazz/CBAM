@@ -38,7 +38,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private const String SERIALIZABLE = TRANSACTION_ISOLATION_PREFIX + "SERIALIZABLE";
 
       public PgSQLConnectionImpl(
-         PgSQLConnectionVendorFunctionality vendorFunctionality,
+         PgSQLConnectionVendorFunctionalityImpl vendorFunctionality,
          PostgreSQLProtocol functionality,
          DatabaseMetadata metaData
          )
@@ -50,30 +50,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          add
          {
-            this.Protocol.NotifyEvent += value;
+            this.ConnectionFunctionality.NotifyEvent += value;
          }
          remove
          {
-            this.Protocol.NotifyEvent -= value;
+            this.ConnectionFunctionality.NotifyEvent -= value;
          }
       }
 
-      public Int32 BackendProcessID => this.Protocol.BackendProcessID;
+      public Int32 BackendProcessID => this.ConnectionFunctionality.BackendProcessID;
 
       public async Task CheckNotificationsAsync()
       {
-         await this.Protocol.CheckNotificationsAsync();
+         await this.ConnectionFunctionality.CheckNotificationsAsync();
       }
 
-      public TypeRegistry TypeRegistry => this.Protocol.TypeRegistry;
-
-      internal PostgreSQLProtocol Protocol
-      {
-         get
-         {
-            return (PostgreSQLProtocol) this.ConnectionFunctionality;
-         }
-      }
+      public TypeRegistry TypeRegistry => this.ConnectionFunctionality.TypeRegistry;
 
       protected override String GetSQLForGettingReadOnly()
       {
@@ -146,7 +138,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       private void ThrowIfInTransaction( String what )
       {
-         if ( ( (PostgreSQLProtocol) this.ConnectionFunctionality ).LastSeenTransactionStatus != TransactionStatus.Idle )
+         if ( this.ConnectionFunctionality.LastSeenTransactionStatus != TransactionStatus.Idle )
          {
             throw new NotSupportedException( "Can not change " + what + " while in middle of transaction." );
          }
@@ -155,9 +147,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal sealed class PgSQLConnectionVendorFunctionality : SQLConnectionVendorFunctionalitySU<PgSQLConnection, PgSQLConnectionCreationInfo, PostgreSQLProtocol>
+   internal sealed class PgSQLConnectionVendorFunctionalityImpl : SQLConnectionVendorFunctionalitySU<PgSQLConnection, PgSQLConnectionCreationInfo, PostgreSQLProtocol>, PgSQLConnectionVendorFunctionality
    {
-      public PgSQLConnectionVendorFunctionality()
+      public PgSQLConnectionVendorFunctionalityImpl()
       {
          this.StandardConformingStrings = true;
       }
@@ -199,31 +191,113 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override Boolean TryParseStatementSQL( String sql, out Int32[] parameterIndices )
       {
-         Int32 charsRead;
-         using ( var reader = new StringReader( sql ) )
+         // We accept either:
+         // 1. Multiple simple statements, OR
+         // 2. Exactly one statement with parameters
+         parameterIndices = null;
+         var strIdx = new StringIndex( sql );
+         var boundReader = new BoundPeekablePotentiallyAsyncReader<Char?, StringIndex>(
+            PeekableReaderFactory.NewNullableValueReader( StringCharacterReader.Instance ),
+            strIdx
+            );
+         Boolean wasOK;
+         do
          {
-            charsRead = Parser.ParseStringForNextSQLStatement( reader, this.StandardConformingStrings, out parameterIndices );
-         }
+            // Because how ValueTask works, and since StringCharacterReader never performs any asynchrony, we will always complete synchronously here
+            var curParameterIndices = Parser.ParseStringForNextSQLStatement(
+               boundReader,
+               this.StandardConformingStrings,
+               () => strIdx.CurrentIndex - 1
+               ).GetAwaiter().GetResult();
+            wasOK = curParameterIndices == null || parameterIndices == null;
+            parameterIndices = curParameterIndices;
+         } while ( wasOK && strIdx.CurrentIndex < sql.Length );
 
-         return AllSpaces( sql, charsRead );
+         return wasOK;
 
+      }
+
+      public override async ValueTask<Boolean> TryAdvanceReaderOverSingleStatement( PeekablePotentiallyAsyncReader<Char?> reader )
+      {
+         await Parser.ParseStringForNextSQLStatement( reader, this.StandardConformingStrings, null );
+         return true;
+      }
+
+      public ValueTask<Boolean> TryAdvanceReaderOverCopyInStatement( PeekablePotentiallyAsyncReader<Char?> reader )
+      {
+         // TODO
+         return new ValueTask<Boolean>( false );
       }
 
       public Boolean StandardConformingStrings { get; set; }
 
-      private static Boolean AllSpaces( String sql, Int32 startIdxInclusive )
-      {
-         var retVal = true;
-         for ( var i = startIdxInclusive; i < sql.Length && retVal; ++i )
-         {
-            if ( !Parser.IsSpace( sql[i] ) )
-            {
-               retVal = false;
-            }
-         }
+      //private static Boolean AllSpaces( String sql, Int32 startIdxInclusive )
+      //{
+      //   var retVal = true;
+      //   for ( var i = startIdxInclusive; i < sql.Length && retVal; ++i )
+      //   {
+      //      if ( !Parser.IsSpace( sql[i] ) )
+      //      {
+      //         retVal = false;
+      //      }
+      //   }
 
-         return retVal;
-      }
+      //   return retVal;
+      //}
+
+      //private static void FindCopyInEndFromTextReader( TextReader reader, ref Char[] auxArray )
+      //{
+      //   const Int32 AUX_ARRAY_LEN = 3;
+      //   if ( auxArray == null )
+      //   {
+      //      // We need 3 characters to detect the end of COPY IN FROM STDIN statement (line-break, \.)
+      //      // The following line-break can be validated by using .Peek();
+      //      auxArray = new Char[AUX_ARRAY_LEN];
+      //   }
+      //   Int32 c;
+      //   var arrayIndex = 0;
+      //   var found = false;
+      //   while ( !found && ( c = reader.Read() ) != -1 )
+      //   {
+      //      // Update auxiliary array
+      //      auxArray[arrayIndex] = (Char) c;
+
+      //      if ( CSDBC.Core.PostgreSQL.Implementation.Parser.CheckForCircularlyFilledArray(
+      //         COPY_IN_END_CHARS,
+      //         auxArray,
+      //         arrayIndex
+      //         ) )
+      //      {
+      //         // We've found '\.', now we need to check for line-ends before and after
+      //         var peek = reader.Peek();
+      //         if ( peek == '\n' || peek == '\r' )
+      //         {
+      //            // This '\.' is followed by new-line. Now check that it is also preceded by a new-line
+      //            var ch = auxArray[( arrayIndex + 1 ) % AUX_ARRAY_LEN];
+      //            found = IsNewline( ch );
+      //            if ( found )
+      //            {
+      //               // Consume the linebreak
+      //               reader.Read();
+      //            }
+      //         }
+      //      }
+
+      //      if ( arrayIndex == AUX_ARRAY_LEN - 1 )
+      //      {
+      //         arrayIndex = 0;
+      //      }
+      //      else
+      //      {
+      //         ++arrayIndex;
+      //      }
+      //   }
+      //}
+
+      //private static Boolean IsNewline( Char ch )
+      //{
+      //   return ch == '\n' || ch == '\r';
+      //}
 
       protected override async Task<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfo parameters,

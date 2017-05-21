@@ -131,6 +131,8 @@ namespace CBAM.SQL.Implementation
 
       protected abstract StatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices );
 
+      public abstract ValueTask<Boolean> TryAdvanceReaderOverSingleStatement( PeekablePotentiallyAsyncReader<Char?> reader );
+
    }
 
    public interface SQLConnectionFunctionality : ConnectionFunctionality<StatementBuilder, SQLStatementExecutionResult>
