@@ -287,9 +287,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          Boolean hasMore = true;
          while ( hasMore )
          {
-            Object value;
-            ElementEndingWay ending;
-            (value, ending) = await this.ReadArrayElementText( boundData, helper, stream, elemTypeInfo );
+            (var value, var ending) = await this.ReadArrayElementText( boundData, helper, stream, elemTypeInfo );
 
             if ( useTempArray )
             {

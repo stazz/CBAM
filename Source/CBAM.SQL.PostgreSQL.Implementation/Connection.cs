@@ -196,8 +196,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          // 2. Exactly one statement with parameters
          parameterIndices = null;
          var strIdx = new StringIndex( sql );
-         var boundReader = new BoundPeekablePotentiallyAsyncReader<Char?, StringIndex>(
-            PeekableReaderFactory.NewNullableValueReader( StringCharacterReader.Instance ),
+         var boundReader = ReaderFactory.NewNullablePeekableValueReader(
+            new StringCharacterReader(),
             strIdx
             );
          Boolean wasOK;

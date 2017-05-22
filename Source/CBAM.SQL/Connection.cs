@@ -40,6 +40,7 @@ namespace CBAM.SQL
       Task<TransactionIsolationLevel> GetDefaultTransactionIsolationLevelAsync();
 
       Task SetDefaultTransactionIsolationLevelAsync( TransactionIsolationLevel level );
+
    }
 
    public interface SQLConnectionVendorFunctionality : ConnectionVendorFunctionality<StatementBuilder, String>
@@ -263,9 +264,10 @@ public static partial class E_CBAM
          encoding = new UTF8EncodingInfo();
       }
 
-      var peekableReader = new BoundPeekablePotentiallyAsyncReader<Char?, StreamReaderWithResizableBuffer>(
-         PeekableReaderFactory.NewNullableValueReader( new StreamCharacterReader( encoding ) ),
-         reader );
+      var peekableReader = ReaderFactory.NewNullablePeekableValueReader(
+         new StreamCharacterReader( encoding ),
+         reader
+         );
 
       Int32 bytesRead;
       var totalStatements = 0;

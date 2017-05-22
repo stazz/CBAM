@@ -703,7 +703,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                case NotificationMessage notification:
                   try
                   {
+#if DEBUG
+                     this.NotifyEvent?.Invoke( null, notification.Args );
+#else
                      this.NotifyEvent.InvokeAllEventHandlers( evt => evt( null, notification.Args ), throwExceptions: false );
+#endif
                   }
                   catch
                   {

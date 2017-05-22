@@ -71,7 +71,13 @@ namespace CBAM.SQL.PostgreSQL.JSON
          switch ( dataFormat )
          {
             case DataFormat.Text:
-               return await stream.ReadJSONTTokenAsync( helper.CharacterReader );
+               using ( helper.CharacterReader.ClearStreamAfterEachRead() )
+               {
+                  return await ReaderFactory.NewNullableMemorizingValueReader(
+                     helper.CharacterReader,
+                     stream
+                     ).ReadJSONTTokenAsync();
+               }
             case DataFormat.Binary:
                throw new InvalidOperationException( "This data format is not supported" );
             default:
