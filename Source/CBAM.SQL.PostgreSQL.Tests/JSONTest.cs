@@ -52,7 +52,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
             yield return ("5", new JValue( 5 ));
             yield return ("[1, 2, \"foo\", null]", new JArray( new JValue( 1 ), new JValue( 2 ), new JValue( "foo" ), JValue.CreateNull() ));
             yield return ("{\"bar\": \"baz\", \"balance\": 7.77, \"active\": false}", new JObject( new JProperty( "bar", new JValue( "baz" ) ), new JProperty( "balance", new JValue( 7.77 ) ), new JProperty( "active", new JValue( false ) ) ));
-            yield return ("{\"foo\": [true, \"bar\"], \"tags\": {\"a\": 1, \"b\": null}}", new JObject( new JProperty( "foo", new JArray( new JValue( true ), new JValue( "bar" ) ) ), new JProperty( "tags", new JObject( new JProperty( "a", new JValue( 1 ) ), new JProperty( "b", JValue.CreateNull() ) ) ) ));
+            yield return ("{\"foo\": [true, \"bar\"], \"tags\": {\"a\": 123, \"b\": null}}", new JObject( new JProperty( "foo", new JArray( new JValue( true ), new JValue( "bar" ) ) ), new JProperty( "tags", new JObject( new JProperty( "a", new JValue( 123 ) ), new JProperty( "b", JValue.CreateNull() ) ) ) ));
          }
       }
 

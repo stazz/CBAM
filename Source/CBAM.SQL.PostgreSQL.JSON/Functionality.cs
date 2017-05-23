@@ -71,12 +71,15 @@ namespace CBAM.SQL.PostgreSQL.JSON
          switch ( dataFormat )
          {
             case DataFormat.Text:
-               using ( helper.CharacterReader.ClearStreamAfterEachRead() )
-               {
-                  return await ReaderFactory.NewNullableMemorizingValueReader(
+
+               var boundReader = ReaderFactory.NewNullableMemorizingValueReader(
                      helper.CharacterReader,
                      stream
-                     ).ReadJSONTTokenAsync();
+                     );
+               // Allow underlying stream buffer to become roughly max 1024 bytes length
+               using ( boundReader.ClearStreamWhenStreamBufferTooBig( stream, 1024 ) )
+               {
+                  return await UtilPack.JSON.JTokenStreamReader.Instance.TryReadNextAsync( boundReader );
                }
             case DataFormat.Binary:
                throw new InvalidOperationException( "This data format is not supported" );
@@ -99,7 +102,7 @@ namespace CBAM.SQL.PostgreSQL.JSON
          switch ( dataFormat )
          {
             case DataFormat.Text:
-               await stream.WriteJSONTTokenAsync( helper.Encoding, (JToken) value );
+               var bytesWritten = await helper.CharacterWriter.CreateJTokenWriter( stream ).TryWriteAsync( (JToken) value );
                break;
             case DataFormat.Binary:
                throw new InvalidOperationException( "This data format is not supported" );

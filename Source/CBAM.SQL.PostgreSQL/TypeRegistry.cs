@@ -65,6 +65,7 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          this.CharacterReader = new StreamCharacterReader( encoding );
+         this.CharacterWriter = new StreamCharacterWriter( encoding, 1024 );
       }
 
       public IEncodingInfo Encoding
@@ -76,6 +77,8 @@ namespace CBAM.SQL.PostgreSQL
       }
 
       public StreamCharacterReader CharacterReader { get; }
+
+      public StreamCharacterWriter CharacterWriter { get; }
 
       public String GetString( Byte[] array, Int32 offset, Int32 count )
       {
