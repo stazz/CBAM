@@ -81,27 +81,3 @@ namespace CBAM.SQL.PostgreSQL
       }
    }
 }
-
-public static partial class E_PgSQL
-{
-   public static async ValueTask<Int32> ExecuteStatementsFromStreamAsync(
-      this SQLConnection connection,
-      StreamReaderWithResizableBuffer reader,
-      IEncodingInfo encoding,
-      Func<SQLException, WhenExceptionInMultipleStatements> onException = null
-      )
-   {
-      return await connection.ExecuteStatementsFromStreamAsync(
-         reader,
-         encoding,
-         ( pReader, sql, item ) =>
-         {
-            // TODO detect copy-in (item is CopyInItem) and read more data from pReader
-            return new ValueTask<Boolean>( true );
-         },
-         onException
-      );
-   }
-
-
-}

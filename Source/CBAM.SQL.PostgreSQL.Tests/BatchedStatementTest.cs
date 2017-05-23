@@ -29,7 +29,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       [
          DataTestMethod,
          DataRow( DEFAULT_CONFIG_FILE_LOCATION ),
-         //Timeout( DEFAULT_TIMEOUT )
+         Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestBatchedStatement( String connectionConfigFileLocation )
       {

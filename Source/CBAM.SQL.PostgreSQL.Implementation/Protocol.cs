@@ -623,8 +623,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public async Task<Object> ConvertFromBytes( Int32 typeID, DataFormat dataFormat, Stream stream, Int32 byteCount )
       {
-         (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo;
-         if ( this.TypeRegistry.TryGetTypeInfo( typeID, out typeInfo ) )
+         if ( this.TypeRegistry.TryGetTypeInfo( typeID, out (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo ) )
          {
 
             var limitedStream = StreamFactory.CreateLimitedReader(

@@ -459,17 +459,43 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       public CommandComplete( Byte[] array, Encoding encoding )
          : base( BackendMessageCode.CommandComplete )
       {
+         const String INSERT = "INSERT";
+
          var idx = 0;
-         this.CommandTag = array.ReadZeroTerminatedStringFromBytes( ref idx, encoding );
-         var tokens = this.CommandTag.Split();
-         Int32 affectedRows;
-         this.AffectedRows = tokens.Length > 1 && Int32.TryParse( tokens[tokens.Length - 1], out affectedRows ) ?
-            affectedRows :
-            (Int32?) null;
-         Int64 insertedID;
-         this.LastInsertedID = tokens.Length > 2 && String.Equals( tokens[0].Trim(), "INSERT", StringComparison.OrdinalIgnoreCase ) && Int64.TryParse( tokens[1], out insertedID ) ?
-            insertedID :
-            (Int64?) null;
+         var tag = array.ReadZeroTerminatedStringFromBytes( ref idx, encoding );
+         this.CommandTag = tag;
+         idx = 0;
+         while ( Char.IsWhiteSpace( tag[idx] ) && ++idx < tag.Length ) ;
+         if ( idx < tag.Length - 1 )
+         {
+            var max = idx;
+            while ( !Char.IsWhiteSpace( tag[max] ) && ++max < tag.Length ) ;
+            var isInsert = max - idx == INSERT.Length && tag.IndexOf( INSERT, StringComparison.OrdinalIgnoreCase ) == idx;
+            if ( isInsert )
+            {
+               // Next word is inserted row id
+               idx = max + 1;
+               while ( Char.IsWhiteSpace( tag[idx] ) && ++idx < tag.Length ) ;
+               max = idx;
+               while ( !Char.IsWhiteSpace( tag[max] ) && ++max < tag.Length ) ;
+               if ( max - idx > 0 && Int64.TryParse( tag.Substring( idx, max - idx ), out Int64 insertedID ) )
+               {
+                  this.LastInsertedID = insertedID;
+               }
+            }
+
+            // Last word is affected row count
+            max = tag.Length - 1;
+            while ( Char.IsWhiteSpace( tag[max] ) && --max >= 0 ) ;
+            idx = max;
+            ++max;
+            while ( !Char.IsWhiteSpace( tag[idx] ) && --idx >= 0 ) ;
+            ++idx;
+            if ( max - idx > 0 && Int32.TryParse( tag.Substring( idx, max - idx ), out Int32 affectedRows ) )
+            {
+               this.AffectedRows = affectedRows;
+            }
+         }
 
       }
 
@@ -511,7 +537,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          : base( isIn ? BackendMessageCode.CopyInResponse : BackendMessageCode.CopyOutResponse )
       {
          var idx = 0;
-         this.CopyFormat = array.ReadByteFromBytes( ref idx );
+         this.CopyFormat = (DataFormat) array.ReadByteFromBytes( ref idx );
          var arraySize = array.ReadPgInt16Count( ref idx );
          var formats = new Int16[Math.Max( 0, arraySize )];
          for ( var i = 0; i < arraySize; ++i )
@@ -521,7 +547,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this.FieldFormats = formats;
       }
 
-      internal Byte CopyFormat { get; }
+      internal DataFormat CopyFormat { get; }
 
       internal Int16[] FieldFormats { get; }
    }

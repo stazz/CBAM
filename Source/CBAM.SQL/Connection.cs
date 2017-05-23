@@ -41,6 +41,8 @@ namespace CBAM.SQL
 
       Task SetDefaultTransactionIsolationLevelAsync( TransactionIsolationLevel level );
 
+      ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, String sql, SQLStatementExecutionResult executionResult );
+
    }
 
    public interface SQLConnectionVendorFunctionality : ConnectionVendorFunctionality<StatementBuilder, String>
@@ -248,45 +250,66 @@ public static partial class E_CBAM
    {
       return args.Current as SQLDataRow;
    }
+   public static async ValueTask<Int32> ExecuteStatementsFromStreamAsync(
+      this SQLConnection connection,
+      System.IO.Stream stream,
+      IEncodingInfo encoding,
+      CancellationToken token,
+      Int32 streamMaxBufferCount = 1024,
+      Int32 streamReadChunkCount = 1024,
+      Func<SQLException, WhenExceptionInMultipleStatements> onException = null
+      )
+   {
+      var streamReader = StreamFactory.CreateUnlimitedReader(
+            stream,
+            token: token,
+            chunkSize: streamReadChunkCount
+         );
+      var charReader = ReaderFactory.NewNullableMemorizingValueReader(
+         new StreamCharacterReader( encoding ),
+         streamReader
+         );
+      using ( charReader.ClearStreamWhenStreamBufferTooBig( streamReader, streamMaxBufferCount ) )
+      {
+         return await connection.ExecuteStatementsFromStreamAsync( charReader, onException );
+      }
+   }
 
    // If you have big sql dump file, this method can be used to execute it.
    // It will read one SQL statement at a time and execute them sequentially.
    public static async ValueTask<Int32> ExecuteStatementsFromStreamAsync(
       this SQLConnection connection,
-      StreamReaderWithResizableBuffer reader,
-      IEncodingInfo encoding,
-      Func<BoundPeekablePotentiallyAsyncReader<Char?, StreamReaderWithResizableBuffer>, String, SQLStatementExecutionResult, ValueTask<Boolean>> statementUser,
+      MemorizingPotentiallyAsyncReader<Char?, Char> reader,
       Func<SQLException, WhenExceptionInMultipleStatements> onException = null
       )
    {
-      if ( encoding == null )
-      {
-         encoding = new UTF8EncodingInfo();
-      }
+      //if ( encoding == null )
+      //{
+      //   encoding = new UTF8EncodingInfo();
+      //}
 
-      var peekableReader = ReaderFactory.NewNullablePeekableValueReader(
-         new StreamCharacterReader( encoding ),
-         reader
-         );
+      //var peekableReader = ReaderFactory.NewNullablePeekableValueReader(
+      //   new StreamCharacterReader( encoding ),
+      //   reader
+      //   );
 
-      Int32 bytesRead;
+      Int32 charsRead;
       var totalStatements = 0;
       do
       {
-         reader.EraseReadBytesFromBuffer();
-         await connection.VendorFunctionality.TryAdvanceReaderOverSingleStatement( peekableReader );
-         bytesRead = reader.ReadBytesCount;
-         reader.EraseReadBytesFromBuffer();
-         if ( bytesRead > 0 )
+         reader.ClearBuffer();
+         await connection.VendorFunctionality.TryAdvanceReaderOverSingleStatement( reader );
+         charsRead = reader.BufferCount;
+         if ( charsRead > 0 )
          {
             WhenExceptionInMultipleStatements? whenException = null;
-            var sql = encoding.Encoding.GetString( reader.Buffer, 0, bytesRead );
+            var sql = new String( reader.Buffer, 0, reader.BufferCount );
             var enumerator = connection.PrepareStatementForExecution( sql );
             try
             {
                while ( await enumerator.MoveNextAsync() )
                {
-                  await statementUser( peekableReader, sql, enumerator.Current );
+                  await connection.ProcessStatementResultPassively( reader, sql, enumerator.Current );
                }
 
             }
@@ -314,7 +337,7 @@ public static partial class E_CBAM
             ++totalStatements;
          }
 
-      } while ( bytesRead > 0 );
+      } while ( charsRead > 0 );
 
       return totalStatements;
    }

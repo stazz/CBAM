@@ -60,6 +60,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Int32 BackendProcessID => this.ConnectionFunctionality.BackendProcessID;
 
+      public override ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, String sql, SQLStatementExecutionResult executionResult )
+      {
+         // TODO detect COPY IN result from executionResult, and use reader to read data and send it to backend
+         return new ValueTask<Boolean>( false );
+      }
+
       public async Task CheckNotificationsAsync()
       {
          await this.ConnectionFunctionality.CheckNotificationsAsync();

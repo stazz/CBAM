@@ -75,6 +75,8 @@ namespace CBAM.SQL.Implementation
          await this.ExecuteNonQueryAsync( this.GetSQLForSettingReadOnly( isReadOnly ), () => this.IsReadOnlyProperty = isReadOnly );
       }
 
+      public abstract ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, String sql, SQLStatementExecutionResult executionResult );
+
       protected Boolean? IsReadOnlyProperty
       {
          get
