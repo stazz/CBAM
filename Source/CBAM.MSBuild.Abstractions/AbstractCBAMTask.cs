@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-namespace CBAM.SQL.MSBuild.Abstractions
+namespace CBAM.MSBuild.Abstractions
 {
    public abstract class AbstractCBAMConnectionUsingTask<TConnection> : Microsoft.Build.Utilities.Task, ICancelableTask
    {
@@ -100,7 +100,6 @@ namespace CBAM.SQL.MSBuild.Abstractions
 
       protected virtual ValueTask<ConnectionPoolProvider<TConnection>> AcquireConnectionPoolProvider()
       {
-
          var providerAssemblyLocation = this.ConnectionPoolProviderAssemblyLocation;
          var providerTypeName = this.ConnectionPoolProviderTypeName;
          var providerTypeNameSpecified = !String.IsNullOrEmpty( providerTypeName );
@@ -154,8 +153,14 @@ namespace CBAM.SQL.MSBuild.Abstractions
          ConnectionPoolProvider<TConnection> poolProvider
          )
       {
+         var path = this.ConnectionConfigurationFilePath;
+         if ( String.IsNullOrEmpty( path ) )
+         {
+            throw new InvalidOperationException( "Connection configuration file path was not provided." );
+         }
+
          return new ValueTask<Object>( new ConfigurationBuilder()
-            .AddJsonFile( System.IO.Path.GetFullPath( this.ConnectionConfigurationFilePath ) )
+            .AddJsonFile( System.IO.Path.GetFullPath( path ) )
             .Build()
             .Get( poolProvider.DefaultTypeForCreationParameter ) );
       }
@@ -170,7 +175,6 @@ namespace CBAM.SQL.MSBuild.Abstractions
 
       public Boolean RunSynchronously { get; set; }
 
-      [Required]
       public String ConnectionPoolProviderAssemblyLocation { get; set; }
 
       public String ConnectionPoolProviderTypeName { get; set; }

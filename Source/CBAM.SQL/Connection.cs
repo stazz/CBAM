@@ -50,6 +50,9 @@ namespace CBAM.SQL
       void AppendEscapedLiteral( StringBuilder builder, String literal );
 
       ValueTask<Boolean> TryAdvanceReaderOverSingleStatement( PeekablePotentiallyAsyncReader<Char?> reader );
+
+      Boolean CanTrimBegin( Char c );
+      Boolean CanTrimEnd( Char c );
    }
 
    public enum TransactionIsolationLevel
@@ -284,46 +287,63 @@ public static partial class E_CBAM
    {
       Int32 charsRead;
       var totalStatements = 0;
+      var vendorFunc = connection.VendorFunctionality;
       do
       {
          reader.ClearBuffer();
-         await connection.VendorFunctionality.TryAdvanceReaderOverSingleStatement( reader );
+         await vendorFunc.TryAdvanceReaderOverSingleStatement( reader );
          charsRead = reader.BufferCount;
          if ( charsRead > 0 )
          {
             WhenExceptionInMultipleStatements? whenException = null;
-            var sql = new String( reader.Buffer, 0, reader.BufferCount );
-            var enumerator = connection.PrepareStatementForExecution( sql );
-            try
+            var start = 0;
+            var count = reader.BufferCount;
+            // Trim begin
+            while ( count > 0 && vendorFunc.CanTrimBegin( reader.Buffer[start] ) )
             {
-               while ( await enumerator.MoveNextAsync() )
+               ++start;
+               --count;
+            }
+            // Trim end
+            while ( count > 0 && vendorFunc.CanTrimEnd( reader.Buffer[start + count - 1] ) )
+            {
+               --count;
+            }
+            if ( count > 0 )
+            {
+               var sql = new String( reader.Buffer, start, count );
+               var enumerator = connection.PrepareStatementForExecution( sql );
+               try
                {
-                  await connection.ProcessStatementResultPassively( reader, sql, enumerator.Current );
+                  while ( await enumerator.MoveNextAsync() )
+                  {
+                     await connection.ProcessStatementResultPassively( reader, sql, enumerator.Current );
+                  }
+
+               }
+               catch ( SQLException sqle )
+               {
+                  whenException = onException?.Invoke( sqle );
+                  if ( !whenException.HasValue || whenException == WhenExceptionInMultipleStatements.Rethrow )
+                  {
+                     throw;
+                  }
                }
 
-            }
-            catch ( SQLException sqle )
-            {
-               whenException = onException?.Invoke( sqle );
-               if ( !whenException.HasValue || whenException == WhenExceptionInMultipleStatements.Rethrow )
+               if ( whenException.HasValue )
                {
-                  throw;
+                  // Have to issue ROLLBACK statement in order to continue from errors
+                  await connection.ExecuteNonQueryAsync( "ROLLBACK" );
+
+                  if ( whenException.Value == WhenExceptionInMultipleStatements.RollbackAndStartNew )
+                  {
+                     // TODO additional optional parameter to specify additional parameters to BEGIN TRANSACTION (isolation level etc)
+                     await connection.ExecuteNonQueryAsync( "BEGIN TRANSACTION" );
+                  }
                }
+
+               ++totalStatements;
             }
-
-            if ( whenException.HasValue )
-            {
-               // Have to issue ROLLBACK statement in order to continue from errors
-               await connection.ExecuteNonQueryAsync( "ROLLBACK" );
-
-               if ( whenException.Value == WhenExceptionInMultipleStatements.RollbackAndStartNew )
-               {
-                  // TODO additional optional parameter to specify additional parameters to BEGIN TRANSACTION (isolation level etc)
-                  await connection.ExecuteNonQueryAsync( "BEGIN TRANSACTION" );
-               }
-            }
-
-            ++totalStatements;
          }
 
       } while ( charsRead > 0 );

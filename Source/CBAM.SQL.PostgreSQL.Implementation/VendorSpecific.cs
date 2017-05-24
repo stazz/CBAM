@@ -126,8 +126,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   }
                   break;
             }
-            prev1 = c;
             prev2 = prev1;
+            prev1 = c;
 
          }
 

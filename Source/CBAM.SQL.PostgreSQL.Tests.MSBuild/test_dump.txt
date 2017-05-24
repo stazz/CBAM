@@ -1,0 +1,18 @@
+CREATE TEMPORARY TABLE dump_test( id SERIAL, value TEXT, PRIMARY KEY (id) );
+
+INSERT INTO dump_test(value) VALUES( 'testing' );
+
+SELECT * FROM dump_test;
+
+CREATE OR REPLACE FUNCTION public.dump_test_func(
+  some_param INT
+) RETURNS INT AS
+$BODY$
+DECLARE
+  some_var TEXT;
+BEGIN
+  some_var = 'Prefix ' || some_param;
+  RETURN some_param + 1;
+END
+$BODY$
+LANGUAGE plpgsql VOLATILE;

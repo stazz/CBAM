@@ -129,6 +129,16 @@ namespace CBAM.SQL.Implementation
             null;
       }
 
+      public virtual Boolean CanTrimBegin( Char c )
+      {
+         return Char.IsWhiteSpace( c );
+      }
+
+      public virtual Boolean CanTrimEnd( Char c )
+      {
+         return this.CanTrimBegin( c ) || c == ';';
+      }
+
       protected abstract Boolean TryParseStatementSQL( String sql, out Int32[] parameterIndices );
 
       protected abstract StatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices );

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.SQL.MSBuild.Abstractions;
+using CBAM.MSBuild.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
