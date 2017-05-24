@@ -25,43 +25,61 @@ using UtilPack;
 
 namespace CBAM.Abstractions
 {
-   public interface ConnectionPoolObservable<TConnection>
-      where TConnection : class
-   {
-      event EventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
-      event EventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEvent;
-      event EventHandler<BeforeConnectionReturningEventArgs<TConnection>> BeforeConnectionReturningEvent;
-      event EventHandler<BeforeConnectionCloseEventArgs<TConnection>> BeforeConnectionCloseEvent;
-   }
-   public interface ConnectionPoolUsage<out TConnection>
-   {
-      Task UseConnectionAsync( Func<TConnection, Task> user, CancellationToken token = default( CancellationToken ) );
-   }
 
    public interface ConnectionPoolCleanUp<in TCleanUpParameters>
    {
       Task CleanUpAsync( TCleanUpParameters cleanupParameters, CancellationToken token );
    }
 
-   public interface ConnectionPoolUnsafe<TConnection>
+   //public interface ConnectionPoolUnsafe<TConnection>
+   //{
+   //   Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) );
+   //}
+
+   public interface ConnectionPool<out TConnection>
    {
-      Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) );
+      Task UseConnectionAsync( Func<TConnection, Task> user, CancellationToken token = default( CancellationToken ) );
+
+      event GenericEventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
+      event GenericEventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEvent;
+      event GenericEventHandler<BeforeConnectionReturningEventArgs<TConnection>> BeforeConnectionReturningEvent;
+      event GenericEventHandler<BeforeConnectionCloseEventArgs<TConnection>> BeforeConnectionCloseEvent;
    }
 
-   public interface ConnectionPool<TConnection, in TCleanUpParameters>
-      : ConnectionPoolUsage<TConnection>,
-        ConnectionPoolCleanUp<TCleanUpParameters>,
-        ConnectionPoolObservable<TConnection>,
-        ConnectionPoolUnsafe<TConnection>
+   public interface ConnectionPool<out TConnection, in TCleanUpParameters>
+      : ConnectionPool<TConnection>,
+        ConnectionPoolCleanUp<TCleanUpParameters>
+      //ConnectionPoolUnsafe<TConnection>
       where TConnection : class
    {
 
    }
 
-   public class AbstractConnectionPoolEventArgs<TConnection> : EventArgsWithAsyncContext
+   public interface AbstractConnectionPoolEventArgs<out TConnection> : EventArgsWithAsyncContext
+   {
+      TConnection Connection { get; }
+   }
+
+   public interface AfterConnectionCreationEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   {
+   }
+
+   public interface AfterConnectionAcquiringEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   {
+   }
+
+   public interface BeforeConnectionReturningEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   {
+   }
+
+   public interface BeforeConnectionCloseEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   {
+   }
+
+   public class AbstractConnectionPoolEventArgsImpl<TConnection> : EventArgsWithAsyncContextImpl, AbstractConnectionPoolEventArgs<TConnection>
       where TConnection : class
    {
-      public AbstractConnectionPoolEventArgs(
+      public AbstractConnectionPoolEventArgsImpl(
          TConnection connection
          )
       {
@@ -71,10 +89,10 @@ namespace CBAM.Abstractions
       public TConnection Connection { get; }
    }
 
-   public class AfterConnectionCreationEventArgs<TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public class AfterConnectionCreationEventArgsImpl<TConnection> : AbstractConnectionPoolEventArgsImpl<TConnection>, AfterConnectionCreationEventArgs<TConnection>
       where TConnection : class
    {
-      public AfterConnectionCreationEventArgs(
+      public AfterConnectionCreationEventArgsImpl(
          TConnection connection
          )
          : base( connection )
@@ -82,10 +100,10 @@ namespace CBAM.Abstractions
       }
    }
 
-   public class AfterConnectionAcquiringEventArgs<TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public class AfterConnectionAcquiringEventArgsImpl<TConnection> : AbstractConnectionPoolEventArgsImpl<TConnection>, AfterConnectionAcquiringEventArgs<TConnection>
       where TConnection : class
    {
-      public AfterConnectionAcquiringEventArgs(
+      public AfterConnectionAcquiringEventArgsImpl(
          TConnection connection
          )
          : base( connection )
@@ -93,10 +111,10 @@ namespace CBAM.Abstractions
       }
    }
 
-   public class BeforeConnectionReturningEventArgs<TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public class BeforeConnectionReturningEventArgsImpl<TConnection> : AbstractConnectionPoolEventArgsImpl<TConnection>, BeforeConnectionReturningEventArgs<TConnection>
       where TConnection : class
    {
-      public BeforeConnectionReturningEventArgs(
+      public BeforeConnectionReturningEventArgsImpl(
          TConnection connection
          )
          : base( connection )
@@ -104,10 +122,10 @@ namespace CBAM.Abstractions
       }
    }
 
-   public class BeforeConnectionCloseEventArgs<TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public class BeforeConnectionCloseEventArgsImpl<TConnection> : AbstractConnectionPoolEventArgsImpl<TConnection>, BeforeConnectionCloseEventArgs<TConnection>
       where TConnection : class
    {
-      public BeforeConnectionCloseEventArgs(
+      public BeforeConnectionCloseEventArgsImpl(
          TConnection connection
          )
          : base( connection )
@@ -118,14 +136,14 @@ namespace CBAM.Abstractions
 
 public static partial class E_CBAM
 {
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUsage<TConnection> pool, Func<TConnection, Task<T>> user, CancellationToken token = default( CancellationToken ) )
+   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPool<TConnection> pool, Func<TConnection, Task<T>> user, CancellationToken token = default( CancellationToken ) )
    {
       var retVal = default( T );
       await pool.UseConnectionAsync( async connection => retVal = await user( connection ), token );
       return retVal;
    }
 
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUsage<TConnection> pool, Func<TConnection, T> user, CancellationToken token = default( CancellationToken ) )
+   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPool<TConnection> pool, Func<TConnection, T> user, CancellationToken token = default( CancellationToken ) )
    {
       var retVal = default( T );
       await pool.UseConnectionAsync( connection =>
@@ -137,7 +155,7 @@ public static partial class E_CBAM
       return retVal;
    }
 
-   public static async Task UseConnectionAsync<TConnection>( this ConnectionPoolUsage<TConnection> pool, Action<TConnection> executer, CancellationToken token = default( CancellationToken ) )
+   public static async Task UseConnectionAsync<TConnection>( this ConnectionPool<TConnection> pool, Action<TConnection> executer, CancellationToken token = default( CancellationToken ) )
    {
       await pool.UseConnectionAsync( connection =>
       {

@@ -1097,11 +1097,4 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          Interlocked.Exchange( ref this._rfqEncountered, Convert.ToInt32( true ) );
       }
    }
-
-   public enum TransactionStatus
-   {
-      Idle = 'I',
-      InTransaction = 'T',
-      ErrorInTransaction = 'E'
-   }
 }

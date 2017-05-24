@@ -140,23 +140,23 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters> : ConnectionPool<TConnection, TCleanUpParameters>
+   public class OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : ConnectionPool<TConnection>
       where TConnection : class
       where TConnectionCreationParams : class
    {
-      private readonly Boolean _unmanagedSupported;
+      //private readonly Boolean _unmanagedSupported;
 
       public OneTimeUseConnectionPool(
          ConnectionFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
-         Boolean unmanagedSupported,
+         //Boolean unmanagedSupported,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
       )
       {
          this.FactoryParameters = ArgumentValidator.ValidateNotNull( nameof( factoryParameters ), factoryParameters );
          this.Factory = ArgumentValidator.ValidateNotNull( nameof( factory ), factory );
-         this._unmanagedSupported = unmanagedSupported;
+         //this._unmanagedSupported = unmanagedSupported;
          this.ConnectionExtractor = ArgumentValidator.ValidateNotNull( nameof( connectionExtractor ), connectionExtractor );
          this.InstanceCreator = ArgumentValidator.ValidateNotNull( nameof( instanceCreator ), instanceCreator );
       }
@@ -187,27 +187,22 @@ namespace CBAM.Abstractions.Implementation
 
       }
 
-      public async Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) )
-      {
-         if ( !this._unmanagedSupported )
-         {
-            throw new NotSupportedException( "Unmanaged connections are not supported for this connection pool." );
-         }
+      //public async Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) )
+      //{
+      //   if ( !this._unmanagedSupported )
+      //   {
+      //      throw new NotSupportedException( "Unmanaged connections are not supported for this connection pool." );
+      //   }
 
-         return ( await this.Factory.AcquireConnection( this.FactoryParameters, token ) ).Connection;
-      }
+      //   return ( await this.Factory.AcquireConnection( this.FactoryParameters, token ) ).Connection;
+      //}
 
-      public event EventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
-      public event EventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEvent;
-      public event EventHandler<BeforeConnectionReturningEventArgs<TConnection>> BeforeConnectionReturningEvent;
-      public event EventHandler<BeforeConnectionCloseEventArgs<TConnection>> BeforeConnectionCloseEvent;
+      public event GenericEventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
+      public event GenericEventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEvent;
+      public event GenericEventHandler<BeforeConnectionReturningEventArgs<TConnection>> BeforeConnectionReturningEvent;
+      public event GenericEventHandler<BeforeConnectionCloseEventArgs<TConnection>> BeforeConnectionCloseEvent;
 
-      public virtual Task CleanUpAsync( TCleanUpParameters parameters, CancellationToken token )
-      {
-         return TaskUtils.CompletedTask;
-      }
-
-      protected EventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEventInstance => this.AfterConnectionAcquiringEvent;
+      protected GenericEventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEventInstance => this.AfterConnectionAcquiringEvent;
 
       protected virtual async Task<TConnectionInstance> AcquireConnectionAsync( CancellationToken token )
       {
@@ -218,8 +213,8 @@ namespace CBAM.Abstractions.Implementation
          {
             using ( var usageInfo = connAcquireInfo.GetConnectionUsageForToken( token ) )
             {
-               await creationEvent.InvokeAndWaitForAwaitables( new AfterConnectionCreationEventArgs<TConnection>( usageInfo.Connection ) );
-               await acquireEvent.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgs<TConnection>( usageInfo.Connection ) );
+               await creationEvent.InvokeAndWaitForAwaitables( new AfterConnectionCreationEventArgsImpl<TConnection>( usageInfo.Connection ) );
+               await acquireEvent.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgsImpl<TConnection>( usageInfo.Connection ) );
             }
          }
 
@@ -246,12 +241,12 @@ namespace CBAM.Abstractions.Implementation
             {
                if ( isConnectionReturned )
                {
-                  await returningEvent.InvokeAndWaitForAwaitables( new BeforeConnectionReturningEventArgs<TConnection>( usageInfo.Connection ) );
+                  await returningEvent.InvokeAndWaitForAwaitables( new BeforeConnectionReturningEventArgsImpl<TConnection>( usageInfo.Connection ) );
                }
 
                if ( closeConnection )
                {
-                  await closingEvent.InvokeAndWaitForAwaitables( new BeforeConnectionCloseEventArgs<TConnection>( usageInfo.Connection ) );
+                  await closingEvent.InvokeAndWaitForAwaitables( new BeforeConnectionCloseEventArgsImpl<TConnection>( usageInfo.Connection ) );
                }
             }
          }
@@ -263,7 +258,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters>, IAsyncDisposable
+   public class CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, IAsyncDisposable
       where TConnection : class
       where TConnectionInstance : class, InstanceWithNextInfo<TConnectionInstance>
       where TConnectionCreationParams : class
@@ -274,7 +269,7 @@ namespace CBAM.Abstractions.Implementation
          TConnectionCreationParams factoryParameters,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
-         ) : base( factory, factoryParameters, false, connectionExtractor, instanceCreator )
+         ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
       {
          this.Pool = new LocklessInstancePoolForClassesNoHeapAllocations<TConnectionInstance>();
       }
@@ -306,7 +301,7 @@ namespace CBAM.Abstractions.Implementation
             {
                using ( var usageInfo = this.ConnectionExtractor( retVal ).GetConnectionUsageForToken( token ) )
                {
-                  await evt.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgs<TConnection>( usageInfo.Connection ) );
+                  await evt.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgsImpl<TConnection>( usageInfo.Connection ) );
                }
             }
          }
@@ -329,7 +324,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class CachingConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingConnectionPool<TConnection, InstanceHolderWithTimestamp<ConnectionAcquireInfo<TConnection>>, TConnectionCreationParams, TimeSpan>
+   public class CachingConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingConnectionPool<TConnection, InstanceHolderWithTimestamp<ConnectionAcquireInfo<TConnection>>, TConnectionCreationParams>, ConnectionPool<TConnection, TimeSpan>
       where TConnection : class
       where TConnectionCreationParams : class
    {
@@ -348,7 +343,7 @@ namespace CBAM.Abstractions.Implementation
          await base.DisposeConnectionAsync( connection, token );
       }
 
-      public override async Task CleanUpAsync( TimeSpan maxConnectionIdleTime, CancellationToken token )
+      public async Task CleanUpAsync( TimeSpan maxConnectionIdleTime, CancellationToken token )
       {
          InstanceHolderWithTimestamp<ConnectionAcquireInfo<TConnection>> instance;
          var tasks = new List<Task>();

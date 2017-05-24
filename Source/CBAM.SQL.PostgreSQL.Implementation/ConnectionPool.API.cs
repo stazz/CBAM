@@ -40,15 +40,13 @@ namespace CBAM.SQL.PostgreSQL
          }
       }
 
-      public static SQLConnectionPool<PgSQLConnection, Object> CreateOneTimeUseConnectionPool(
-         PgSQLConnectionCreationInfo connectionConfig,
-         Boolean unmanagedSupported = false
+      public static SQLConnectionPool<PgSQLConnection> CreateOneTimeUseConnectionPool(
+         PgSQLConnectionCreationInfo connectionConfig
          )
       {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo, Object>(
+         return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
             _VendorFunctionality,
             connectionConfig,
-            unmanagedSupported,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
             );

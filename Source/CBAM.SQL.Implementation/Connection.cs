@@ -30,7 +30,7 @@ using CBAM.Tabular;
 namespace CBAM.SQL.Implementation
 {
    public abstract class SQLConnectionImpl<TConnectionFunctionality> : ConnectionImpl<StatementBuilder, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : class, SQLConnectionFunctionality
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, SQLStatementExecutionResult>, SQLConnectionFunctionality
    {
       private Object _isReadOnly;
       private Object _isolationLevel;

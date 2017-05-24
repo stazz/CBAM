@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.5</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.MSBuild.Abstractions\CBAM.MSBuild.Abstractions.csproj" />
+    <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
+  </ItemGroup>
+
+</Project>

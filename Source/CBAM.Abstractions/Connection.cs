@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CBAM.Abstractions
@@ -27,6 +28,7 @@ namespace CBAM.Abstractions
    {
       AsyncEnumerator<TEnumerableItem> PrepareStatementForExecution( TStatement statement );
       TVendorFunctionality VendorFunctionality { get; }
+      CancellationToken CurrentCancellationToken { get; }
    }
 
    public interface ConnectionVendorFunctionality<out TStatement, in TStatementCreationArgs>

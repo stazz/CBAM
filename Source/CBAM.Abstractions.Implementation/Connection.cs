@@ -27,7 +27,7 @@ namespace CBAM.Abstractions.Implementation
 {
    public abstract class ConnectionImpl<TStatement, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
       where TVendorFunctionality : class, ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
-      where TConnectionFunctionality : class, ConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
    {
 
       public ConnectionImpl(
@@ -47,6 +47,8 @@ namespace CBAM.Abstractions.Implementation
       }
 
       protected TConnectionFunctionality ConnectionFunctionality { get; }
+
+      public CancellationToken CurrentCancellationToken => this.ConnectionFunctionality.CurrentCancellationToken;
    }
 
    public abstract class DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>, ConnectionFactory<TConnection, TConnectionCreationParameters>
@@ -93,7 +95,6 @@ namespace CBAM.Abstractions.Implementation
 
    public interface ConnectionFunctionality<in TStatement, out TEnumerableItem>
    {
-
       AsyncEnumerator<TEnumerableItem> CreateIterationArguments( TStatement stmt );
    }
 

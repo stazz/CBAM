@@ -15,26 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.SQL;
+using CBAM.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using UtilPack;
-using CBAM.Abstractions;
 
-namespace CBAM.SQL
+namespace CBAM.SQL.PostgreSQL
 {
-   public interface SQLConnectionPool<out TConnection> : ConnectionPool<TConnection>
+   public sealed class PgSQLConnectionPoolProvider : ConnectionPoolProvider<PgSQLConnection>
    {
+      public ConnectionPool<PgSQLConnection> CreateOneTimeUseConnectionPool( Object creationParameters )
+      {
+         return creationParameters is PgSQLConnectionCreationInfoData creationData ?
+            PgSQLConnectionPool.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( creationData ) ) :
+            throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( PgSQLConnectionCreationInfoData ).FullName}." );
+      }
 
+      public Type DefaultTypeForCreationParameter => typeof( PgSQLConnectionCreationInfoData );
    }
-
-   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : ConnectionPool<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
-      where TConnection : class, SQLConnection
-   {
-   }
-
-
 }

@@ -23,22 +23,21 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
-   public class OneTimeUseSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters>, SQLConnectionPool<TConnection, TCleanUpParameters>
+   public class OneTimeUseSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
       where TConnectionCreationParams : class
    {
       public OneTimeUseSQLConnectionPool(
          ConnectionFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
-         Boolean unmanagedSupported,
          Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
          Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
-         ) : base( factory, factoryParameters, unmanagedSupported, connectionExtractor, instanceCreator )
+         ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
       {
       }
    }
 
-   public class CachingSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters> : CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams, TCleanUpParameters>, SQLConnectionPool<TConnection, TCleanUpParameters>
+   public class CachingSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
       where TConnectionInstance : class, InstanceWithNextInfo<TConnectionInstance>
       where TConnectionCreationParams : class

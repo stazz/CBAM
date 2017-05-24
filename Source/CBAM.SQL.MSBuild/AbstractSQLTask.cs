@@ -15,26 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.SQL;
+using CBAM.SQL.MSBuild.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using UtilPack;
-using CBAM.Abstractions;
 
-namespace CBAM.SQL
+namespace CBAM.SQL.MSBuild
 {
-   public interface SQLConnectionPool<out TConnection> : ConnectionPool<TConnection>
-   {
-
-   }
-
-   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : ConnectionPool<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
-      where TConnection : class, SQLConnection
+   public abstract class AbstractSQLConnectionUsingTask : AbstractCBAMConnectionUsingTask<SQLConnection>
    {
    }
-
-
 }

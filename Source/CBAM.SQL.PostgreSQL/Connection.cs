@@ -36,6 +36,8 @@ namespace CBAM.SQL.PostgreSQL
       TypeRegistry TypeRegistry { get; }
 
       Int32 BackendProcessID { get; }
+
+      TransactionStatus LastSeenTransactionStatus { get; }
    }
 
    public interface PgSQLConnectionVendorFunctionality : SQLConnectionVendorFunctionality
@@ -79,5 +81,12 @@ namespace CBAM.SQL.PostgreSQL
             return this._payload;
          }
       }
+   }
+
+   public enum TransactionStatus
+   {
+      Idle = 'I',
+      InTransaction = 'T',
+      ErrorInTransaction = 'E'
    }
 }

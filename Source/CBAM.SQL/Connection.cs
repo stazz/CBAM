@@ -254,7 +254,6 @@ public static partial class E_CBAM
       this SQLConnection connection,
       System.IO.Stream stream,
       IEncodingInfo encoding,
-      CancellationToken token,
       Int32 streamMaxBufferCount = 1024,
       Int32 streamReadChunkCount = 1024,
       Func<SQLException, WhenExceptionInMultipleStatements> onException = null
@@ -262,7 +261,7 @@ public static partial class E_CBAM
    {
       var streamReader = StreamFactory.CreateUnlimitedReader(
             stream,
-            token: token,
+            token: connection.CurrentCancellationToken,
             chunkSize: streamReadChunkCount
          );
       var charReader = ReaderFactory.NewNullableMemorizingValueReader(
@@ -283,16 +282,6 @@ public static partial class E_CBAM
       Func<SQLException, WhenExceptionInMultipleStatements> onException = null
       )
    {
-      //if ( encoding == null )
-      //{
-      //   encoding = new UTF8EncodingInfo();
-      //}
-
-      //var peekableReader = ReaderFactory.NewNullablePeekableValueReader(
-      //   new StreamCharacterReader( encoding ),
-      //   reader
-      //   );
-
       Int32 charsRead;
       var totalStatements = 0;
       do

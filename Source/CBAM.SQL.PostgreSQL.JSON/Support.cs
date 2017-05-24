@@ -26,19 +26,19 @@ using System.Threading.Tasks;
 
 public static partial class E_CBAM
 {
-   public static void EnableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
+   public static void EnableJSONSupport( this ConnectionPool<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent += Pool_AfterConnectionCreationEvent;
    }
 
-   public static void DisableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
+   public static void DisableJSONSupport( this ConnectionPool<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent -= Pool_AfterConnectionCreationEvent;
    }
 
-   private static void Pool_AfterConnectionCreationEvent( Object sender, CBAM.Abstractions.AfterConnectionCreationEventArgs<PgSQLConnection> e )
+   private static void Pool_AfterConnectionCreationEvent( AfterConnectionCreationEventArgs<PgSQLConnection> e )
    {
-      e.Awaitables.Add( e.Connection.AddJSONSupportAsync() );
+      e.AddAwaitable( e.Connection.AddJSONSupportAsync() );
    }
 
    public static async Task AddJSONSupportAsync( this PgSQLConnection connection )

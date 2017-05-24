@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UtilPack;
+using System.Reflection;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
