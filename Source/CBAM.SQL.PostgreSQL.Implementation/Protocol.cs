@@ -1097,4 +1097,24 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          Interlocked.Exchange( ref this._rfqEncountered, Convert.ToInt32( true ) );
       }
    }
+
+#if NET45
+
+   // No SocketTaskExtensions in .NET 4.5...
+   internal static class SocketTaskextensions
+   {
+      public static Task ConnectAsync( this Socket socket, EndPoint remoteEndPoint )
+      {
+         //token.ThrowIfCancellationRequested();
+         var connectArgs = (socket, remoteEndPoint);
+         return Task.Factory.FromAsync(
+           (cArgs, cb, state) => cArgs.Item1.BeginConnect( cArgs.Item2, cb, state),
+           (result) => ((Socket)result.AsyncState).EndConnect( result ),
+           connectArgs,
+           socket
+           );
+      }
+   }
+
+#endif
 }

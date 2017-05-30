@@ -15,14 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.Abstractions;
 using CBAM.MSBuild.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
+using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
+
 namespace CBAM.SQL.MSBuild
 {
    public abstract class AbstractSQLConnectionUsingTask : AbstractCBAMConnectionUsingTask<SQLConnection>
    {
+      public AbstractSQLConnectionUsingTask( TNuGetPackageResolverCallback nugetResolver )
+         : base( nugetResolver )
+      {
+
+      }
    }
+
 }

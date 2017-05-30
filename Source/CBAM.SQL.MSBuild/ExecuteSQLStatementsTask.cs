@@ -15,18 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.MSBuild.Abstractions;
 using Microsoft.Build.Framework;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using UtilPack;
+using Microsoft.Build.Utilities;
+using System.IO;
+
+using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
 
 namespace CBAM.SQL.MSBuild
 {
    public class ExecuteSQLStatementsTask : AbstractSQLConnectionUsingTask
    {
-      protected override async Task UseConnection( SQLConnection connection )
+      public ExecuteSQLStatementsTask( TNuGetPackageResolverCallback nugetResolver )
+         : base( nugetResolver )
+      {
+
+      }
+
+      protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
+      {
+         return File.Exists( Path.GetFullPath( this.SQLStatementsFilePath ) );
+      }
+
+      protected override async System.Threading.Tasks.Task UseConnection( SQLConnection connection )
       {
          Encoding encoding;
          var encodingName = this.FileEncoding;
@@ -39,7 +55,7 @@ namespace CBAM.SQL.MSBuild
             encoding = Encoding.GetEncoding( encodingName );
          }
 
-         using ( var fs = System.IO.File.Open( this.SQLStatementsFilePath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
+         using ( var fs = File.Open( Path.GetFullPath( this.SQLStatementsFilePath ), System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
          {
             await connection.ExecuteStatementsFromStreamAsync(
                fs,

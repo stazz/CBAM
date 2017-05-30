@@ -126,7 +126,7 @@ namespace CBAM.SQL.PostgreSQL
       {
          this.CreationData = ArgumentValidator.ValidateNotNull( nameof( data ), data );
 
-#if NETCOREAPP1_1 || NET46
+#if NETCOREAPP1_1 || NET45
          this.ProvideSSLStream = (
             Stream innerStream,
             Boolean leaveInnerStreamOpen,

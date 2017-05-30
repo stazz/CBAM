@@ -11,11 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack" Version="1.0.0-RC5" />
+    <PackageReference Include="UtilPack" Version="1.0.0-RC7" />
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.0.1</VersionPrefix>
+    <VersionPrefix>0.0.2</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>

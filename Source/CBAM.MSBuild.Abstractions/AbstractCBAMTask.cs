@@ -26,128 +26,86 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.NuGet;
+
+using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
 
 namespace CBAM.MSBuild.Abstractions
 {
    public abstract class AbstractCBAMConnectionUsingTask<TConnection> : Microsoft.Build.Utilities.Task, ICancelableTask
    {
-      private readonly CancellationTokenSource _cancelTokenSource;
+      private readonly CancellationTokenSource _cancellationSource;
+      private readonly TNuGetPackageResolverCallback _nugetPackageResolver;
 
-      public AbstractCBAMConnectionUsingTask()
+      public AbstractCBAMConnectionUsingTask( TNuGetPackageResolverCallback nugetPackageResolver )
       {
-         this._cancelTokenSource = new CancellationTokenSource();
-      }
-
-      public void Cancel()
-      {
-         this._cancelTokenSource.Cancel( false );
+         this._cancellationSource = new CancellationTokenSource();
+         this._nugetPackageResolver = nugetPackageResolver;
       }
 
       public override Boolean Execute()
       {
          // Reacquire must be called in same thread as yield -> run our Task synchronously
          var retVal = false;
-         var yieldCalled = false;
-         try
+         if ( this.CheckTaskParametersBeforeConnectionPoolUsage() )
          {
+            var yieldCalled = false;
+            var be = (IBuildEngine3) this.BuildEngine;
             try
             {
-               if ( !this.RunSynchronously )
+               try
                {
-                  this.BuildEngine3.Yield();
-                  yieldCalled = true;
-               }
-               this.ExecuteTaskAsync().GetAwaiter().GetResult();
+                  var poolProvider = this.AcquireConnectionPoolProvider();
+                  if ( poolProvider != null )
+                  {
+                     if ( !this.RunSynchronously )
+                     {
+                        be.Yield();
+                        yieldCalled = true;
+                     }
+                     this.ExecuteTaskAsync( poolProvider ).GetAwaiter().GetResult();
 
-               retVal = true;
-            }
-            catch ( TaskCanceledException )
-            {
-               // Canceled, do nothing
-            }
-            catch ( OperationCanceledException )
-            {
-               // Canceled, do nothing
-            }
-            catch ( Exception exc )
-            {
-               // Only log if we did not receive cancellation
-               if ( !this._cancelTokenSource.IsCancellationRequested )
+                     retVal = true;
+                  }
+               }
+               catch ( OperationCanceledException )
                {
-                  this.Log.LogError( exc.ToString() );
+                  // Canceled, do nothing
+               }
+               catch ( Exception exc )
+               {
+                  // Only log if we did not receive cancellation
+                  if ( !this._cancellationSource.IsCancellationRequested )
+                  {
+                     this.Log.LogError( exc.ToString() );
+                  }
+               }
+            }
+            finally
+            {
+               if ( yieldCalled )
+               {
+                  be.Reacquire();
                }
             }
          }
-         finally
-         {
-            if ( yieldCalled )
-            {
-               this.BuildEngine3.Reacquire();
-            }
-         }
-
          return retVal;
       }
 
-      private async Task ExecuteTaskAsync()
+      public void Cancel()
       {
-         var poolProvider = await this.AcquireConnectionPoolProvider();
+         this._cancellationSource.Cancel( false );
+      }
+
+      public async Task ExecuteTaskAsync( ConnectionPoolProvider<TConnection> poolProvider )
+      {
          var poolCreationArgs = await this.ProvideConnectionCreationParameters( poolProvider );
          var pool = await this.AcquireConnectionPool( poolProvider, poolCreationArgs );
-         await pool.UseConnectionAsync( this.UseConnection, this._cancelTokenSource.Token );
+         await pool.UseConnectionAsync( this.UseConnection, this._cancellationSource.Token );
 
       }
 
-      protected virtual ValueTask<ConnectionPoolProvider<TConnection>> AcquireConnectionPoolProvider()
-      {
-         var providerAssemblyLocation = this.ConnectionPoolProviderAssemblyLocation;
-         var providerTypeName = this.ConnectionPoolProviderTypeName;
-         var providerTypeNameSpecified = !String.IsNullOrEmpty( providerTypeName );
-         var providerBaseType = typeof( ConnectionPoolProvider<TConnection> ).GetTypeInfo();
-         Type providerType;
-         String errorMessage;
-         if ( String.IsNullOrEmpty( providerAssemblyLocation ) )
-         {
-            if ( providerTypeNameSpecified )
-            {
-               providerType = Type.GetType( providerTypeName, false );
-               errorMessage = $"Failed to load type \"{providerTypeName}\", make sure the name is assembly-qualified.";
-            }
-            else
-            {
-               providerType = null;
-               errorMessage = $"The task must receive {nameof( ConnectionPoolProviderAssemblyLocation )} and/or {nameof( ConnectionPoolProviderTypeName )} parameters.";
-            }
-         }
-         else
-         {
-            var providerAssemblyTuple = new ExplicitAssemblyLoader().LoadAssemblyFrom( providerAssemblyLocation );
-            var providerAssembly = providerAssemblyTuple.LoadedAssembly;
-            if ( providerTypeNameSpecified )
-            {
-               providerType = providerAssembly.GetType( providerTypeName, false );
-               errorMessage = $"No type \"{providerTypeName}\" in assembly located in \"{providerAssemblyLocation}\".";
-            }
-            else
-            {
-               providerType = providerAssembly.DefinedTypes.FirstOrDefault( t => providerBaseType.IsAssignableFrom( t ) )?.AsType();
-               errorMessage = $"Failed to find any type implementing \"{providerBaseType.AssemblyQualifiedName}\" in assembly located in \"{providerAssemblyLocation}\".";
-            }
-         }
-
-         if ( providerType == null )
-         {
-            throw new InvalidOperationException( errorMessage );
-         }
-         else if ( !providerBaseType.IsAssignableFrom( providerType ) )
-         {
-            throw new InvalidOperationException( $"The loaded connection pool provider type \"{providerType.AssemblyQualifiedName}\" does not implement \"{providerBaseType.AssemblyQualifiedName}\"." );
-         }
-
-         return new ValueTask<ConnectionPoolProvider<TConnection>>( (ConnectionPoolProvider<TConnection>) Activator.CreateInstance( providerType ) );
-      }
-
-      protected abstract Task UseConnection( TConnection connection );
+      protected abstract Boolean CheckTaskParametersBeforeConnectionPoolUsage();
 
       protected virtual ValueTask<Object> ProvideConnectionCreationParameters(
          ConnectionPoolProvider<TConnection> poolProvider
@@ -173,9 +131,77 @@ namespace CBAM.MSBuild.Abstractions
          return new ValueTask<ConnectionPool<TConnection>>( provider.CreateOneTimeUseConnectionPool( poolCreationArgs ) );
       }
 
+      protected abstract Task UseConnection( TConnection connection );
+
+      private ConnectionPoolProvider<TConnection> AcquireConnectionPoolProvider()
+      {
+         var resolver = this._nugetPackageResolver;
+         ConnectionPoolProvider<TConnection> retVal = null;
+         if ( resolver != null )
+         {
+            var assembly = this._nugetPackageResolver(
+               this.ConnectionPoolProviderPackageID, // package ID
+               this.ConnectionPoolProviderVersion,  // optional package version
+               null, // optional repository paths
+               true, // resolve all dependencies too
+               this.ConnectionPoolProviderAssemblyPath // optional assembly path within package
+               );
+            if ( assembly != null )
+            {
+               // Now search for the type
+               var typeName = this.ConnectionPoolProviderTypeName;
+               var parentType = typeof( ConnectionPoolProvider<TConnection> ).GetTypeInfo();
+               var checkParentType = !String.IsNullOrEmpty( typeName );
+               Type providerType;
+               if ( checkParentType )
+               {
+                  // Instantiate directly
+                  providerType = assembly.GetType( typeName, false );
+               }
+               else
+               {
+                  // Search for first available
+                  providerType = assembly.DefinedTypes.FirstOrDefault( t => parentType.IsAssignableFrom( t ) )?.AsType();
+               }
+
+               if ( providerType != null )
+               {
+                  if ( !checkParentType || parentType.IsAssignableFrom( providerType ) )
+                  {
+                     // All checks passed, instantiate the pool provider
+                     retVal = (ConnectionPoolProvider<TConnection>) Activator.CreateInstance( providerType );
+                  }
+                  else
+                  {
+                     this.Log.LogError( $"The type \"{providerType.FullName}\" in \"{assembly}\" does not have required parent type \"{parentType.FullName}\"." );
+                  }
+               }
+               else
+               {
+                  this.Log.LogError( $"Failed to find type within assembly in \"{assembly}\", try specify {nameof( ConnectionPoolProviderTypeName )} parameter." );
+               }
+            }
+            else
+            {
+               this.Log.LogError( $"Failed to load connection pool provider package \"{this.ConnectionPoolProviderPackageID}\"." );
+            }
+         }
+         else
+         {
+            this.Log.LogError( "Task must be provided callback to load NuGet packages (just make constructor taking it as argument and use UtilPack.NuGet.MSBuild task factory)." );
+         }
+
+         return retVal;
+      }
+
       public Boolean RunSynchronously { get; set; }
 
-      public String ConnectionPoolProviderAssemblyLocation { get; set; }
+      [Required]
+      public String ConnectionPoolProviderPackageID { get; set; }
+
+      public String ConnectionPoolProviderVersion { get; set; }
+
+      public String ConnectionPoolProviderAssemblyPath { get; set; }
 
       public String ConnectionPoolProviderTypeName { get; set; }
 

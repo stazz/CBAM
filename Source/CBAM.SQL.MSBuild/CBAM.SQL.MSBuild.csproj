@@ -1,12 +1,80 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFrameworks>netstandard1.5;net451</TargetFrameworks>
+    <BuildOutputTargetFolder>lib</BuildOutputTargetFolder>
   </PropertyGroup>
+
+  <!--<ItemDefinitionGroup>
+    <PackageReference>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <ProjectReference>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemDefinitionGroup>-->
+
+  <ItemGroup>
+    <!--<PackageReference Include="Nerdbank.MSBuildExtension" Version="0.1.17-beta" />-->
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net451' ">
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="14.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net451'">
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="15.1.548" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CBAM.MSBuild.Abstractions\CBAM.MSBuild.Abstractions.csproj" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
+    
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="build\**\*" Pack="true" PackagePath="\build" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>0.0.2</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Authors>Stanislav Muhametsin</Authors>
+    <Company>Cometa Solutions Ltd</Company>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Product>CBAM</Product>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL.MSbuild assembly contains abstract SQL-oriented MSBuild task, and task which reads file and executes SQL statements contained within.</Description>
+    <Copyright>Stanislav Muhametsin</Copyright>
+    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
+  </PropertyGroup>
+
+  <!-- Assembly signing stuff -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
+    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+
+  <!-- Disable all debug information in release mode-->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>False</DebugSymbols>
+    <!-- For some reason, both OutputPath and OutDir properties are empty at this point... go figure. Maybe renamed for MSBuild 15.0? -->
+    <!-- <DocumentationFile>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile> -->
+  </PropertyGroup>
+
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
+    <Title>SQL-Oriented MSBuild Tasks</Title>
+    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
+    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+  </PropertyGroup>
 
 </Project>

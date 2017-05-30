@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.ValueTuple" Version="4.4.0-preview1-25305-02" />
-    <PackageReference Include="UtilPack" Version="1.0.0-RC5" />
+    <PackageReference Include="UtilPack" Version="1.0.0-RC7" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,7 +22,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.0.1</VersionPrefix>
+    <VersionPrefix>0.0.2</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>

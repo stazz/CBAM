@@ -295,7 +295,6 @@ public static partial class E_CBAM
          charsRead = reader.BufferCount;
          if ( charsRead > 0 )
          {
-            WhenExceptionInMultipleStatements? whenException = null;
             var start = 0;
             var count = reader.BufferCount;
             // Trim begin
@@ -309,8 +308,10 @@ public static partial class E_CBAM
             {
                --count;
             }
+
             if ( count > 0 )
             {
+               WhenExceptionInMultipleStatements? whenException = null;
                var sql = new String( reader.Buffer, start, count );
                var enumerator = connection.PrepareStatementForExecution( sql );
                try
