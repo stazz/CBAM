@@ -1,39 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.5;net451</TargetFrameworks>
-    <BuildOutputTargetFolder>lib</BuildOutputTargetFolder>
+    <TargetFrameworks>netstandard1.3</TargetFrameworks>
   </PropertyGroup>
 
-  <!--<ItemDefinitionGroup>
-    <PackageReference>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <ProjectReference>
-      <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
-  </ItemDefinitionGroup>-->
-
   <ItemGroup>
-    <!--<PackageReference Include="Nerdbank.MSBuildExtension" Version="0.1.17-beta" />-->
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net451' ">
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="14.3" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' != 'net451'">
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="15.1.548" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\CBAM.MSBuild.Abstractions\CBAM.MSBuild.Abstractions.csproj" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
     
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="build\**\*" Pack="true" PackagePath="\build" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -26,7 +26,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
-using UtilPack.NuGet;
 
 using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
 
@@ -156,7 +155,7 @@ namespace CBAM.MSBuild.Abstractions
                if ( checkParentType )
                {
                   // Instantiate directly
-                  providerType = assembly.GetType( typeName, false );
+                  providerType = assembly.GetType( typeName, false, false );
                }
                else
                {
@@ -166,7 +165,7 @@ namespace CBAM.MSBuild.Abstractions
 
                if ( providerType != null )
                {
-                  if ( !checkParentType || parentType.IsAssignableFrom( providerType ) )
+                  if ( !checkParentType || parentType.IsAssignableFrom( providerType.GetTypeInfo() ) )
                   {
                      // All checks passed, instantiate the pool provider
                      retVal = (ConnectionPoolProvider<TConnection>) Activator.CreateInstance( providerType );
