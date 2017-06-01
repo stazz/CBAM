@@ -56,13 +56,13 @@ namespace CBAM.SQL.MSBuild
             encoding = Encoding.GetEncoding( encodingName );
          }
 
-         connection.BeforeStatementExecutionStart += this.Connection_BeforeStatementExecutionStart;
-         connection.AfterStatementExecutionItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
+         connection.BeforeEnumerationStart += this.Connection_BeforeStatementExecutionStart;
+         connection.AfterEnumerationItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
 
          using ( new UsingHelper( () =>
          {
-            connection.BeforeStatementExecutionStart -= this.Connection_BeforeStatementExecutionStart;
-            connection.AfterStatementExecutionItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
+            connection.BeforeEnumerationStart -= this.Connection_BeforeStatementExecutionStart;
+            connection.AfterEnumerationItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
          } ) )
          {
             var path = Path.GetFullPath( this.SQLStatementsFilePath );
@@ -81,12 +81,12 @@ namespace CBAM.SQL.MSBuild
          }
       }
 
-      private void Connection_BeforeStatementExecutionStart( StatementExecutionStartedEventArgs<StatementBuilder> args )
+      private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<StatementBuilder> args )
       {
          this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Statement.SQL );
       }
 
-      private void Connection_AfterStatementExecutionItemEncountered( StatementExecutionResultEventArgs<SQLStatementExecutionResult> args )
+      private void Connection_AfterStatementExecutionItemEncountered( EnumerationItemEventArgs<SQLStatementExecutionResult> args )
       {
          if ( args.Item is SingleCommandExecutionResult commandResult )
          {

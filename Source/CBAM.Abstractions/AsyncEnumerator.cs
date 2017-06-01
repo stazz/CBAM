@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UtilPack;
 
 namespace CBAM.Abstractions
 {
@@ -32,17 +33,42 @@ namespace CBAM.Abstractions
       Task ResetAsync();
    }
 
-   public class IterationEndedEventArgs : EventArgs
+   public interface AsyncEnumeratorObservable<out T> : AsyncEnumerator<T>, AsyncEnumerationObservation<T>
    {
 
    }
 
-   public interface AsyncEnumeratorObservable<out T> : AsyncEnumerator<T>, ExecutionItemObservable<T>
+   public interface AsyncEnumeratorObservable<out T, out TMetadata> : AsyncEnumeratorObservable<T>, AsyncEnumerationObservation<T, TMetadata>
    {
 
    }
 
-   public interface AsyncEnumeratorObservable<out T, out TStatement> : AsyncEnumeratorObservable<T>, ConnectionObservable<TStatement, T>
+   public interface AsyncEnumerationObservation<out T>
+   {
+      event GenericEventHandler<EnumerationItemEventArgs<T>> AfterEnumerationItemEncountered;
+
+   }
+
+   public interface AsyncEnumerationObservation<out T, out TMetadata> : AsyncEnumerationObservation<T>
+   {
+      event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> BeforeEnumerationStart;
+      event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> AfterEnumerationStart;
+
+      event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> BeforeEnumerationEnd;
+      event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> AfterEnumerationEnd;
+   }
+
+   public interface EnumerationStartedEventArgs<out TStatement>
+   {
+      TStatement Statement { get; }
+   }
+
+   public interface EnumerationItemEventArgs<out TEnumerableItem>
+   {
+      TEnumerableItem Item { get; }
+   }
+
+   public interface EnumerationEndedEventArgs<out TStatement> : EnumerationStartedEventArgs<TStatement>
    {
 
    }

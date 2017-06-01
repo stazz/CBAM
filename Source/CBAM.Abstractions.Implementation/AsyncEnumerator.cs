@@ -212,7 +212,6 @@ namespace CBAM.Abstractions.Implementation
          var prev = Interlocked.Exchange( ref this._current, null );
          if ( prev != null || disposeDelegate != null )
          {
-            this.IterationEndedEvent.InvokeAllEventHandlers( ( evt ) => evt( null, new IterationEndedEventArgs() ), throwExceptions: false );
             if ( disposeDelegate == null )
             {
                disposeDelegate = prev.Dispose;
@@ -235,30 +234,31 @@ namespace CBAM.Abstractions.Implementation
          return null;
       }
 
-      public event EventHandler<IterationEndedEventArgs> IterationEndedEvent;
-
    }
 
    public class AsyncEnumeratorObservableForClasses<T, TStatement> : AsyncEnumeratorForClasses<T>, AsyncEnumeratorObservable<T, TStatement>
       where T : class
    {
       private readonly TStatement _statement;
-      private readonly Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionStart;
-      private readonly Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionEnd;
-      private readonly Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> _getGlobalAfterStatementExecutionEnd;
-      private readonly Func<GenericEventHandler<StatementExecutionResultEventArgs<T>>> _getGlobalAfterStatementExecutionItemEncountered;
+      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionStart;
+      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> _getGlobalAfterStatementExecutionStart;
+      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionEnd;
+      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> _getGlobalAfterStatementExecutionEnd;
+      private readonly Func<GenericEventHandler<EnumerationItemEventArgs<T>>> _getGlobalAfterStatementExecutionItemEncountered;
 
       public AsyncEnumeratorObservableForClasses(
          InitialMoveNextAsyncDelegate<T> initialMoveNext,
          TStatement statement,
-         Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<StatementExecutionResultEventArgs<T>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<T>>> getGlobalAfterStatementExecutionItemEncountered
          ) : base( initialMoveNext )
       {
          this._statement = statement;
          this._getGlobalBeforeStatementExecutionStart = getGlobalBeforeStatementExecutionStart;
+         this._getGlobalAfterStatementExecutionStart = getGlobalAfterStatementExecutionStart;
          this._getGlobalBeforeStatementExecutionEnd = getGlobalBeforeStatementExecutionEnd;
          this._getGlobalAfterStatementExecutionEnd = getGlobalAfterStatementExecutionEnd;
          this._getGlobalAfterStatementExecutionItemEncountered = getGlobalAfterStatementExecutionItemEncountered;
@@ -266,21 +266,29 @@ namespace CBAM.Abstractions.Implementation
 
       protected override async Task<(bool, T, MoveNextAsyncDelegate<T>, DisposeAsyncDelegate)> CallInitialMoveNext( InitialMoveNextAsyncDelegate<T> initialMoveNext )
       {
-         this.BeforeStatementExecutionStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         this.BeforeEnumerationStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
          this._getGlobalBeforeStatementExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
-         return await base.CallInitialMoveNext( initialMoveNext );
+         try
+         {
+            return await base.CallInitialMoveNext( initialMoveNext );
+         }
+         finally
+         {
+            this.AfterEnumerationStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+            this._getGlobalAfterStatementExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         }
       }
 
       protected override Task AfterMoveNextSucessful()
       {
-         this.AfterStatementExecutionItemEncountered?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T>( this.Current ) ), throwExceptions: false );
+         this.AfterEnumerationItemEncountered?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T>( this.Current ) ), throwExceptions: false );
          this._getGlobalAfterStatementExecutionItemEncountered?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T>( this.Current ) ), throwExceptions: false );
          return base.AfterMoveNextSucessful();
       }
 
       protected override async Task PerformDispose( DisposeAsyncDelegate disposeDelegate = null )
       {
-         this.BeforeStatementExecutionEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         this.BeforeEnumerationEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
          this._getGlobalBeforeStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
          try
          {
@@ -288,15 +296,18 @@ namespace CBAM.Abstractions.Implementation
          }
          finally
          {
-            this.AfterStatementExecutionEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+            this.AfterEnumerationEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
             this._getGlobalAfterStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
          }
 
       }
 
-      public event GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>> BeforeStatementExecutionStart;
-      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> BeforeStatementExecutionEnd;
-      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> AfterStatementExecutionEnd;
-      public event GenericEventHandler<StatementExecutionResultEventArgs<T>> AfterStatementExecutionItemEncountered;
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> BeforeEnumerationStart;
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> AfterEnumerationStart;
+
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> BeforeEnumerationEnd;
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> AfterEnumerationEnd;
+
+      public event GenericEventHandler<EnumerationItemEventArgs<T>> AfterEnumerationItemEncountered;
    }
 }

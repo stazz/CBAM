@@ -51,10 +51,11 @@ namespace CBAM.Abstractions.Implementation
 
       protected override AsyncEnumeratorObservable<TEnumerableItem, TStatement> PerformCreateIterationArguments(
          TStatement stmt,
-         Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
          )
       {
          return new AsyncEnumeratorObservableForClasses<TEnumerableItem, TStatement>( async () =>
@@ -66,7 +67,7 @@ namespace CBAM.Abstractions.Implementation
                false
                );
             return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async () => await this.DisposeStatementAsync( reserved ));
-         }, stmt, getGlobalBeforeStatementExecutionStart, getGlobalBeforeStatementExecutionEnd, getGlobalAfterStatementExecutionEnd, getGlobalAfterStatementExecutionItemEncountered );
+         }, stmt, getGlobalBeforeStatementExecutionStart, getGlobalAfterStatementExecutionStart, getGlobalBeforeStatementExecutionEnd, getGlobalAfterStatementExecutionEnd, getGlobalAfterStatementExecutionItemEncountered );
       }
 
       protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( TStatement stmt, ReservedForStatement reservationObject );
