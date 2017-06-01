@@ -89,7 +89,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AfterEnumerationItemEncountered
+      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>> AfterEnumerationItemEncountered
       {
          add
          {
@@ -98,6 +98,66 @@ namespace CBAM.Abstractions.Implementation
          remove
          {
             this.ConnectionFunctionality.AfterEnumerationItemEncountered -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationStart
+      {
+         add
+         {
+            this.ConnectionFunctionality.BeforeEnumerationStart += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.BeforeEnumerationStart -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationStart
+      {
+         add
+         {
+            this.ConnectionFunctionality.AfterEnumerationStart += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.AfterEnumerationStart -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationItemEncountered
+      {
+         add
+         {
+            this.ConnectionFunctionality.AfterEnumerationItemEncountered += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.AfterEnumerationItemEncountered -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationEnd
+      {
+         add
+         {
+            this.ConnectionFunctionality.BeforeEnumerationEnd += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.BeforeEnumerationEnd -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationEnd
+      {
+         add
+         {
+            this.ConnectionFunctionality.AfterEnumerationEnd += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.AfterEnumerationEnd -= value;
          }
       }
 
@@ -180,7 +240,71 @@ namespace CBAM.Abstractions.Implementation
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> BeforeEnumerationEnd;
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> AfterEnumerationEnd;
 
-      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AfterEnumerationItemEncountered;
+      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>> AfterEnumerationItemEncountered;
+
+      event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationStart
+      {
+         add
+         {
+            this.BeforeEnumerationStart += value;
+         }
+
+         remove
+         {
+            this.BeforeEnumerationStart -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationStart
+      {
+         add
+         {
+            this.AfterEnumerationStart += value;
+         }
+
+         remove
+         {
+            this.AfterEnumerationStart -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationItemEncountered
+      {
+         add
+         {
+            this.AfterEnumerationItemEncountered += value;
+         }
+         remove
+         {
+            this.AfterEnumerationItemEncountered -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationEnd
+      {
+         add
+         {
+            this.BeforeEnumerationEnd += value;
+         }
+
+         remove
+         {
+            this.BeforeEnumerationEnd -= value;
+         }
+      }
+
+      event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationEnd
+      {
+         add
+         {
+            this.AfterEnumerationEnd += value;
+         }
+
+         remove
+         {
+            this.AfterEnumerationEnd -= value;
+         }
+      }
 
       internal protected void ResetCancellationToken()
       {
@@ -208,7 +332,7 @@ namespace CBAM.Abstractions.Implementation
          Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
          Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
          Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>>> getGlobalAfterStatementExecutionItemEncountered
          );
 
       protected abstract void ValidateStatementOrThrow( TStatement statement );
@@ -218,10 +342,10 @@ namespace CBAM.Abstractions.Implementation
    {
       public StatementExecutionStartedEventArgsImpl( TStatement statement )
       {
-         this.Statement = statement;
+         this.Metadata = statement;
       }
 
-      public TStatement Statement { get; }
+      public TStatement Metadata { get; }
    }
 
    public class StatementExecutionResultEventArgsImpl<TEnumerableItem> : EnumerationItemEventArgs<TEnumerableItem>
@@ -241,6 +365,20 @@ namespace CBAM.Abstractions.Implementation
          ) : base( statement )
       {
       }
+   }
+
+   public class StatementExecutionResultEventArgsImpl<TEnumerableItem, TMetadata> : StatementExecutionResultEventArgsImpl<TEnumerableItem>, EnumerationItemEventArgs<TEnumerableItem, TMetadata>
+   {
+      public StatementExecutionResultEventArgsImpl(
+         TEnumerableItem item,
+         TMetadata metadata
+         )
+         : base( item )
+      {
+         this.Metadata = metadata;
+      }
+
+      public TMetadata Metadata { get; }
    }
 
 }

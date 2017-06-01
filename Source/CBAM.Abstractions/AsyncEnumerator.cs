@@ -45,33 +45,76 @@ namespace CBAM.Abstractions
 
    public interface AsyncEnumerationObservation<out T>
    {
+      event GenericEventHandler<EnumerationStartedEventArgs> BeforeEnumerationStart;
+      event GenericEventHandler<EnumerationStartedEventArgs> AfterEnumerationStart;
+
       event GenericEventHandler<EnumerationItemEventArgs<T>> AfterEnumerationItemEncountered;
 
+      event GenericEventHandler<EnumerationEndedEventArgs> BeforeEnumerationEnd;
+      event GenericEventHandler<EnumerationEndedEventArgs> AfterEnumerationEnd;
    }
 
    public interface AsyncEnumerationObservation<out T, out TMetadata> : AsyncEnumerationObservation<T>
    {
-      event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> BeforeEnumerationStart;
-      event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> AfterEnumerationStart;
+      new event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> BeforeEnumerationStart;
+      new event GenericEventHandler<EnumerationStartedEventArgs<TMetadata>> AfterEnumerationStart;
 
-      event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> BeforeEnumerationEnd;
-      event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> AfterEnumerationEnd;
+      new event GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>> AfterEnumerationItemEncountered;
+
+      new event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> BeforeEnumerationEnd;
+      new event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> AfterEnumerationEnd;
    }
 
-   public interface EnumerationStartedEventArgs<out TStatement>
+   public interface EnumerationStartedEventArgs
    {
-      TStatement Statement { get; }
    }
 
-   public interface EnumerationItemEventArgs<out TEnumerableItem>
+   public interface EnumerationItemEventArgs<out T>
    {
-      TEnumerableItem Item { get; }
+      T Item { get; }
    }
 
-   public interface EnumerationEndedEventArgs<out TStatement> : EnumerationStartedEventArgs<TStatement>
+   public interface EnumerationEndedEventArgs : EnumerationStartedEventArgs
    {
 
    }
+
+   public interface EnumerationStartedEventArgs<out TMetadata> : EnumerationStartedEventArgs
+   {
+      TMetadata Metadata { get; }
+   }
+
+   public interface EnumerationEndedEventArgs<out TMetadata> : EnumerationStartedEventArgs<TMetadata>, EnumerationEndedEventArgs
+   {
+
+   }
+
+   public interface EnumerationItemEventArgs<out T, out TMetadata> : EnumerationItemEventArgs<T>
+   {
+      TMetadata Metadata { get; }
+   }
+
+   public static class EnumerationEventArgsUtility
+   {
+      private sealed class EnumerationStarted : EnumerationStartedEventArgs
+      {
+      }
+
+      private sealed class EnumerationEnded : EnumerationEndedEventArgs
+      {
+
+      }
+
+      static EnumerationEventArgsUtility()
+      {
+         StatelessStart = new EnumerationStarted();
+         StatelessEnd = new EnumerationEnded();
+      }
+
+      public static EnumerationStartedEventArgs StatelessStart { get; }
+      public static EnumerationEndedEventArgs StatelessEnd { get; }
+   }
+
 }
 
 public static partial class E_CBAM

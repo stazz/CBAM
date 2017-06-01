@@ -55,7 +55,7 @@ namespace CBAM.Abstractions.Implementation
          Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
          Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
          Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>>> getGlobalAfterStatementExecutionItemEncountered
          )
       {
          return new AsyncEnumeratorObservableForClasses<TEnumerableItem, TStatement>( async () =>

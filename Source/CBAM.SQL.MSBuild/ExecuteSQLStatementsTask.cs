@@ -83,7 +83,7 @@ namespace CBAM.SQL.MSBuild
 
       private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<StatementBuilder> args )
       {
-         this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Statement.SQL );
+         this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Metadata.SQL );
       }
 
       private void Connection_AfterStatementExecutionItemEncountered( EnumerationItemEventArgs<SQLStatementExecutionResult> args )
