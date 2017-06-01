@@ -463,11 +463,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          var idx = 0;
          var tag = array.ReadZeroTerminatedStringFromBytes( ref idx, encoding );
-         this.CommandTag = tag;
+         this.FullCommandTag = tag;
          idx = 0;
          while ( Char.IsWhiteSpace( tag[idx] ) && ++idx < tag.Length ) ;
+         String actualTag = null;
          if ( idx < tag.Length - 1 )
          {
+            var start = idx;
             var max = idx;
             while ( !Char.IsWhiteSpace( tag[max] ) && ++max < tag.Length ) ;
             var isInsert = max - idx == INSERT.Length && tag.IndexOf( INSERT, StringComparison.OrdinalIgnoreCase ) == idx;
@@ -487,19 +489,40 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Last word is affected row count
             max = tag.Length - 1;
             while ( Char.IsWhiteSpace( tag[max] ) && --max >= 0 ) ;
-            idx = max;
-            ++max;
-            while ( !Char.IsWhiteSpace( tag[idx] ) && --idx >= 0 ) ;
-            ++idx;
-            if ( max - idx > 0 && Int32.TryParse( tag.Substring( idx, max - idx ), out Int32 affectedRows ) )
+            if ( max > 0 )
             {
-               this.AffectedRows = affectedRows;
+               idx = max;
+               ++max;
+               while ( !Char.IsWhiteSpace( tag[idx] ) && --idx >= 0 ) ;
+               ++idx;
+               if ( max - idx > 0 && Int32.TryParse( tag.Substring( idx, max - idx ), out Int32 affectedRows ) )
+               {
+                  this.AffectedRows = affectedRows;
+               }
+
+               // First integer word marks actual command id
+               if ( this.AffectedRows.HasValue )
+               {
+                  // See if previous word is number (happens only in insert)
+                  --idx;
+                  Char c;
+                  while ( ( Char.IsDigit( ( c = tag[idx] ) ) || c == '-' || c == '+' || Char.IsWhiteSpace( c ) ) && --idx >= 0 ) ;
+                  if ( idx >= 0 )
+                  {
+                     actualTag = tag.Substring( 0, idx + 1 );
+                  }
+               }
             }
+
          }
+
+         this.CommandTag = actualTag ?? tag;
 
       }
 
       internal String CommandTag { get; }
+
+      internal String FullCommandTag { get; }
 
       internal Int32? AffectedRows { get; }
 

@@ -41,7 +41,55 @@ namespace CBAM.Abstractions.Implementation
 
       public TVendorFunctionality VendorFunctionality { get; }
 
-      public AsyncEnumerator<TEnumerableItem> PrepareStatementForExecution( TStatement statementBuilder )
+      public event GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>> BeforeStatementExecutionStart
+      {
+         add
+         {
+            this.ConnectionFunctionality.BeforeStatementExecutionStart += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.BeforeStatementExecutionStart -= value;
+         }
+      }
+
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> BeforeStatementExecutionEnd
+      {
+         add
+         {
+            this.ConnectionFunctionality.BeforeStatementExecutionEnd += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.BeforeStatementExecutionEnd -= value;
+         }
+      }
+
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> AfterStatementExecutionEnd
+      {
+         add
+         {
+            this.ConnectionFunctionality.AfterStatementExecutionEnd += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.AfterStatementExecutionEnd -= value;
+         }
+      }
+
+      public event GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>> AfterStatementExecutionItemEncountered
+      {
+         add
+         {
+            this.ConnectionFunctionality.AfterStatementExecutionItemEncountered += value;
+         }
+         remove
+         {
+            this.ConnectionFunctionality.AfterStatementExecutionItemEncountered -= value;
+         }
+      }
+
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatement> PrepareStatementForExecution( TStatement statementBuilder )
       {
          return this.ConnectionFunctionality.CreateIterationArguments( statementBuilder );
       }
@@ -93,17 +141,15 @@ namespace CBAM.Abstractions.Implementation
       protected abstract Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
    }
 
-   public interface ConnectionFunctionality<in TStatement, out TEnumerableItem>
+   public interface ConnectionFunctionality<TStatement, out TEnumerableItem> : ConnectionObservable<TStatement, TEnumerableItem>
    {
-      AsyncEnumerator<TEnumerableItem> CreateIterationArguments( TStatement stmt );
+      AsyncEnumeratorObservable<TEnumerableItem, TStatement> CreateIterationArguments( TStatement stmt );
    }
 
    public abstract class DefaultConnectionFunctionality<TStatement, TEnumerableItem> : ConnectionFunctionality<TStatement, TEnumerableItem>
    {
 
       private Object _cancellationToken;
-
-
       public CancellationToken CurrentCancellationToken
       {
          get
@@ -116,22 +162,68 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      public event GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>> BeforeStatementExecutionStart;
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> BeforeStatementExecutionEnd;
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> AfterStatementExecutionEnd;
+      public event GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>> AfterStatementExecutionItemEncountered;
+
       internal protected void ResetCancellationToken()
       {
          Interlocked.Exchange( ref this._cancellationToken, null );
       }
 
-      public AsyncEnumerator<TEnumerableItem> CreateIterationArguments( TStatement statement )
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatement> CreateIterationArguments( TStatement statement )
       {
          this.ValidateStatementOrThrow( statement );
-         return this.PerformCreateIterationArguments( statement );
+         return this.PerformCreateIterationArguments(
+            statement,
+            () => this.BeforeStatementExecutionStart,
+            () => this.BeforeStatementExecutionEnd,
+            () => this.AfterStatementExecutionEnd,
+            () => this.AfterStatementExecutionItemEncountered
+            );
       }
 
       public abstract Boolean CanBeReturnedToPool { get; }
 
-      protected abstract AsyncEnumerator<TEnumerableItem> PerformCreateIterationArguments( TStatement statement );
+      protected abstract AsyncEnumeratorObservable<TEnumerableItem, TStatement> PerformCreateIterationArguments(
+         TStatement statement,
+         Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
+         );
 
       protected abstract void ValidateStatementOrThrow( TStatement statement );
+   }
+
+   public class StatementExecutionStartedEventArgsImpl<TStatement> : StatementExecutionStartedEventArgs<TStatement>
+   {
+      public StatementExecutionStartedEventArgsImpl( TStatement statement )
+      {
+         this.Statement = statement;
+      }
+
+      public TStatement Statement { get; }
+   }
+
+   public class StatementExecutionResultEventArgsImpl<TEnumerableItem> : StatementExecutionResultEventArgs<TEnumerableItem>
+   {
+      public StatementExecutionResultEventArgsImpl( TEnumerableItem item )
+      {
+         this.Item = item;
+      }
+
+      public TEnumerableItem Item { get; }
+   }
+
+   public class StatementExecutionEndedEventArgsImpl<TStatement> : StatementExecutionStartedEventArgsImpl<TStatement>, StatementExecutionEndedEventArgs<TStatement>
+   {
+      public StatementExecutionEndedEventArgsImpl(
+         TStatement statement
+         ) : base( statement )
+      {
+      }
    }
 
 }

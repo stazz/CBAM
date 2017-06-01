@@ -111,7 +111,7 @@ public static partial class E_CBAM
    public static async Task ExecuteNonQueryAsync( this SQLConnection connection, StatementBuilder stmt, Action action )
    {
       var iArgs = connection.PrepareStatementForExecution( stmt );
-      iArgs.IterationEndedEvent += ( sender, args ) => action();
+      iArgs.BeforeStatementExecutionEnd += ( args ) => action();
       while ( await iArgs.MoveNextAsync() ) ;
    }
 

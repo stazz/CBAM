@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UtilPack;
 
 namespace CBAM.Abstractions.Implementation
 {
@@ -41,7 +42,7 @@ namespace CBAM.Abstractions.Implementation
             )
          {
             this.MoveNext = moveNext;
-            this.Current = current ?? throw new ArgumentNullException( nameof( current ) );
+            this.Current = ArgumentValidator.ValidateNotNull( nameof( current ), current );
             this.Dispose = disposeDelegate;
          }
 
@@ -77,7 +78,7 @@ namespace CBAM.Abstractions.Implementation
       {
          this._state = STATE_INITIAL;
          this._current = null;
-         this._initialMoveNext = initialMoveNext ?? throw new ArgumentNullException( nameof( initialMoveNext ) );
+         this._initialMoveNext = ArgumentValidator.ValidateNotNull( nameof( initialMoveNext ), initialMoveNext );
       }
 
       public async Task<Boolean> MoveNextAsync()
@@ -112,7 +113,7 @@ namespace CBAM.Abstractions.Implementation
                else
                {
                   // First time calling move next
-                  var result = await this._initialMoveNext();
+                  var result = await this.CallInitialMoveNext( this._initialMoveNext );
                   retVal = result.Item1;
                   if ( retVal )
                   {
@@ -128,7 +129,15 @@ namespace CBAM.Abstractions.Implementation
             {
                try
                {
-                  if ( !retVal )
+                  if ( retVal )
+                  {
+                     var t = this.AfterMoveNextSucessful();
+                     if ( t != null )
+                     {
+                        await t;
+                     }
+                  }
+                  else
                   {
                      await this.PerformDispose( disposeDelegate );
                   }
@@ -198,19 +207,12 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      private async Task PerformDispose( DisposeAsyncDelegate disposeDelegate = null )
+      protected virtual async Task PerformDispose( DisposeAsyncDelegate disposeDelegate = null )
       {
          var prev = Interlocked.Exchange( ref this._current, null );
          if ( prev != null || disposeDelegate != null )
          {
-            try
-            {
-               this.IterationEndedEvent?.Invoke( null, new IterationEndedEventArgs() );
-            }
-            catch
-            {
-               // Ignore
-            }
+            this.IterationEndedEvent.InvokeAllEventHandlers( ( evt ) => evt( null, new IterationEndedEventArgs() ), throwExceptions: false );
             if ( disposeDelegate == null )
             {
                disposeDelegate = prev.Dispose;
@@ -223,7 +225,78 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      protected virtual async Task<(Boolean, T, MoveNextAsyncDelegate<T>, DisposeAsyncDelegate)> CallInitialMoveNext( InitialMoveNextAsyncDelegate<T> initialMoveNext )
+      {
+         return await initialMoveNext();
+      }
+
+      protected virtual Task AfterMoveNextSucessful()
+      {
+         return null;
+      }
+
       public event EventHandler<IterationEndedEventArgs> IterationEndedEvent;
 
+   }
+
+   public class AsyncEnumeratorObservableForClasses<T, TStatement> : AsyncEnumeratorForClasses<T>, AsyncEnumeratorObservable<T, TStatement>
+      where T : class
+   {
+      private readonly TStatement _statement;
+      private readonly Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionStart;
+      private readonly Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> _getGlobalBeforeStatementExecutionEnd;
+      private readonly Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> _getGlobalAfterStatementExecutionEnd;
+      private readonly Func<GenericEventHandler<StatementExecutionResultEventArgs<T>>> _getGlobalAfterStatementExecutionItemEncountered;
+
+      public AsyncEnumeratorObservableForClasses(
+         InitialMoveNextAsyncDelegate<T> initialMoveNext,
+         TStatement statement,
+         Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionResultEventArgs<T>>> getGlobalAfterStatementExecutionItemEncountered
+         ) : base( initialMoveNext )
+      {
+         this._statement = statement;
+         this._getGlobalBeforeStatementExecutionStart = getGlobalBeforeStatementExecutionStart;
+         this._getGlobalBeforeStatementExecutionEnd = getGlobalBeforeStatementExecutionEnd;
+         this._getGlobalAfterStatementExecutionEnd = getGlobalAfterStatementExecutionEnd;
+         this._getGlobalAfterStatementExecutionItemEncountered = getGlobalAfterStatementExecutionItemEncountered;
+      }
+
+      protected override async Task<(bool, T, MoveNextAsyncDelegate<T>, DisposeAsyncDelegate)> CallInitialMoveNext( InitialMoveNextAsyncDelegate<T> initialMoveNext )
+      {
+         this.BeforeStatementExecutionStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         this._getGlobalBeforeStatementExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         return await base.CallInitialMoveNext( initialMoveNext );
+      }
+
+      protected override Task AfterMoveNextSucessful()
+      {
+         this.AfterStatementExecutionItemEncountered?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T>( this.Current ) ), throwExceptions: false );
+         this._getGlobalAfterStatementExecutionItemEncountered?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T>( this.Current ) ), throwExceptions: false );
+         return base.AfterMoveNextSucessful();
+      }
+
+      protected override async Task PerformDispose( DisposeAsyncDelegate disposeDelegate = null )
+      {
+         this.BeforeStatementExecutionEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         this._getGlobalBeforeStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         try
+         {
+            await base.PerformDispose( disposeDelegate );
+         }
+         finally
+         {
+            this.AfterStatementExecutionEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+            this._getGlobalAfterStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TStatement>( this._statement ) ), throwExceptions: false );
+         }
+
+      }
+
+      public event GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>> BeforeStatementExecutionStart;
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> BeforeStatementExecutionEnd;
+      public event GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> AfterStatementExecutionEnd;
+      public event GenericEventHandler<StatementExecutionResultEventArgs<T>> AfterStatementExecutionItemEncountered;
    }
 }

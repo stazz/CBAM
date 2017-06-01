@@ -30,12 +30,19 @@ namespace CBAM.Abstractions
       Task<Boolean> MoveNextAsync();
       T Current { get; }
       Task ResetAsync();
-
-      // This event is useful when the first MoveNextAsync call returns 'false', but we still want to do something before the call returns.
-      event EventHandler<IterationEndedEventArgs> IterationEndedEvent;
    }
 
    public class IterationEndedEventArgs : EventArgs
+   {
+
+   }
+
+   public interface AsyncEnumeratorObservable<out T> : AsyncEnumerator<T>, ExecutionItemObservable<T>
+   {
+
+   }
+
+   public interface AsyncEnumeratorObservable<out T, out TStatement> : AsyncEnumeratorObservable<T>, ConnectionObservable<TStatement, T>
    {
 
    }

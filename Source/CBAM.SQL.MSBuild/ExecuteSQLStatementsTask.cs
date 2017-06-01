@@ -26,6 +26,7 @@ using Microsoft.Build.Utilities;
 using System.IO;
 
 using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
+using CBAM.Abstractions;
 
 namespace CBAM.SQL.MSBuild
 {
@@ -55,12 +56,41 @@ namespace CBAM.SQL.MSBuild
             encoding = Encoding.GetEncoding( encodingName );
          }
 
-         using ( var fs = File.Open( Path.GetFullPath( this.SQLStatementsFilePath ), System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
+         connection.BeforeStatementExecutionStart += this.Connection_BeforeStatementExecutionStart;
+         connection.AfterStatementExecutionItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
+
+         using ( new UsingHelper( () =>
          {
-            await connection.ExecuteStatementsFromStreamAsync(
-               fs,
-               encoding.CreateDefaultEncodingInfo()
-               );
+            connection.BeforeStatementExecutionStart -= this.Connection_BeforeStatementExecutionStart;
+            connection.AfterStatementExecutionItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
+         } ) )
+         {
+            var path = Path.GetFullPath( this.SQLStatementsFilePath );
+            using ( var fs = File.Open( path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
+            {
+               this.Log.LogMessage(
+                  MessageImportance.High,
+                  "Executed {0} statements from \"{1}\".",
+                  await connection.ExecuteStatementsFromStreamAsync(
+                     fs,
+                     encoding.CreateDefaultEncodingInfo()
+                  ),
+                  path
+                  );
+            }
+         }
+      }
+
+      private void Connection_BeforeStatementExecutionStart( StatementExecutionStartedEventArgs<StatementBuilder> args )
+      {
+         this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Statement.SQL );
+      }
+
+      private void Connection_AfterStatementExecutionItemEncountered( StatementExecutionResultEventArgs<SQLStatementExecutionResult> args )
+      {
+         if ( args.Item is SingleCommandExecutionResult commandResult )
+         {
+            this.Log.LogMessage( MessageImportance.Low, "Result: {0} statement, {1} rows affected.", commandResult.CommandTag, commandResult.AffectedRows );
          }
       }
 

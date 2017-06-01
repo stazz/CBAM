@@ -23,10 +23,10 @@ using System.Threading.Tasks;
 
 namespace CBAM.Abstractions
 {
-   public interface Connection<in TStatement, in TStatementCreationArgs, out TEnumerableItem, out TVendorFunctionality>
+   public interface Connection<TStatement, in TStatementCreationArgs, out TEnumerableItem, out TVendorFunctionality> : ConnectionObservable<TStatement, TEnumerableItem>
       where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
-      AsyncEnumerator<TEnumerableItem> PrepareStatementForExecution( TStatement statement );
+      AsyncEnumeratorObservable<TEnumerableItem, TStatement> PrepareStatementForExecution( TStatement statement );
       TVendorFunctionality VendorFunctionality { get; }
       CancellationToken CurrentCancellationToken { get; }
    }
@@ -34,5 +34,32 @@ namespace CBAM.Abstractions
    public interface ConnectionVendorFunctionality<out TStatement, in TStatementCreationArgs>
    {
       TStatement CreateStatementBuilder( TStatementCreationArgs sql );
+   }
+
+   public interface StatementExecutionStartedEventArgs<out TStatement>
+   {
+      TStatement Statement { get; }
+   }
+
+   public interface StatementExecutionResultEventArgs<out TEnumerableItem>
+   {
+      TEnumerableItem Item { get; }
+   }
+
+   public interface StatementExecutionEndedEventArgs<out TStatement> : StatementExecutionStartedEventArgs<TStatement>
+   {
+
+   }
+
+   public interface ExecutionItemObservable<out TEnumerableItem>
+   {
+      event UtilPack.GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>> AfterStatementExecutionItemEncountered;
+   }
+
+   public interface ConnectionObservable<out TStatement, out TEnumerableItem> : ExecutionItemObservable<TEnumerableItem>
+   {
+      event UtilPack.GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>> BeforeStatementExecutionStart;
+      event UtilPack.GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> BeforeStatementExecutionEnd;
+      event UtilPack.GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>> AfterStatementExecutionEnd;
    }
 }

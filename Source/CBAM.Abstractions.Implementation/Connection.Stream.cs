@@ -49,9 +49,15 @@ namespace CBAM.Abstractions.Implementation
          this._currentlyExecutingStatement = NotInUse.Instance;
       }
 
-      protected override AsyncEnumerator<TEnumerableItem> PerformCreateIterationArguments( TStatement stmt )
+      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatement> PerformCreateIterationArguments(
+         TStatement stmt,
+         Func<GenericEventHandler<StatementExecutionStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<StatementExecutionResultEventArgs<TEnumerableItem>>> getGlobalAfterStatementExecutionItemEncountered
+         )
       {
-         return new AsyncEnumeratorForClasses<TEnumerableItem>( async () =>
+         return new AsyncEnumeratorObservableForClasses<TEnumerableItem, TStatement>( async () =>
          {
             var reserved = this.CreateReservationObject( stmt );
             var simpleTuple = await this.UseStreamOutsideStatementAsync(
@@ -60,7 +66,7 @@ namespace CBAM.Abstractions.Implementation
                false
                );
             return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async () => await this.DisposeStatementAsync( reserved ));
-         } );
+         }, stmt, getGlobalBeforeStatementExecutionStart, getGlobalBeforeStatementExecutionEnd, getGlobalAfterStatementExecutionEnd, getGlobalAfterStatementExecutionItemEncountered );
       }
 
       protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( TStatement stmt, ReservedForStatement reservationObject );

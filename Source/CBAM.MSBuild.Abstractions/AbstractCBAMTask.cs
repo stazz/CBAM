@@ -76,7 +76,7 @@ namespace CBAM.MSBuild.Abstractions
                   // Only log if we did not receive cancellation
                   if ( !this._cancellationSource.IsCancellationRequested )
                   {
-                     this.Log.LogError( exc.ToString() );
+                     this.Log.LogErrorFromException( exc );
                   }
                }
             }
