@@ -90,7 +90,7 @@ namespace CBAM.SQL.MSBuild
       {
          if ( args.Item is SingleCommandExecutionResult commandResult )
          {
-            this.Log.LogMessage( MessageImportance.Low, "Result: {0} statement, {1} row{2} affected.", commandResult.CommandTag, commandResult.AffectedRows, commandResult.AffectedRows == 0 ? "" : "s" );
+            this.Log.LogMessage( MessageImportance.Low, "Result: {0} statement, {1} row{2} affected.", commandResult.CommandTag, commandResult.AffectedRows, commandResult.AffectedRows == 1 ? "" : "s" );
          }
       }
 
