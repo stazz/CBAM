@@ -240,28 +240,28 @@ namespace CBAM.Abstractions.Implementation
       where T : class
    {
       private readonly TMetadata _metadata;
-      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> _getGlobalBeforeStatementExecutionStart;
-      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> _getGlobalAfterStatementExecutionStart;
-      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> _getGlobalBeforeStatementExecutionEnd;
-      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> _getGlobalAfterStatementExecutionEnd;
-      private readonly Func<GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>>> _getGlobalAfterStatementExecutionItemEncountered;
+      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> _getGlobalBeforeEnumerationExecutionStart;
+      private readonly Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> _getGlobalAfterEnumerationExecutionStart;
+      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> _getGlobalBeforeEnumerationExecutionEnd;
+      private readonly Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> _getGlobalAfterEnumerationExecutionEnd;
+      private readonly Func<GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>>> _getGlobalAfterEnumerationExecutionItemEncountered;
 
       public AsyncEnumeratorObservableForClasses(
          InitialMoveNextAsyncDelegate<T> initialMoveNext,
          TMetadata metadata,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> getGlobalAfterStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> getGlobalBeforeEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TMetadata>>> getGlobalAfterEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> getGlobalBeforeEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TMetadata>>> getGlobalAfterEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>>> getGlobalAfterEnumerationExecutionItemEncountered
          ) : base( initialMoveNext )
       {
          this._metadata = metadata;
-         this._getGlobalBeforeStatementExecutionStart = getGlobalBeforeStatementExecutionStart;
-         this._getGlobalAfterStatementExecutionStart = getGlobalAfterStatementExecutionStart;
-         this._getGlobalBeforeStatementExecutionEnd = getGlobalBeforeStatementExecutionEnd;
-         this._getGlobalAfterStatementExecutionEnd = getGlobalAfterStatementExecutionEnd;
-         this._getGlobalAfterStatementExecutionItemEncountered = getGlobalAfterStatementExecutionItemEncountered;
+         this._getGlobalBeforeEnumerationExecutionStart = getGlobalBeforeEnumerationExecutionStart;
+         this._getGlobalAfterEnumerationExecutionStart = getGlobalAfterEnumerationExecutionStart;
+         this._getGlobalBeforeEnumerationExecutionEnd = getGlobalBeforeEnumerationExecutionEnd;
+         this._getGlobalAfterEnumerationExecutionEnd = getGlobalAfterEnumerationExecutionEnd;
+         this._getGlobalAfterEnumerationExecutionItemEncountered = getGlobalAfterEnumerationExecutionItemEncountered;
       }
 
 
@@ -332,38 +332,41 @@ namespace CBAM.Abstractions.Implementation
 
       protected override async Task<(bool, T, MoveNextAsyncDelegate<T>, DisposeAsyncDelegate)> CallInitialMoveNext( InitialMoveNextAsyncDelegate<T> initialMoveNext )
       {
-         this.BeforeEnumerationStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
-         this._getGlobalBeforeStatementExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
+         EnumerationStartedEventArgsImpl<TMetadata> args = null;
+         this.BeforeEnumerationStart?.InvokeAllEventHandlers( evt => evt( ( args = new EnumerationStartedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
+         this._getGlobalBeforeEnumerationExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationStartedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
          try
          {
             return await base.CallInitialMoveNext( initialMoveNext );
          }
          finally
          {
-            this.AfterEnumerationStart?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
-            this._getGlobalAfterStatementExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionStartedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
+            this.AfterEnumerationStart?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationStartedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
+            this._getGlobalAfterEnumerationExecutionStart?.Invoke()?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationStartedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
          }
       }
 
       protected override Task AfterMoveNextSucessful()
       {
-         this.AfterEnumerationItemEncountered?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T, TMetadata>( this.Current, this._metadata ) ), throwExceptions: false );
-         this._getGlobalAfterStatementExecutionItemEncountered?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionResultEventArgsImpl<T, TMetadata>( this.Current, this._metadata ) ), throwExceptions: false );
+         EnumerationItemResultEventArgsImpl<T, TMetadata> args = null;
+         this.AfterEnumerationItemEncountered?.InvokeAllEventHandlers( evt => evt( ( args = new EnumerationItemResultEventArgsImpl<T, TMetadata>( this.Current, this._metadata ) ) ), throwExceptions: false );
+         this._getGlobalAfterEnumerationExecutionItemEncountered?.Invoke()?.InvokeAllEventHandlers( evt => evt( args ?? new EnumerationItemResultEventArgsImpl<T, TMetadata>( this.Current, this._metadata ) ), throwExceptions: false );
          return base.AfterMoveNextSucessful();
       }
 
       protected override async Task PerformDispose( DisposeAsyncDelegate disposeDelegate = null )
       {
-         this.BeforeEnumerationEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
-         this._getGlobalBeforeStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
+         EnumerationEndedEventArgsImpl<TMetadata> args = null;
+         this.BeforeEnumerationEnd?.InvokeAllEventHandlers( evt => evt( ( args = new EnumerationEndedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
+         this._getGlobalBeforeEnumerationExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationEndedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
          try
          {
             await base.PerformDispose( disposeDelegate );
          }
          finally
          {
-            this.AfterEnumerationEnd?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
-            this._getGlobalAfterStatementExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( new StatementExecutionEndedEventArgsImpl<TMetadata>( this._metadata ) ), throwExceptions: false );
+            this.AfterEnumerationEnd?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationEndedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
+            this._getGlobalAfterEnumerationExecutionEnd?.Invoke()?.InvokeAllEventHandlers( evt => evt( args ?? ( args = new EnumerationEndedEventArgsImpl<TMetadata>( this._metadata ) ) ), throwExceptions: false );
          }
 
       }
@@ -375,5 +378,48 @@ namespace CBAM.Abstractions.Implementation
       public event GenericEventHandler<EnumerationEndedEventArgs<TMetadata>> AfterEnumerationEnd;
 
       public event GenericEventHandler<EnumerationItemEventArgs<T, TMetadata>> AfterEnumerationItemEncountered;
+   }
+
+   public class EnumerationStartedEventArgsImpl<TStatement> : EnumerationStartedEventArgs<TStatement>
+   {
+      public EnumerationStartedEventArgsImpl( TStatement statement )
+      {
+         this.Metadata = statement;
+      }
+
+      public TStatement Metadata { get; }
+   }
+
+   public class EnumerationItemResultEventArgsImpl<TEnumerableItem> : EnumerationItemEventArgs<TEnumerableItem>
+   {
+      public EnumerationItemResultEventArgsImpl( TEnumerableItem item )
+      {
+         this.Item = item;
+      }
+
+      public TEnumerableItem Item { get; }
+   }
+
+   public class EnumerationEndedEventArgsImpl<TStatement> : EnumerationStartedEventArgsImpl<TStatement>, EnumerationEndedEventArgs<TStatement>
+   {
+      public EnumerationEndedEventArgsImpl(
+         TStatement statement
+         ) : base( statement )
+      {
+      }
+   }
+
+   public class EnumerationItemResultEventArgsImpl<TEnumerableItem, TMetadata> : EnumerationItemResultEventArgsImpl<TEnumerableItem>, EnumerationItemEventArgs<TEnumerableItem, TMetadata>
+   {
+      public EnumerationItemResultEventArgsImpl(
+         TEnumerableItem item,
+         TMetadata metadata
+         )
+         : base( item )
+      {
+         this.Metadata = metadata;
+      }
+
+      public TMetadata Metadata { get; }
    }
 }

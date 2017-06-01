@@ -338,47 +338,4 @@ namespace CBAM.Abstractions.Implementation
       protected abstract void ValidateStatementOrThrow( TStatement statement );
    }
 
-   public class StatementExecutionStartedEventArgsImpl<TStatement> : EnumerationStartedEventArgs<TStatement>
-   {
-      public StatementExecutionStartedEventArgsImpl( TStatement statement )
-      {
-         this.Metadata = statement;
-      }
-
-      public TStatement Metadata { get; }
-   }
-
-   public class StatementExecutionResultEventArgsImpl<TEnumerableItem> : EnumerationItemEventArgs<TEnumerableItem>
-   {
-      public StatementExecutionResultEventArgsImpl( TEnumerableItem item )
-      {
-         this.Item = item;
-      }
-
-      public TEnumerableItem Item { get; }
-   }
-
-   public class StatementExecutionEndedEventArgsImpl<TStatement> : StatementExecutionStartedEventArgsImpl<TStatement>, EnumerationEndedEventArgs<TStatement>
-   {
-      public StatementExecutionEndedEventArgsImpl(
-         TStatement statement
-         ) : base( statement )
-      {
-      }
-   }
-
-   public class StatementExecutionResultEventArgsImpl<TEnumerableItem, TMetadata> : StatementExecutionResultEventArgsImpl<TEnumerableItem>, EnumerationItemEventArgs<TEnumerableItem, TMetadata>
-   {
-      public StatementExecutionResultEventArgsImpl(
-         TEnumerableItem item,
-         TMetadata metadata
-         )
-         : base( item )
-      {
-         this.Metadata = metadata;
-      }
-
-      public TMetadata Metadata { get; }
-   }
-
 }
