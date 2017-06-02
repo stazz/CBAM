@@ -359,7 +359,13 @@ namespace CBAM.Abstractions.Implementation
             }
          }
 
-         await Task.WhenAll( tasks );
+         await
+#if NET40
+            TaskEx
+#else
+            Task
+#endif
+            .WhenAll( tasks );
       }
    }
 

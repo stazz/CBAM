@@ -73,7 +73,7 @@ namespace CBAM.Tabular.Implementation
          this._value = null;
       }
 
-      public async Task<ResultOrNone<Object>> TryGetValueAsync()
+      public async ValueTask<ResultOrNone<Object>> TryGetValueAsync()
       {
          Int32 oldState;
          ResultOrNone<Object> retVal;

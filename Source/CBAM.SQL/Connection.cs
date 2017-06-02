@@ -157,7 +157,7 @@ public static partial class E_CBAM
       await connection.ExecuteNonQueryAsync( connection.CreateStatementBuilder( sql ), action );
    }
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Int32 parameterIndex = 0, Func<DataColumn, Task<T>> extractor = null )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Int32 parameterIndex = 0, Func<DataColumn, ValueTask<T>> extractor = null )
    {
       return await connection.ExecuteStatementAsync( stmt, async args =>
       {
@@ -172,7 +172,7 @@ public static partial class E_CBAM
       } );
    }
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Int32 parameterIndex = 0, Func<DataColumn, Task<T>> extractor = null )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Int32 parameterIndex = 0, Func<DataColumn, ValueTask<T>> extractor = null )
    {
       return await connection.GetFirstOrDefaultAsync( connection.VendorFunctionality.CreateStatementBuilder( sql ), parameterIndex, extractor );
    }

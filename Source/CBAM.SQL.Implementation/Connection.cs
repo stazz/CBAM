@@ -109,9 +109,9 @@ namespace CBAM.SQL.Implementation
 
       protected abstract String GetSQLForSettingReadOnly( Boolean isReadOnly );
 
-      protected abstract Task<Boolean> InterpretReadOnly( DataColumn row );
+      protected abstract ValueTask<Boolean> InterpretReadOnly( DataColumn row );
 
-      protected abstract Task<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row );
+      protected abstract ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row );
    }
 
    public abstract class DefaultConnectionVendorFunctionality<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, StatementBuilder, String, SQLStatementExecutionResult, TConnectionCreationParameters, TConnectionFunctionality>, SQLConnectionVendorFunctionality

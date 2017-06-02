@@ -54,7 +54,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             await this.DoSendMessageAsync( args.Item1, args.Item2, size, args.Item3, args.Item4 );
             if ( !skipFlush )
             {
-               await args.Item2.FlushAsync();
+               await args.Item2.FlushAsync( args.Item3 );
             }
          }
          catch ( Exception exc )

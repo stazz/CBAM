@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.0</TargetFramework>
+    <TargetFrameworks>netstandard1.0;net40;net45</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -9,10 +9,13 @@
     <TreatSpecificWarningsAsErrors />
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
   </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net40' ">
+   <PackageReference Include="System.ValueTuple" Version="4.3.1" />
+  </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.ValueTuple" Version="4.4.0-preview1-25305-02" />
-    <PackageReference Include="UtilPack" Version="1.0.0-RC7" />
+    <PackageReference Include="UtilPack" Version="1.0.0-RC8" />
   </ItemGroup>
 
   <ItemGroup>
@@ -54,7 +57,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking changes to CBAM.Tabular. The .NET 4.0 and 4.5 frameworks are now supported as well.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular</PackageTags>
     <Title>Skeleton Implementations for Common Tabular CBAM Abstractions</Title>
     <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>

@@ -52,7 +52,7 @@ namespace CBAM.Tabular
    public interface DataColumn
    {
       // Will return "none" if read bytes has been started
-      Task<ResultOrNone<Object>> TryGetValueAsync();
+      ValueTask<ResultOrNone<Object>> TryGetValueAsync();
 
       // Will return -1 if value reading via GetValueAsync has started.
       // Will return null on concurrent read
@@ -70,22 +70,22 @@ namespace CBAM.Tabular
 
 public static partial class E_CBAM
 {
-   public static async Task<Object> GetValueAsync( this DataRow row, Int32 index, Type type )
+   public static async ValueTask<Object> GetValueAsync( this DataRow row, Int32 index, Type type )
    {
       return await row.GetColumn( index ).GetValueAsync( type );
    }
 
-   public static async Task<T> GetValueAsync<T>( this DataRow row, Int32 index )
+   public static async ValueTask<T> GetValueAsync<T>( this DataRow row, Int32 index )
    {
       return (T) ( await row.GetValueAsync( index, typeof( T ) ) );
    }
 
-   public static async Task<Object> GetValueAsObjectAsync( this DataRow row, Int32 index )
+   public static async ValueTask<Object> GetValueAsObjectAsync( this DataRow row, Int32 index )
    {
       return await row.GetValueAsync( index, typeof( Object ) );
    }
 
-   public static async Task<Object> GetValueAsync( this DataColumn column, Type type )
+   public static async ValueTask<Object> GetValueAsync( this DataColumn column, Type type )
    {
       var retValOrNone = await column.TryGetValueAsync();
 
@@ -106,17 +106,17 @@ public static partial class E_CBAM
       return retVal;
    }
 
-   public static async Task<T> GetValueAsync<T>( this DataColumn column )
+   public static async ValueTask<T> GetValueAsync<T>( this DataColumn column )
    {
       return (T) ( await column.GetValueAsync( typeof( T ) ) );
    }
 
-   public static async Task<Object> GetValueAsObjectAsync( this DataColumn column )
+   public static async ValueTask<Object> GetValueAsObjectAsync( this DataColumn column )
    {
       return await column.GetValueAsync( typeof( Object ) );
    }
 
-   public static async Task<T> GetValueByNameAsync<T>( this DataRow row, String name )
+   public static async ValueTask<T> GetValueByNameAsync<T>( this DataRow row, String name )
    {
       return await row.GetValueAsync<T>( row.Metadata.GetIndexFor( name ) );
    }

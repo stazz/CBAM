@@ -119,12 +119,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return levelString;
       }
 
-      protected override async Task<Boolean> InterpretReadOnly( DataColumn row )
+      protected override async ValueTask<Boolean> InterpretReadOnly( DataColumn row )
       {
          return String.Equals( (String) ( await row.TryGetValueAsync() ).Result, "on", StringComparison.OrdinalIgnoreCase );
       }
 
-      protected override async Task<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row )
+      protected override async ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row )
       {
          TransactionIsolationLevel retVal;
          String levelString;
@@ -311,7 +311,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //   return ch == '\n' || ch == '\r';
       //}
 
-      protected override async Task<PostgreSQLProtocol> CreateConnectionFunctionality(
+      protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfo parameters,
          CancellationToken token
          )
@@ -325,9 +325,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return tuple.Protocol;
       }
 
-      protected override Task<PgSQLConnection> CreateConnection( PostgreSQLProtocol functionality )
+      protected override ValueTask<PgSQLConnection> CreateConnection( PostgreSQLProtocol functionality )
       {
-         return Task.FromResult<PgSQLConnection>( new PgSQLConnectionImpl( this, functionality, new PgSQLDatabaseMetaData( this, functionality ) ) );
+         return new ValueTask<PgSQLConnection>( new PgSQLConnectionImpl( this, functionality, new PgSQLDatabaseMetaData( this, functionality ) ) );
       }
 
       protected override ConnectionAcquireInfo<PgSQLConnection> CreateConnectionAcquireInfo( PostgreSQLProtocol functionality, PgSQLConnection connection )

@@ -48,7 +48,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<Int32> PerformReadFromStreamAsync( Byte[] array, Int32 offset, Int32 count )
       {
-         return await this.ConnectionFunctionality.Stream.ReadAsync( array, offset, count );
+         return await this.ConnectionFunctionality.Stream.ReadAsync( array, offset, count, this.ConnectionFunctionality.CurrentCancellationToken );
       }
 
       public void Reset( DataRowObject nextRow )

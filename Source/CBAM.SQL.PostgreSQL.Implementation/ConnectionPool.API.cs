@@ -69,7 +69,13 @@ namespace CBAM.SQL.PostgreSQL
 
       public PgSQLConnectionCreationInfoData()
       {
-         this.SSLProtocols = System.Security.Authentication.SslProtocols.Tls12;
+         this.SSLProtocols = System.Security.Authentication.SslProtocols
+#if NET40
+            .Tls
+#else
+            .Tls12
+#endif
+            ;
       }
 
       public String Host { get; set; }
@@ -126,7 +132,7 @@ namespace CBAM.SQL.PostgreSQL
       {
          this.CreationData = ArgumentValidator.ValidateNotNull( nameof( data ), data );
 
-#if NETCOREAPP1_1 || NET45
+#if NETCOREAPP1_1 || NET45 || NET40
          this.ProvideSSLStream = (
             Stream innerStream,
             Boolean leaveInnerStreamOpen,
@@ -227,4 +233,26 @@ namespace CBAM.SQL.PostgreSQL
       System.Security.Authentication.SslProtocols enabledSslProtocols,
       Boolean checkCertificateRevocation
       );
+
+#if NET40
+   internal static class SSLStreamExtensions
+   {
+      public static Task AuthenticateAsClientAsync(
+         this System.Net.Security.SslStream stream,
+         String targetHost,
+         System.Security.Cryptography.X509Certificates.X509CertificateCollection clientCertificates,
+         System.Security.Authentication.SslProtocols enabledSslProtocols,
+         Boolean checkCertificateRevocation
+         )
+      {
+         var authArgs = (stream, targetHost, clientCertificates, enabledSslProtocols, checkCertificateRevocation);
+         return Task.Factory.FromAsync(
+            ( aArgs, cb, state ) => aArgs.Item1.BeginAuthenticateAsClient( aArgs.Item2, aArgs.Item3, aArgs.Item4, aArgs.Item5, cb, state ),
+            result => ( (System.Net.Security.SslStream) result.AsyncState ).EndAuthenticateAsClient( result ),
+            authArgs,
+            stream
+            );
+      }
+   }
+#endif
 }

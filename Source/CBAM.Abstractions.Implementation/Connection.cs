@@ -207,8 +207,8 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      protected abstract Task<TConnectionFunctionality> CreateConnectionFunctionality( TConnectionCreationParameters parameters, CancellationToken token );
-      protected abstract Task<TConnection> CreateConnection( TConnectionFunctionality functionality );
+      protected abstract ValueTask<TConnectionFunctionality> CreateConnectionFunctionality( TConnectionCreationParameters parameters, CancellationToken token );
+      protected abstract ValueTask<TConnection> CreateConnection( TConnectionFunctionality functionality );
       protected abstract ConnectionAcquireInfo<TConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TConnection connection );
       protected abstract Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
    }

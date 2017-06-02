@@ -229,7 +229,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             var affectedRowsArray = new Int32[batchCount];
             // Send and receive messages asynchronously
             var commandTag = new String[1];
-            await Task.WhenAll(
+            await
+#if NET40
+               TaskEx
+#else
+               Task
+#endif
+               .WhenAll(
                this.SendMessagesForBatch( statement, typeInfos, stmtName, ioArgs, chunkSize, batchCount ),
                this.ReceiveMessagesForBatch( notices, affectedRowsArray, commandTag )
                );
@@ -1098,9 +1104,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
    }
 
-#if NET45
+#if NET40 || NET45
 
    // No SocketTaskExtensions in .NET 4.5...
+   // TODO move to UtilPack.
    internal static class SocketTaskextensions
    {
       public static Task ConnectAsync( this Socket socket, EndPoint remoteEndPoint )
