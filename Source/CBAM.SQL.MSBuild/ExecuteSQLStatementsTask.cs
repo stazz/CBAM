@@ -25,7 +25,7 @@ using UtilPack;
 using Microsoft.Build.Utilities;
 using System.IO;
 
-using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
+using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String, System.Threading.Tasks.Task<System.Reflection.Assembly>>;
 using CBAM.Abstractions;
 
 namespace CBAM.SQL.MSBuild
@@ -40,7 +40,14 @@ namespace CBAM.SQL.MSBuild
 
       protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
       {
-         return File.Exists( Path.GetFullPath( this.SQLStatementsFilePath ) );
+         var fp = Path.GetFullPath( this.SQLStatementsFilePath );
+         var retVal = File.Exists( fp );
+         if ( !retVal )
+         {
+            this.Log.LogError( "SQL statements \"{0}\" file does not exist", fp );
+         }
+         return retVal;
+
       }
 
       protected override async System.Threading.Tasks.Task UseConnection( SQLConnection connection )

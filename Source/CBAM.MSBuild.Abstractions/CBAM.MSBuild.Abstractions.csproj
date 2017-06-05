@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.0.2</VersionPrefix>
+    <VersionPrefix>0.0.3</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -57,7 +57,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageReleaseNotes>Updating package to be useable with UtilPack.NuGet.MSBuild version 1.0.0-RC4.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection msbuild task</PackageTags>
     <Title>Skeleton Implementations for MSBuild Tasks Using CBAM Packages.</Title>
     <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>

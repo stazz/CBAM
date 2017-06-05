@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String[], System.Boolean, System.String, System.Reflection.Assembly>;
+using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String, System.Threading.Tasks.Task<System.Reflection.Assembly>>;
 
 namespace CBAM.MSBuild.Abstractions
 {
@@ -54,18 +54,14 @@ namespace CBAM.MSBuild.Abstractions
             {
                try
                {
-                  var poolProvider = this.AcquireConnectionPoolProvider();
-                  if ( poolProvider != null )
+                  if ( !this.RunSynchronously )
                   {
-                     if ( !this.RunSynchronously )
-                     {
-                        be.Yield();
-                        yieldCalled = true;
-                     }
-                     this.ExecuteTaskAsync( poolProvider ).GetAwaiter().GetResult();
-
-                     retVal = true;
+                     be.Yield();
+                     yieldCalled = true;
                   }
+                  this.ExecuteTaskAsync().GetAwaiter().GetResult();
+
+                  retVal = !this.Log.HasLoggedErrors;
                }
                catch ( OperationCanceledException )
                {
@@ -96,12 +92,19 @@ namespace CBAM.MSBuild.Abstractions
          this._cancellationSource.Cancel( false );
       }
 
-      public async Task ExecuteTaskAsync( ConnectionPoolProvider<TConnection> poolProvider )
+      public async Task ExecuteTaskAsync()
       {
-         var poolCreationArgs = await this.ProvideConnectionCreationParameters( poolProvider );
-         var pool = await this.AcquireConnectionPool( poolProvider, poolCreationArgs );
-         await pool.UseConnectionAsync( this.UseConnection, this._cancellationSource.Token );
-
+         var poolProvider = await this.AcquireConnectionPoolProvider();
+         if ( poolProvider == null )
+         {
+            this.Log.LogError( "Failed to acquire connection pool provider." );
+         }
+         else
+         {
+            var poolCreationArgs = await this.ProvideConnectionCreationParameters( poolProvider );
+            var pool = await this.AcquireConnectionPool( poolProvider, poolCreationArgs );
+            await pool.UseConnectionAsync( this.UseConnection, this._cancellationSource.Token );
+         }
       }
 
       protected abstract Boolean CheckTaskParametersBeforeConnectionPoolUsage();
@@ -132,17 +135,15 @@ namespace CBAM.MSBuild.Abstractions
 
       protected abstract Task UseConnection( TConnection connection );
 
-      private ConnectionPoolProvider<TConnection> AcquireConnectionPoolProvider()
+      protected async ValueTask<ConnectionPoolProvider<TConnection>> AcquireConnectionPoolProvider()
       {
          var resolver = this._nugetPackageResolver;
          ConnectionPoolProvider<TConnection> retVal = null;
          if ( resolver != null )
          {
-            var assembly = this._nugetPackageResolver(
+            var assembly = await this._nugetPackageResolver(
                this.ConnectionPoolProviderPackageID, // package ID
                this.ConnectionPoolProviderVersion,  // optional package version
-               null, // optional repository paths
-               true, // resolve all dependencies too
                this.ConnectionPoolProviderAssemblyPath // optional assembly path within package
                );
             if ( assembly != null )
