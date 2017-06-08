@@ -40,15 +40,20 @@ namespace CBAM.SQL.MSBuild
 
       protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
       {
-         var fp = Path.GetFullPath( this.SQLStatementsFilePath );
-         var retVal = File.Exists( fp );
-         if ( !retVal )
-         {
-            this.Log.LogError( "SQL statements \"{0}\" file does not exist", fp );
-         }
-         return retVal;
-
+         return true;
       }
+
+      //protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
+      //{
+      //   var fp = Path.GetFullPath( this.SQLStatementsFilePath );
+      //   var retVal = File.Exists( fp );
+      //   if ( !retVal )
+      //   {
+      //      this.Log.LogError( "SQL statements \"{0}\" file does not exist", fp );
+      //   }
+      //   return retVal;
+
+      //}
 
       protected override async System.Threading.Tasks.Task UseConnection( SQLConnection connection )
       {
@@ -72,18 +77,51 @@ namespace CBAM.SQL.MSBuild
             connection.AfterEnumerationItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
          } ) )
          {
-            var path = Path.GetFullPath( this.SQLStatementsFilePath );
-            using ( var fs = File.Open( path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
+            foreach ( var item in this.SQLFilePaths )
             {
-               this.Log.LogMessage(
-                  MessageImportance.High,
-                  "Executed {0} statements from \"{1}\".",
-                  await connection.ExecuteStatementsFromStreamAsync(
-                     fs,
-                     encoding.CreateDefaultEncodingInfo()
-                  ),
-                  path
-                  );
+               var path = item.GetMetadata( "FullPath" );
+               var exists = false;
+               try
+               {
+                  path = Path.GetFullPath( path );
+                  exists = File.Exists( path );
+               }
+               catch
+               {
+                  // Ignore
+               }
+
+               if ( exists )
+               {
+                  try
+                  {
+                     using ( var fs = File.Open( path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
+                     {
+                        this.Log.LogMessage(
+                           MessageImportance.High,
+                           "Executed {0} statements from \"{1}\".",
+                           await connection.ExecuteStatementsFromStreamAsync(
+                              fs,
+                              encoding.CreateDefaultEncodingInfo(),
+                              onException: exc =>
+                              {
+                                 this.Log.LogError( exc.ToString() );
+                                 return WhenExceptionInMultipleStatements.Rollback;
+                              }
+                           ),
+                           path
+                           );
+                     }
+                  }
+                  catch ( Exception exc )
+                  {
+                     this.Log.LogErrorFromException( exc );
+                  }
+               }
+               else
+               {
+                  this.Log.LogWarning( "Path {0} did not exist or was invalid.", path );
+               }
             }
          }
       }
@@ -102,7 +140,7 @@ namespace CBAM.SQL.MSBuild
       }
 
       [Required]
-      public String SQLStatementsFilePath { get; set; }
+      public ITaskItem[] SQLFilePaths { get; set; }
 
       public String FileEncoding { get; set; }
    }

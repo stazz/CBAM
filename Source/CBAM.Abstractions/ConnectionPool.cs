@@ -49,8 +49,7 @@ namespace CBAM.Abstractions
    public interface ConnectionPool<out TConnection, in TCleanUpParameters>
       : ConnectionPool<TConnection>,
         ConnectionPoolCleanUp<TCleanUpParameters>
-      //ConnectionPoolUnsafe<TConnection>
-      where TConnection : class
+   //ConnectionPoolUnsafe<TConnection>
    {
 
    }

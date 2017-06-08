@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.0.3</VersionPrefix>
+    <VersionPrefix>0.0.4</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -43,7 +43,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating package to be useable with UtilPack.NuGet.MSBuild version 1.0.0-RC4.</PackageReleaseNotes>
+    <PackageReleaseNotes>SQL files are now task items.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
     <Title>SQL-Oriented MSBuild Tasks</Title>
     <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>

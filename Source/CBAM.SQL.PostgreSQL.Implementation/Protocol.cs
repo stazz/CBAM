@@ -27,13 +27,16 @@ using UtilPack;
 using CBAM.SQL.PostgreSQL.Implementation;
 using CBAM.SQL.PostgreSQL;
 using System.Net;
-using System.Net.Sockets;
 using TBoundTypeInfo = System.ValueTuple<CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
 using CBAM.Abstractions;
 
 using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
 using CBAM.Abstractions.Implementation;
 using CBAM.Tabular.Implementation;
+
+#if !NETSTANDARD1_0
+using System.Net.Sockets;
+#endif
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
@@ -47,6 +50,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private readonly IDictionary<String, String> _serverParameters;
       //private Int32 _standardConformingStrings;
       private readonly Version _serverVersion;
+      private readonly PgSQLConnectionVendorFunctionality _vendorFunctionality;
 
       public PostgreSQLProtocol(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
@@ -55,17 +59,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          BackendABIHelper messageIOArgs,
          Stream stream,
          ResizableArray<Byte> buffer,
-         Socket socket,
          IDictionary<String, String> serverParameters,
          TransactionStatus status,
          Int32 backendPID
+#if !NETSTANDARD1_0
+         , Socket socket
+#endif
          )
       {
+         this._vendorFunctionality = ArgumentValidator.ValidateNotNull( nameof( vendorFunctionality ), vendorFunctionality );
          this.DisableBinaryProtocolSend = disableBinaryProtocolSend;
          this.DisableBinaryProtocolReceive = disableBinaryProtocolReceive;
          this.MessageIOArgs = ArgumentValidator.ValidateNotNull( nameof( messageIOArgs ), messageIOArgs );
          this.Stream = ArgumentValidator.ValidateNotNull( nameof( stream ), stream );
-         this.Socket = ArgumentValidator.ValidateNotNull( nameof( socket ), socket );
+#if !NETSTANDARD1_0
+         this.Socket = socket;
+#endif
          this.Buffer = buffer ?? new ResizableArray<Byte>( 8, exponentialResize: true );
          this.DataRowColumnSizes = new ResizableArray<ResettableTransformable<Int32?, Int32>>( exponentialResize: false );
          this._serverParameters = ArgumentValidator.ValidateNotNull( nameof( serverParameters ), serverParameters );
@@ -618,7 +627,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Stream Stream { get; }
 
+#if !NETSTANDARD1_0
       public Socket Socket { get; }
+#endif
 
       public ResizableArray<ResettableTransformable<Int32?, Int32>> DataRowColumnSizes { get; }
 
@@ -750,25 +761,42 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public async Task CheckNotificationsAsync()
       {
-         // First, check from the socket that we have any data pending
+#if !NETSTANDARD1_0
          var socket = this.Socket;
-         Boolean SocketHasDataPending()
+         if ( socket == null )
          {
-            return socket.Available > 0 || socket.Poll( 1, SelectMode.SelectRead ) || socket.Available > 0;
-         };
-         if ( SocketHasDataPending() )
-         {
-            // There is pending data
-            await this.UseStreamOutsideStatementAsync( async () =>
-            {
-               await this.ReadMessagesUntilMeaningful(
-                  null,
-                  SocketHasDataPending
-                  );
-            } );
+#endif
+         // Just do "SELECT 1"; If we get any notifications 
+         await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+#if !NETSTANDARD1_0
          }
+         else
+         {
+            // First, check from the socket that we have any data pending
+            Boolean SocketHasDataPending()
+            {
+               return socket.Available > 0 || socket.Poll( 1, SelectMode.SelectRead ) || socket.Available > 0;
+            };
+            if ( SocketHasDataPending() )
+            {
+               // There is pending data
+               await this.UseStreamOutsideStatementAsync( async () =>
+               {
+                  await this.ReadMessagesUntilMeaningful(
+                     null,
+                     SocketHasDataPending
+                     );
+               } );
+            }
+            else
+            {
+               // TODO check if this connection is free to use.
+            }
+         }
+#endif
       }
 
+#if !NETSTANDARD1_0
       internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
          PgSQLConnectionCreationInfo creationParameters,
@@ -786,14 +814,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
 
          var creationData = creationParameters.CreationData;
-         var remoteHost = creationData.Host;
+         var connectionConfig = creationData?.Connection ?? throw new ArgumentException( "Please specify connection configuration." );
+         var remoteHost = connectionConfig?.Host ?? throw new ArgumentException( "Please specify remote host in connection configuration." );
          var remoteAddress = GetAddressFromHost( remoteHost );
          if ( remoteAddress == null )
          {
             throw new InvalidOperationException( "No remote address supplied, either via host property, or via DNS event." );
          }
 
-         var remoteEP = new IPEndPoint( remoteAddress, creationData.Port );
+         var remoteEP = new IPEndPoint( remoteAddress, connectionConfig?.Port ?? throw new ArgumentException( "Please specify remote port in connection configuration." ) );
 
          Socket CreateSocket()
          {
@@ -803,8 +832,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             ProtocolType.Tcp
             );
          }
-         var localEP = !String.IsNullOrEmpty( creationData.LocalHost ) && creationData.LocalPort > 0 ?
-            new IPEndPoint( GetAddressFromHost( creationData.LocalHost ), creationData.LocalPort ) :
+         var localEP = !String.IsNullOrEmpty( connectionConfig.LocalHost ) && connectionConfig.LocalPort > 0 ?
+            new IPEndPoint( GetAddressFromHost( connectionConfig.LocalHost ), connectionConfig.LocalPort ) :
             null;
 
          async Task<Stream> InitNetworkStream( Socket thisSocket )
@@ -825,10 +854,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             stream = await InitNetworkStream( socket );
 
-            var encoding = new UTF8EncodingInfo();
-            var msgArgs = new BackendABIHelper( encoding );
+            var msgArgs = new BackendABIHelper( new UTF8EncodingInfo() );
             var buffer = new ResizableArray<Byte>( initialSize: 8, exponentialResize: true );
-            var connectionMode = creationData.ConnectionSSLMode;
+            var connectionMode = connectionConfig.ConnectionSSLMode;
             var isSSLRequired = connectionMode == ConnectionSSLMode.Required;
             if ( isSSLRequired || connectionMode == ConnectionSSLMode.Preferred )
             {
@@ -860,7 +888,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         }
                         if ( sslStream != null && authenticateAsClient != null )
                         {
-                           await authenticateAsClient( sslStream, remoteHost, clientCerts, creationData.SSLProtocols, true )();
+                           await authenticateAsClient( sslStream, remoteHost, clientCerts, connectionConfig.SSLProtocols, true )();
                            stream = sslStream;
                         }
                      }
@@ -893,27 +921,16 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   throw new PgSQLException( "Server does not support SSL." );
                }
             }
-
-            var startupInfo = await DoConnectionInitialization( creationData, (msgArgs, stream, token, buffer) );
-            var retVal = (
-               new PostgreSQLProtocol(
-                  vendorFunctionality,
-                  creationParameters.CreationData.DisableBinaryProtocolSend,
-                  creationParameters.CreationData.DisableBinaryProtocolReceive,
-                  msgArgs,
-                  stream,
-                  buffer,
-                  socket,
-                  startupInfo.ServerParameters,
-                  startupInfo.TransactionStatus,
-                  startupInfo.backendProcessID ?? 0
-               ),
-               startupInfo.Notices ?? new List<PgSQLError>()
+            return await PerformStartup(
+               vendorFunctionality,
+               creationData.Initialization,
+               token,
+               stream,
+               msgArgs,
+               buffer,
+               socket
                );
 
-            await retVal.Item1.ReadTypesFromServer( creationData.ForceTypeIDLoad, token );
-
-            return retVal;
          }
          catch
          {
@@ -929,16 +946,80 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
       }
 
+#endif
+
+      internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
+         PgSQLConnectionVendorFunctionality vendorFunctionality,
+         PgSQLInitializationConfiguration initData,
+         CancellationToken token,
+         Stream stream
+         )
+      {
+         return await PerformStartup(
+            vendorFunctionality,
+            initData,
+            token,
+            stream,
+            new BackendABIHelper( new UTF8EncodingInfo() ),
+            new ResizableArray<Byte>( initialSize: 8, exponentialResize: true )
+#if !NETSTANDARD1_0
+            ,null
+#endif
+            );
+      }
+
+      private static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
+         PgSQLConnectionVendorFunctionality vendorFunctionality,
+         PgSQLInitializationConfiguration initData,
+         CancellationToken token,
+         Stream stream,
+         BackendABIHelper abiHelper,
+         ResizableArray<Byte> buffer
+#if !NETSTANDARD1_0
+         , Socket socket
+#endif
+         )
+      {
+         var startupInfo = await DoConnectionInitialization(
+            initData?.Database ?? throw new ArgumentException( "Please specify database configuration." ),
+            (abiHelper, stream, token, buffer)
+            );
+         var protoConfig = initData.Protocol;
+         var retVal = (
+            new PostgreSQLProtocol(
+               vendorFunctionality,
+               protoConfig?.DisableBinaryProtocolSend ?? false,
+               protoConfig?.DisableBinaryProtocolReceive ?? false,
+               abiHelper,
+               stream,
+               buffer,
+               startupInfo.ServerParameters,
+               startupInfo.TransactionStatus,
+               startupInfo.backendProcessID ?? 0
+#if !NETSTANDARD1_0
+               , socket
+#endif
+            ),
+            startupInfo.Notices ?? new List<PgSQLError>()
+            );
+
+         await retVal.Item1.ReadTypesFromServer( protoConfig?.ForceTypeIDLoad ?? false, token );
+
+         return retVal;
+      }
+
       private static async Task<(IDictionary<String, String> ServerParameters, Int32? backendProcessID, Int32? backendKeyData, List<PgSQLError> Notices, TransactionStatus TransactionStatus)> DoConnectionInitialization(
-         PgSQLConnectionCreationInfoData creationParameters,
+         PgSQLDatabaseConfiguration dbConfig,
          MessageIOArgs ioArgs
          )
       {
+
          var encoding = ioArgs.Item1.Encoding.Encoding;
+         var username = dbConfig.Username ?? throw new ArgumentException( "Please specify username in database configuration." );
          var parameters = new Dictionary<String, String>()
          {
-            { "database", creationParameters.Database },
-            { "user", creationParameters.Username },
+            { "database", dbConfig.Database ?? throw new ArgumentException("Please specify database name in database configuration.") },
+            { "user",username },
             { "DateStyle", "ISO" },
             { "client_encoding", encoding.WebName  },
             { "extra_float_digits", "2" },
@@ -965,10 +1046,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   await ProcessAuth(
                      ioArgs,
                      auth,
-                     creationParameters.Username,
-                     String.Equals( PgSQLConnectionCreationInfoData.PasswordByteEncoding.WebName, encoding.WebName ) ?
-                        creationParameters.PasswordBytes :
-                        encoding.GetBytes( creationParameters.Password )
+                     username,
+                     String.Equals( PgSQLDatabaseConfiguration.PasswordByteEncoding.WebName, encoding.WebName ) ?
+                        dbConfig.PasswordBytes :
+                        encoding.GetBytes( dbConfig.Password )
                      );
                   break;
                case PgSQLErrorObject error:
@@ -1021,6 +1102,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   throw new PgSQLException( "Backend requested password, but it was not supplied." );
                }
 
+#if NETSTANDARD1_0
+               throw new NotImplementedException( "Need to port MD5 to NETStandard1.0 via UtilPack." );
+#else
+
                var buffer = ioArgs.Item4;
                using ( var md5 = System.Security.Cryptography.MD5.Create() )
                {
@@ -1067,6 +1152,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   await new PasswordMessage( buffer.Array.CreateBlockCopy( idx ) ).SendMessageAsync( ioArgs );
                }
                break;
+#endif
             case AuthenticationResponse.AuthenticationRequestType.AuthenticationOk:
                // Nothing to do
                break;
@@ -1115,8 +1201,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          //token.ThrowIfCancellationRequested();
          var connectArgs = (socket, remoteEndPoint);
          return Task.Factory.FromAsync(
-           (cArgs, cb, state) => cArgs.Item1.BeginConnect( cArgs.Item2, cb, state),
-           (result) => ((Socket)result.AsyncState).EndConnect( result ),
+           ( cArgs, cb, state ) => cArgs.Item1.BeginConnect( cArgs.Item2, cb, state ),
+           ( result ) => ( (Socket) result.AsyncState ).EndConnect( result ),
            connectArgs,
            socket
            );

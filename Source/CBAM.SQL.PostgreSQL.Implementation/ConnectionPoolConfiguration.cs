@@ -28,54 +28,63 @@ using CBAM.Abstractions.Implementation;
 
 namespace CBAM.SQL.PostgreSQL
 {
-   public static class PgSQLConnectionPool
+
+#if !NETSTANDARD1_0
+   public class PgSQLConnectionCreationInfoData
    {
-      private static readonly PgSQLConnectionVendorFunctionalityImpl _VendorFunctionality = new PgSQLConnectionVendorFunctionalityImpl();
 
-      public static PgSQLConnectionVendorFunctionality VendorFunctionality
+      public PgSQLConnectionConfiguration Connection { get; set; }
+      public PgSQLInitializationConfiguration Initialization { get; set; }
+
+      public PgSQLConnectionCreationInfoData CreateCopy()
       {
-         get
+         var conn = this.Connection;
+         var init = this.Initialization;
+         var db = init?.Database;
+         var protocol = init?.Protocol;
+
+         return new PgSQLConnectionCreationInfoData()
          {
-            return _VendorFunctionality;
-         }
-      }
-
-      public static SQLConnectionPool<PgSQLConnection> CreateOneTimeUseConnectionPool(
-         PgSQLConnectionCreationInfo connectionConfig
-         )
-      {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
-            _VendorFunctionality,
-            connectionConfig,
-            acquire => acquire,
-            acquire => (PgSQLConnectionAcquireInfo) acquire
-            );
-      }
-
-      public static SQLConnectionPool<PgSQLConnection, TimeSpan> CreateTimeoutingConnectionPool(
-         PgSQLConnectionCreationInfo connectionConfig
-         )
-      {
-         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnection, PgSQLConnectionCreationInfo>(
-            _VendorFunctionality,
-            connectionConfig
-            );
+            Connection = new PgSQLConnectionConfiguration()
+            {
+               Host = conn?.Host,
+               Port = conn?.Port ?? 0,
+               LocalHost = conn?.LocalHost,
+               LocalPort = conn?.LocalPort ?? 0,
+               ConnectionSSLMode = conn?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired,
+               SSLProtocols = conn?.SSLProtocols ?? PgSQLConnectionConfiguration.DEFAULT
+            },
+            Initialization = new PgSQLInitializationConfiguration()
+            {
+               Database = new PgSQLDatabaseConfiguration()
+               {
+                  Database = db?.Database,
+                  Username = db?.Username,
+                  PasswordBytes = db?.PasswordBytes?.CreateBlockCopy(),
+               },
+               Protocol = new PgSQLProtocolConfiguration()
+               {
+                  ForceTypeIDLoad = protocol?.ForceTypeIDLoad ?? false,
+                  DisableBinaryProtocolSend = protocol?.DisableBinaryProtocolSend ?? false,
+                  DisableBinaryProtocolReceive = protocol?.DisableBinaryProtocolReceive ?? false
+               }
+            }
+         };
       }
    }
 
-   public class PgSQLConnectionCreationInfoData
+   public class PgSQLConnectionConfiguration
    {
-      internal static readonly Encoding PasswordByteEncoding = new UTF8Encoding( false, true );
-
-      public PgSQLConnectionCreationInfoData()
-      {
-         this.SSLProtocols = System.Security.Authentication.SslProtocols
+      public const System.Security.Authentication.SslProtocols DEFAULT = System.Security.Authentication.SslProtocols
 #if NET40
             .Tls
 #else
             .Tls12
 #endif
-            ;
+         ;
+      public PgSQLConnectionConfiguration()
+      {
+         this.SSLProtocols = DEFAULT;
       }
 
       public String Host { get; set; }
@@ -84,6 +93,21 @@ namespace CBAM.SQL.PostgreSQL
       public Int32 LocalPort { get; set; }
       public ConnectionSSLMode ConnectionSSLMode { get; set; }
       public System.Security.Authentication.SslProtocols SSLProtocols { get; set; }
+   }
+#endif
+
+
+
+   public class PgSQLInitializationConfiguration
+   {
+      public PgSQLDatabaseConfiguration Database { get; set; }
+      public PgSQLProtocolConfiguration Protocol { get; set; }
+   }
+
+   public class PgSQLDatabaseConfiguration
+   {
+      internal static readonly Encoding PasswordByteEncoding = new UTF8Encoding( false, true );
+
       public String Database { get; set; }
       public String Username { get; set; }
       public Byte[] PasswordBytes { get; set; }
@@ -99,31 +123,16 @@ namespace CBAM.SQL.PostgreSQL
             this.PasswordBytes = value == null ? null : PasswordByteEncoding.GetBytes( value );
          }
       }
+   }
 
+   public class PgSQLProtocolConfiguration
+   {
       public Boolean ForceTypeIDLoad { get; set; }
       public Boolean DisableBinaryProtocolSend { get; set; }
       public Boolean DisableBinaryProtocolReceive { get; set; }
-
-      public PgSQLConnectionCreationInfoData CreateCopy()
-      {
-         return new PgSQLConnectionCreationInfoData()
-         {
-            Host = this.Host,
-            Port = this.Port,
-            LocalHost = this.LocalHost,
-            LocalPort = this.LocalPort,
-            ConnectionSSLMode = this.ConnectionSSLMode,
-            SSLProtocols = this.SSLProtocols,
-            Database = this.Database,
-            Username = this.Username,
-            PasswordBytes = this.PasswordBytes.CreateBlockCopy(),
-            ForceTypeIDLoad = this.ForceTypeIDLoad,
-            DisableBinaryProtocolSend = this.DisableBinaryProtocolSend,
-            DisableBinaryProtocolReceive = this.DisableBinaryProtocolReceive,
-         };
-      }
    }
 
+#if !NETSTANDARD1_0
    public sealed class PgSQLConnectionCreationInfo
    {
       public PgSQLConnectionCreationInfo(
@@ -255,4 +264,12 @@ namespace CBAM.SQL.PostgreSQL
       }
    }
 #endif
+
+#endif
+
+   public class PgSQLConnectionCreationInfoForReadyMadeStreams
+   {
+      public PgSQLInitializationConfiguration Initialization { get; set; }
+      public Stream Stream { get; set; }
+   }
 }

@@ -93,13 +93,13 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          var data = GetConnectionCreationInfoData( connectionConfigFileLocation );
          var enabled = data.CreateCopy();
-         enabled.DisableBinaryProtocolReceive = false;
+         enabled.Initialization.Protocol.DisableBinaryProtocolReceive = false;
          var disabled = data.CreateCopy();
-         disabled.DisableBinaryProtocolReceive = true;
+         disabled.Initialization.Protocol.DisableBinaryProtocolReceive = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPool.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
-            PgSQLConnectionPool.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
             );
       }
 
@@ -110,13 +110,13 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          var data = GetConnectionCreationInfoData( connectionConfigFileLocation );
          var enabled = data.CreateCopy();
-         enabled.DisableBinaryProtocolSend = false;
+         enabled.Initialization.Protocol.DisableBinaryProtocolSend = false;
          var disabled = data.CreateCopy();
-         disabled.DisableBinaryProtocolSend = true;
+         disabled.Initialization.Protocol.DisableBinaryProtocolSend = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPool.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
-            PgSQLConnectionPool.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
             );
       }
 

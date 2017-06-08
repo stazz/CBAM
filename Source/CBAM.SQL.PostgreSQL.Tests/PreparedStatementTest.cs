@@ -36,7 +36,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
          const Int32 THIRD = 3;
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseConnectionAsync( async conn =>
          {
@@ -77,7 +77,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseConnectionAsync( async conn =>
          {

@@ -69,7 +69,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          pool.EnableJSONSupport();
          await pool.UseConnectionAsync( async conn =>
          {
@@ -95,7 +95,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          pool.EnableJSONSupport();
          await pool.UseConnectionAsync( async conn =>
          {

@@ -31,7 +31,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
       public async Task TestSelect1( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          var selectResult = await pool.UseConnectionAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );
       }
@@ -42,7 +42,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var first = 1;
          var second = 2;
          var third = 3;
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseConnectionAsync( async conn =>
          {
@@ -68,7 +68,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
       public async Task TestNotReadingAllColumns( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseConnectionAsync( async conn =>
          {
             var iArgs = conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" );
@@ -101,7 +101,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          )
       {
          var generator = (SimpleArrayDataGenerator) Activator.CreateInstance( arrayGenerator );
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseConnectionAsync( async conn =>
          {
             foreach ( var arrayInfo in generator.GenerateArrays() )
@@ -121,7 +121,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          String connectionConfigFileLocation
          )
       {
-         await PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseConnectionAsync( async conn =>
+         await PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseConnectionAsync( async conn =>
          {
             var enumerator = conn.PrepareStatementForExecution( "SELECT 1; SELECT 2;" );
             Assert.IsTrue( await enumerator.MoveNextAsync() );

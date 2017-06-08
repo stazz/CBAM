@@ -125,7 +125,7 @@ public static partial class E_CBAM
       {
          while ( await enumerator.MoveNextAsync() )
          {
-            action( enumerator.Current );
+            action?.Invoke( enumerator.Current );
          }
       }
       catch
@@ -149,7 +149,10 @@ public static partial class E_CBAM
       {
          while ( await enumerator.MoveNextAsync() )
          {
-            await asyncAction( enumerator.Current );
+            if ( asyncAction != null )
+            {
+               await asyncAction( enumerator.Current );
+            }
          }
       }
       catch

@@ -25,6 +25,8 @@ namespace CBAM.Abstractions
    {
       ConnectionPool<TConnection> CreateOneTimeUseConnectionPool( Object creationParameters );
 
+      ConnectionPool<TConnection, TimeSpan> CreateTimeoutingConnectionPool( Object creationParameters );
+
       Type DefaultTypeForCreationParameter { get; }
    }
 }

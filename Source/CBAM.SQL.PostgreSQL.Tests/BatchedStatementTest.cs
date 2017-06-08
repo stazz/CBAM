@@ -33,7 +33,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          ]
       public async Task TestBatchedStatement( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
@@ -76,7 +76,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          ]
       public async Task TestBatchedStatementWithoutParameters( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPool.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          await pool.UseConnectionAsync( async conn =>
          {

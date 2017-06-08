@@ -38,7 +38,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private const String SERIALIZABLE = TRANSACTION_ISOLATION_PREFIX + "SERIALIZABLE";
 
       public PgSQLConnectionImpl(
-         PgSQLConnectionVendorFunctionalityImpl vendorFunctionality,
+         PgSQLConnectionVendorFunctionality vendorFunctionality,
          PostgreSQLProtocol functionality,
          DatabaseMetadata metaData
          )
@@ -159,7 +159,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal sealed class PgSQLConnectionVendorFunctionalityImpl : SQLConnectionVendorFunctionalitySU<PgSQLConnection, PgSQLConnectionCreationInfo, PostgreSQLProtocol>, PgSQLConnectionVendorFunctionality
+   internal abstract class PgSQLConnectionVendorFunctionalityImpl<TConnectionCreationParameters> : SQLConnectionVendorFunctionalitySU<PgSQLConnection, TConnectionCreationParameters, PostgreSQLProtocol>, PgSQLConnectionVendorFunctionality
    {
       public PgSQLConnectionVendorFunctionalityImpl()
       {
@@ -311,19 +311,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //   return ch == '\n' || ch == '\r';
       //}
 
-      protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
-         PgSQLConnectionCreationInfo parameters,
-         CancellationToken token
-         )
-      {
-         var tuple = await PostgreSQLProtocol.PerformStartup(
-            this,
-            parameters,
-            token
-            );
-         // TODO event: StartupNoticeOccurred
-         return tuple.Protocol;
-      }
+
 
       protected override ValueTask<PgSQLConnection> CreateConnection( PostgreSQLProtocol functionality )
       {
@@ -342,6 +330,43 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       protected override IDisposable ExtractStreamOnConnectionAcquirementError( PostgreSQLProtocol functionality, PgSQLConnection connection, CancellationToken token, Exception error )
       {
          return functionality?.Stream;
+      }
+   }
+
+#if !NETSTANDARD1_0
+   internal sealed class PgSQLConnectionVendorFunctionalityImpl : PgSQLConnectionVendorFunctionalityImpl<PgSQLConnectionCreationInfo>
+   {
+      protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
+         PgSQLConnectionCreationInfo parameters,
+         CancellationToken token
+         )
+      {
+         var tuple = await PostgreSQLProtocol.PerformStartup(
+            this,
+            parameters,
+            token
+            );
+         // TODO event: StartupNoticeOccurred
+         return tuple.Protocol;
+      }
+   }
+#endif
+
+   internal sealed class PgSQLConnectionVendorFunctionalityForReadyMadeStreams : PgSQLConnectionVendorFunctionalityImpl<PgSQLConnectionCreationInfoForReadyMadeStreams>
+   {
+      protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
+         PgSQLConnectionCreationInfoForReadyMadeStreams parameters,
+         CancellationToken token
+         )
+      {
+         var tuple = await PostgreSQLProtocol.PerformStartup(
+            this,
+            parameters.Initialization,
+            token,
+            parameters.Stream
+            );
+         // TODO event: StartupNoticeOccurred
+         return tuple.Protocol;
       }
    }
 
