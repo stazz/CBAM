@@ -959,7 +959,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             vendorFunctionality,
             initData,
             token,
-            stream,
+            ArgumentValidator.ValidateNotNull( nameof( stream ), stream ),
             new BackendABIHelper( new UTF8EncodingInfo() ),
             new ResizableArray<Byte>( initialSize: 8, exponentialResize: true )
 #if !NETSTANDARD1_0
