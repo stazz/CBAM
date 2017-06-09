@@ -31,6 +31,12 @@ namespace CBAM.SQL.PostgreSQL
    {
       event EventHandler<NotificationEventArgs> NotificationEvent;
 
+      /// <summary>
+      /// Checks whether any notifications are pending.
+      /// Please note that if runtime of the process is equivalent to .NET Standard 1.0-1.2, calling this method causes SQL query (<c>SELECT 1</c>).
+      /// In other frameworks, it does not cause any SQL queries.
+      /// </summary>
+      /// <returns></returns>
       Task CheckNotificationsAsync();
 
       TypeRegistry TypeRegistry { get; }
