@@ -151,10 +151,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override void WriteMessageToBuffer( BackendABIHelper args, ResizableArray<Byte> array )
       {
-         var idx = 0;
-         array.Array
-            .BlockCopyFrom( ref idx, this._pw )
-            .WriteByteToBytes( ref idx, 0 );
+         this._pw.CopyTo( array.Array, 0 );
+         array.Array[this._pw.Length] = 0;
       }
    }
 

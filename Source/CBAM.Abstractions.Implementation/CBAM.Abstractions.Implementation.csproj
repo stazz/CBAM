@@ -11,7 +11,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="UtilPack" Version="1.0.0-RC8" />
+    <PackageReference Include="UtilPack" Version="1.0.0-RC9" />
   </ItemGroup>
 
   <ItemGroup>

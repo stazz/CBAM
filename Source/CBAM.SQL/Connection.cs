@@ -268,7 +268,7 @@ public static partial class E_CBAM
             chunkSize: streamReadChunkCount
          );
       var charReader = ReaderFactory.NewNullableMemorizingValueReader(
-         new StreamCharacterReader( encoding ),
+         new StreamCharacterReaderLogic( encoding ),
          streamReader
          );
       using ( charReader.ClearStreamWhenStreamBufferTooBig( streamReader, streamMaxBufferCount ) )

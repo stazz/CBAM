@@ -60,7 +60,7 @@ namespace CBAM.SQL.PostgreSQL
                {
                   Database = db?.Database,
                   Username = db?.Username,
-                  PasswordBytes = db?.PasswordBytes?.CreateBlockCopy(),
+                  PasswordBytes = db?.PasswordBytes?.CreateArrayCopy(),
                },
                Protocol = new PgSQLProtocolConfiguration()
                {

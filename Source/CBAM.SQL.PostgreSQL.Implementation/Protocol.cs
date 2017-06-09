@@ -766,8 +766,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-         // Just do "SELECT 1"; If we get any notifications 
-         await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+            // Just do "SELECT 1"; If we get any notifications 
+            await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -963,7 +963,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             new BackendABIHelper( new UTF8EncodingInfo() ),
             new ResizableArray<Byte>( initialSize: 8, exponentialResize: true )
 #if !NETSTANDARD1_0
-            ,null
+            , null
 #endif
             );
       }
@@ -1102,25 +1102,20 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   throw new PgSQLException( "Backend requested password, but it was not supplied." );
                }
 
-#if NETSTANDARD1_0
-               throw new NotImplementedException( "Need to port MD5 to NETStandard1.0 via UtilPack." );
-#else
-
                var buffer = ioArgs.Item4;
-               using ( var md5 = System.Security.Cryptography.MD5.Create() )
+               using ( var md5 = new UtilPack.Cryptography.Digest.MD5() )
                {
                   // Extract server salt before using args.Buffer
-                  var idx = msg.AdditionalDataInfo.offset;
                   var args = ioArgs.Item1;
-                  var serverSalt = buffer.Array.CreateAndBlockCopyTo( ref idx, msg.AdditionalDataInfo.count );
+                  var serverSalt = buffer.Array.CreateArrayCopy( msg.AdditionalDataInfo.offset, msg.AdditionalDataInfo.count );
 
                   // Hash password with username as salt
                   var prehashLength = args.Encoding.Encoding.GetByteCount( username ) + pw.Length;
                   buffer.CurrentMaxCapacity = prehashLength;
-                  idx = 0;
-                  pw.BlockCopyTo( ref idx, buffer.Array, 0, pw.Length );
+                  var idx = 0;
+                  pw.CopyTo( buffer.Array, ref idx, 0, pw.Length );
                   args.Encoding.Encoding.GetBytes( username, 0, username.Length, buffer.Array, pw.Length );
-                  var hash = md5.ComputeHash( buffer.Array, 0, prehashLength );
+                  var hash = md5.ComputeDigest( buffer.Array, 0, prehashLength );
 
                   // Write hash as hexadecimal string
                   buffer.CurrentMaxCapacity = hash.Length * 2 * args.Encoding.BytesPerASCIICharacter;
@@ -1133,8 +1128,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   // Hash result again with server-provided salt
                   buffer.CurrentMaxCapacity += serverSalt.Length;
                   var dummy = 0;
-                  serverSalt.BlockCopyTo( ref dummy, buffer.Array, idx, serverSalt.Length );
-                  hash = md5.ComputeHash( buffer.Array, 0, idx + serverSalt.Length );
+                  serverSalt.CopyTo( buffer.Array, ref dummy, idx, serverSalt.Length );
+                  hash = md5.ComputeDigest( buffer.Array, 0, idx + serverSalt.Length );
 
                   // Send back string "md5" followed by hexadecimal hash value
                   buffer.CurrentMaxCapacity = 3 * args.Encoding.BytesPerASCIICharacter + hash.Length * 2 * args.Encoding.BytesPerASCIICharacter;
@@ -1149,10 +1144,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                      args.Encoding.WriteHexDecimal( array, ref idx, hashByte );
                   }
 
-                  await new PasswordMessage( buffer.Array.CreateBlockCopy( idx ) ).SendMessageAsync( ioArgs );
+                  await new PasswordMessage( array.CreateArrayCopy( idx ) ).SendMessageAsync( ioArgs );
                }
                break;
-#endif
             case AuthenticationResponse.AuthenticationRequestType.AuthenticationOk:
                // Nothing to do
                break;

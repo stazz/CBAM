@@ -209,7 +209,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          parameterIndices = null;
          var strIdx = new StringIndex( sql );
          var boundReader = ReaderFactory.NewNullablePeekableValueReader(
-            StringCharacterReader.Instance,
+            StringCharacterReaderLogic.Instance,
             strIdx
             );
          Boolean wasOK;

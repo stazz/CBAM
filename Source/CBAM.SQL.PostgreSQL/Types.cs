@@ -3984,21 +3984,21 @@ public static partial class E_PgSQL
    // TODO move to utilpack, make "this REsizableARray" instead of "this Stream"
    public static async Task<Byte> ReadByte( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
    {
-      array.CurrentMaxCapacity = sizeof( Byte );
+      //array.CurrentMaxCapacity = sizeof( Byte );
       await stream.ReadSpecificAmountAsync( array.Array, 0, 1, token );
       return array.Array[0];
    }
 
    public static async Task<Int32> ReadInt16Count( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
    {
-      array.CurrentMaxCapacity = sizeof( Int16 );
+      //array.CurrentMaxCapacity = sizeof( Int16 );
       await stream.ReadSpecificAmountAsync( array.Array, 0, sizeof( Int16 ), token );
       return array.Array.ReadUInt16BEFromBytesNoRef( 0 );
    }
 
    public static async Task<Int32> ReadInt32( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
    {
-      array.CurrentMaxCapacity = sizeof( Int32 );
+      //array.CurrentMaxCapacity = sizeof( Int32 );
       await stream.ReadSpecificAmountAsync( array.Array, 0, sizeof( Int32 ), token );
       return array.Array.ReadInt32BEFromBytesNoRef( 0 );
    }
