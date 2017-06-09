@@ -161,7 +161,7 @@ namespace CBAM.MSBuild.Abstractions
                else
                {
                   // Search for first available
-                  providerType = assembly.DefinedTypes.FirstOrDefault( t => parentType.IsAssignableFrom( t ) )?.AsType();
+                  providerType = assembly.DefinedTypes.FirstOrDefault( t => !t.IsInterface && !t.IsAbstract && parentType.IsAssignableFrom( t ) )?.AsType();
                }
 
                if ( providerType != null )

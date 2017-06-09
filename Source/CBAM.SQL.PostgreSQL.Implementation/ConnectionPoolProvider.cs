@@ -68,7 +68,7 @@ namespace CBAM.SQL.PostgreSQL
       // We leave constructor as public so that this class could be instantiated by dynamic loading (e.g. CBAM.Abstractions.MSBuild project)
 
 
-      public Type DefaultTypeForCreationParameter => typeof( TDefaultConfiguration );
+      public Type DefaultTypeForCreationParameter => typeof( TDefaultConfigurationData );
 
       ConnectionPool<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
       {
