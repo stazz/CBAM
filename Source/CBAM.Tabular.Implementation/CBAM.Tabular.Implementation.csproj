@@ -13,11 +13,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' != 'net40' ">
    <PackageReference Include="System.ValueTuple" Version="4.3.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="UtilPack" Version="1.0.0-RC10" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />

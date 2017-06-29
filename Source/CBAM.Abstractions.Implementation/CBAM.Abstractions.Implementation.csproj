@@ -9,10 +9,6 @@
     <TreatSpecificWarningsAsErrors />
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="UtilPack" Version="1.0.0-RC10" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
