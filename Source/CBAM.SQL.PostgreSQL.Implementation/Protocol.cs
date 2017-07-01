@@ -1025,6 +1025,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             { "extra_float_digits", "2" },
             { "lc_monetary", "C" }
          };
+         var sp = dbConfig.SearchPath;
+         if ( !String.IsNullOrEmpty( sp ) )
+         {
+            parameters.Add( "search_path", sp );
+         }
 
          await new StartupMessage( 3 << 16, parameters ).SendMessageAsync( ioArgs );
 

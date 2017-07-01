@@ -61,6 +61,7 @@ namespace CBAM.SQL.PostgreSQL
                   Database = db?.Database,
                   Username = db?.Username,
                   PasswordBytes = db?.PasswordBytes?.CreateArrayCopy(),
+                  SearchPath = db?.SearchPath
                },
                Protocol = new PgSQLProtocolConfiguration()
                {
@@ -123,6 +124,7 @@ namespace CBAM.SQL.PostgreSQL
             this.PasswordBytes = value == null ? null : PasswordByteEncoding.GetBytes( value );
          }
       }
+      public String SearchPath { get; set; }
    }
 
    public class PgSQLProtocolConfiguration

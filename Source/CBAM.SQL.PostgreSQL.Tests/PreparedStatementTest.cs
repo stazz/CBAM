@@ -159,5 +159,28 @@ namespace CBAM.SQL.PostgreSQL.Tests
             }
          } );
       }
+
+      [DataTestMethod,
+         DataRow(
+         DEFAULT_CONFIG_FILE_LOCATION
+         ),
+      //Timeout( DEFAULT_TIMEOUT )
+      ]
+      public async Task TestByteA(
+         String connectionConfigFileLocation
+         )
+      {
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+
+         var bytez = new Byte[256];
+         UtilPack.Cryptography.Digest.DigestBasedRandomGenerator.CreateAndSeedWithDefaultLogic( new UtilPack.Cryptography.Digest.SHA512() ).NextBytes( bytez );
+
+         await pool.UseConnectionAsync( async conn =>
+         {
+            var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ) ) AS tmp" );
+            stmt.SetParameterObject<Byte[]>( 0, bytez );
+            await conn.ExecuteNonQueryAsync( stmt );
+         } );
+      }
    }
 }

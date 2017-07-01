@@ -27,6 +27,7 @@ using CBAM.Abstractions;
 namespace CBAM.SQL
 {
    public interface SQLConnectionPool<out TConnection> : ConnectionPool<TConnection>
+      where TConnection : class, SQLConnection
    {
 
    }

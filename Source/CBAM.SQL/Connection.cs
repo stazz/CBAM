@@ -157,6 +157,28 @@ public static partial class E_CBAM
       await connection.ExecuteNonQueryAsync( connection.CreateStatementBuilder( sql ), action );
    }
 
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Func<DataRow, ValueTask<T>> extractor )
+   {
+      ArgumentValidator.ValidateNotNull( nameof( extractor ), extractor );
+      return await connection.ExecuteStatementAsync( stmt, async args =>
+      {
+         await args.MoveNextAsync();
+         var row = args.GetDataRow();
+         var retVal = row == null ? default( T ) : await extractor( row );
+
+         // Read until the end
+         while ( await args.MoveNextAsync() ) ;
+
+         return retVal;
+      } );
+   }
+
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Func<DataRow, ValueTask<T>> extractor )
+   {
+      return await connection.GetFirstOrDefaultAsync( connection.VendorFunctionality.CreateStatementBuilder( sql ), extractor );
+   }
+
+
    public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Int32 parameterIndex = 0, Func<DataColumn, ValueTask<T>> extractor = null )
    {
       return await connection.ExecuteStatementAsync( stmt, async args =>

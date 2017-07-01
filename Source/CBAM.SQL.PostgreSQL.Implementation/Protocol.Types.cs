@@ -939,7 +939,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Byte[] value, BinaryBackendSizeInfo additionalInfoFromSize ) =>
             {
                // Just copy array
-               Array.Copy( value, array, value.Length );
+               Array.Copy( value, 0, array, offset, value.Length );
             },
             null,
             null

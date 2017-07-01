@@ -1,3 +1,6 @@
 Keys
+obj
+bin
 Source/CBAM.SQL.PostgreSQL.Tests/test_config.json
 Source/CBAM.SQL.PostgreSQL.Tests/test_config_ssl.json
+Source/NuGetPushOnBuild.props

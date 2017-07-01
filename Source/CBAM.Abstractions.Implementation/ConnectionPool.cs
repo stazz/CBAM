@@ -31,7 +31,8 @@ namespace CBAM.Abstractions.Implementation
       Task<ConnectionAcquireInfo<TConnection>> AcquireConnection( TParams parameters, CancellationToken token );
    }
 
-   public interface ConnectionAcquireInfo<out TConnection> : IAsyncDisposable
+   // Use IDisposable.Dispose only when it is necessary to immediately close underlying stream
+   public interface ConnectionAcquireInfo<out TConnection> : IAsyncDisposable, IDisposable
       where TConnection : class
    {
       ConnectionUsageInfo<TConnection> GetConnectionUsageForToken( CancellationToken token );
@@ -42,7 +43,7 @@ namespace CBAM.Abstractions.Implementation
       Boolean IsConnectionReturnableToPool { get; }
    }
 
-   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TEnumerableItem, TStream> : ConnectionAcquireInfo<TConnection>
+   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TEnumerableItem, TStream> : AbstractDisposable, ConnectionAcquireInfo<TConnection>
       where TConnection : class
       where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
       where TStream : IDisposable
@@ -73,6 +74,14 @@ namespace CBAM.Abstractions.Implementation
             await ( this.DisposeBeforeClosingStream( token ) ?? TaskUtils.CompletedTask );
          }
          finally
+         {
+            this.Stream.DisposeSafely();
+         }
+      }
+
+      protected override void Dispose( Boolean disposing )
+      {
+         if ( disposing )
          {
             this.Stream.DisposeSafely();
          }
@@ -169,7 +178,15 @@ namespace CBAM.Abstractions.Implementation
 
       protected Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> InstanceCreator { get; }
 
-      public async Task UseConnectionAsync( Func<TConnection, Task> executer, CancellationToken token = default( CancellationToken ) )
+      public Task UseConnectionAsync( Func<TConnection, Task> executer, CancellationToken token = default( CancellationToken ) )
+      {
+         return token.IsCancellationRequested ?
+            TaskUtils2.FromCanceled( token ) :
+            this.DoUseConnectionAsync( executer, token );
+
+      }
+
+      private async Task DoUseConnectionAsync( Func<TConnection, Task> executer, CancellationToken token )
       {
          var instance = await this.AcquireConnectionAsync( token );
 
@@ -184,7 +201,6 @@ namespace CBAM.Abstractions.Implementation
          {
             await ( this.DisposeConnectionAsync( instance, token ) ?? TaskUtils.CompletedTask );
          }
-
       }
 
       //public async Task<TConnection> CreateUnmanagedConnectionAsync( CancellationToken token = default( CancellationToken ) )
@@ -258,7 +274,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, IAsyncDisposable
+   public class CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, IAsyncDisposable, IDisposable
       where TConnection : class
       where TConnectionInstance : class, InstanceWithNextInfo<TConnectionInstance>
       where TConnectionCreationParams : class
@@ -285,13 +301,22 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      public void Dispose()
+      {
+         TConnectionInstance conn;
+         while ( ( conn = this.Pool.TakeInstance() ) != null )
+         {
+            this.ConnectionExtractor( conn ).DisposeSafely();
+         }
+      }
+
       protected override async Task<TConnectionInstance> AcquireConnectionAsync( CancellationToken token )
       {
          var retVal = this.Pool.TakeInstance();
          if ( retVal == null )
          {
             // Create connection and await for events
-            retVal = await this.AcquireConnectionAsync( token );
+            retVal = await base.AcquireConnectionAsync( token );
          }
          else
          {
@@ -404,6 +429,28 @@ namespace CBAM.Abstractions.Implementation
       public void JustBeforePuttingBackToPool()
       {
          Interlocked.Exchange( ref this._lastChanged, DateTime.UtcNow );
+      }
+   }
+
+   // TODO move to UtilPack
+   public static class TaskUtils2
+   {
+      public static Task FromCanceled( CancellationToken token )
+      {
+         if ( !token.IsCancellationRequested )
+         {
+            throw new ArgumentException( nameof( token ) );
+         }
+         return new Task( () => { }, token, TaskCreationOptions.None );
+      }
+
+      public static Task<T> FromCanceled<T>( CancellationToken token )
+      {
+         if ( !token.IsCancellationRequested )
+         {
+            throw new ArgumentException( nameof( token ) );
+         }
+         return new Task<T>( () => default( T ), token, TaskCreationOptions.None );
       }
    }
 }

@@ -26,7 +26,7 @@ using UtilPack;
 namespace CBAM.Abstractions
 {
 
-   public interface ConnectionPoolCleanUp<in TCleanUpParameters>
+   public interface ConnectionPoolCleanUp<in TCleanUpParameters> : IDisposable
    {
       Task CleanUpAsync( TCleanUpParameters cleanupParameters, CancellationToken token );
    }
@@ -131,6 +131,31 @@ namespace CBAM.Abstractions
       {
       }
    }
+
+   public interface ConnectionPoolUser<out TConnection>
+   {
+      CancellationToken Token { get; }
+
+      Task UseConnectionAsync( Func<TConnection, Task> user );
+   }
+
+   public class DefaultConnectionPoolUser<TConnection> : ConnectionPoolUser<TConnection>
+   {
+      private readonly ConnectionPool<TConnection> _pool;
+
+      public DefaultConnectionPoolUser( ConnectionPool<TConnection> pool, CancellationToken token )
+      {
+         this._pool = ArgumentValidator.ValidateNotNull( nameof( pool ), pool );
+         this.Token = token;
+      }
+
+      public CancellationToken Token { get; }
+
+      public Task UseConnectionAsync( Func<TConnection, Task> user )
+      {
+         return this._pool.UseConnectionAsync( user, this.Token );
+      }
+   }
 }
 
 public static partial class E_CBAM
@@ -161,5 +186,33 @@ public static partial class E_CBAM
          executer( connection );
          return TaskUtils.CompletedTask;
       }, token );
+   }
+
+   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUser<TConnection> pool, Func<TConnection, Task<T>> user )
+   {
+      var retVal = default( T );
+      await pool.UseConnectionAsync( async connection => retVal = await user( connection ) );
+      return retVal;
+   }
+
+   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUser<TConnection> pool, Func<TConnection, T> user )
+   {
+      var retVal = default( T );
+      await pool.UseConnectionAsync( connection =>
+      {
+         retVal = user( connection );
+         return TaskUtils.CompletedTask;
+      } );
+
+      return retVal;
+   }
+
+   public static async Task UseConnectionAsync<TConnection>( this ConnectionPoolUser<TConnection> pool, Action<TConnection> executer )
+   {
+      await pool.UseConnectionAsync( connection =>
+      {
+         executer( connection );
+         return TaskUtils.CompletedTask;
+      } );
    }
 }

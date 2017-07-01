@@ -1,0 +1,40 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NuGetPushSourcesFile Condition=" '$(NuGetPushSourcesFile)' == '' ">$(MSBuildThisFileDirectory)\NuGetPushOnBuild.props</NuGetPushSourcesFile>
+  </PropertyGroup>
+  
+  <Import Project="$(NuGetPushSourcesFile)" Condition="Exists('$(NuGetPushSourcesFile)')" />
+  
+  <!-- 
+    Setting GeneratePackageOnBuild to true will cause Pack target to be run.
+    Our target will run after Pack.
+    -->
+  <Target 
+    Name="NuGetPush"
+    AfterTargets="Pack"
+    >
+    <!-- We must perform actual push in via other file, as we don't want to get UtilPack.NuGet.MSBuild dependency. -->
+    <PropertyGroup>
+      <PushOnBuildDirectory>$(MSBuildThisFileDirectory)PushOnBuildInfra</PushOnBuildDirectory>
+      <PushOnBuildFile>$(PushOnBuildDirectory)\NuGetPushOnBuild.targets</PushOnBuildFile>
+      <NuGetPushSourcesProperty>@(NuGetPushSources)</NuGetPushSourcesProperty>
+    </PropertyGroup>
+    
+    <!-- Perform restore via Exec as otherwise the required properties are not updated -->
+    <Exec
+      Condition="!Exists('$(PushOnBuildDirectory)\obj')"
+      Command="&quot;$(MSBuildBinPath)\MSBuild.exe&quot; /t:Restore &quot;$(PushOnBuildFile)&quot;"
+      />
+      
+    <!-- Perform push by calling specific target -->
+    <MSBuild
+      Condition=" '$(NuGetPushSourcesProperty)' != '' "
+      Projects="$(PushOnBuildFile)"
+      Targets="NuGetPush"
+      UnloadProjectsOnCompletion="true"
+      Properties="PackageFilePath=$(PackageOutputAbsolutePath)$(PackageID).$(PackageVersion).nupkg;NuGetPushSources=$(NuGetPushSourcesProperty)"
+      />
+  </Target>
+</Project>
