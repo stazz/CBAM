@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 using TypeInfo = System.ValueTuple<CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
 using TStaticTypeCacheValue = System.Collections.Generic.IDictionary<System.String, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
@@ -52,7 +53,25 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) GetTypeInfo( Type clrType )
       {
-         return clrType != null && this._typeInfosByCLRType.TryGetValue( clrType, out TypeInfo retVal ) ? retVal : default( TypeInfo );
+         return clrType != null && (
+            this._typeInfosByCLRType.TryGetValue( clrType, out var retVal )
+            || ( retVal = this.TryFindByParent( clrType ) ).Item1 != null
+            ) ? retVal : default( TypeInfo );
+      }
+
+      private TypeInfo TryFindByParent( Type clrType )
+      {
+         var child = clrType
+#if !NET40 && !NET45
+         .GetTypeInfo()
+#endif
+         ;
+         return this._typeInfosByCLRType.FirstOrDefault( kvp => kvp.Key
+#if !NET40 && !NET45
+         .GetTypeInfo()
+#endif
+         .IsAssignableFrom( child )
+         ).Value;
       }
 
       public Int32 TypeInfoCount => this._typeInfos.Count;

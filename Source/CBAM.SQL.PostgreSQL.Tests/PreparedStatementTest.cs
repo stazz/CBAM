@@ -164,7 +164,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          DataRow(
          DEFAULT_CONFIG_FILE_LOCATION
          ),
-      //Timeout( DEFAULT_TIMEOUT )
+      Timeout( DEFAULT_TIMEOUT )
       ]
       public async Task TestByteA(
          String connectionConfigFileLocation

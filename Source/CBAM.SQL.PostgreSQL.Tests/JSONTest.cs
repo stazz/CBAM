@@ -115,5 +115,25 @@ namespace CBAM.SQL.PostgreSQL.Tests
          Assert.AreEqual( value.GetType(), valueFromDB.GetType() );
          Assert.IsTrue( JToken.DeepEquals( value, valueFromDB ) );
       }
+
+      [DataTestMethod,
+         DataRow(
+         DEFAULT_CONFIG_FILE_LOCATION
+         ),
+         Timeout( DEFAULT_TIMEOUT )
+         ]
+      public async Task TestJSONCasting(
+         String connectionConfigFileLocation
+         )
+      {
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         pool.EnableJSONSupport();
+         await pool.UseConnectionAsync( async conn =>
+         {
+            var stmt = conn.VendorFunctionality.CreateStatementBuilder( "SELECT ?" );
+            stmt.SetParameterObject<JObject>( 0, new JObject( new JProperty( "testKey", "testValue" ) ) );
+            var obj = await conn.GetFirstOrDefaultAsync<JObject>( stmt );
+         } );
+      }
    }
 }

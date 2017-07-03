@@ -219,7 +219,7 @@ namespace CBAM.Abstractions.Implementation
 
             if ( disposeDelegate != null )
             {
-               await prev.Dispose();
+               await disposeDelegate();
             }
          }
       }
