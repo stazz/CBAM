@@ -33,6 +33,7 @@ using CBAM.Abstractions;
 using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
 using CBAM.Abstractions.Implementation;
 using CBAM.Tabular.Implementation;
+using UtilPack.AsyncEnumeration;
 
 #if !NETSTANDARD1_0
 using System.Net.Sockets;
@@ -40,7 +41,7 @@ using System.Net.Sockets;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, CBAM.Abstractions.Implementation.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
+   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
    internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU
    {
@@ -172,7 +173,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return (this.MessageIOArgs, this.Stream, tokenToUse ?? this.CurrentCancellationToken, bufferToUse ?? this.Buffer);
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( StatementBuilder statement, ReservedForStatement reservedState )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
+         CancellationToken token,
+         StatementBuilder statement,
+         ReservedForStatement reservedState
+         )
       {
          // TODO somehow make statement name and chunk size parametrizable
          (var parameterIndices, var typeInfos, var typeIDs) = GetVariablesForExtendedQuerySequence( statement, this.TypeRegistry, ( stmt, idx ) => stmt.GetBatchParameterInfo( 0, idx ) );
@@ -330,7 +335,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( StatementBuilder statement, ReservedForStatement reservedState )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
+         CancellationToken token,
+         StatementBuilder statement,
+         ReservedForStatement reservedState
+         )
       {
          (var parameterIndices, var typeInfos, var typeIDs) = GetVariablesForExtendedQuerySequence( statement, this.TypeRegistry, ( stmt, idx ) => stmt.GetParameterInfo( idx ) );
          var ioArgs = this.GetIOArgs();
@@ -402,7 +411,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         warningsLazy
                         );
                   current = dataRowCurrent;
-                  moveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
+                  moveNext = async ( innerToken ) => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
                   break;
                case CommandComplete cc:
                   if ( seenRD == null )
@@ -423,6 +432,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
+         CancellationToken token,
          StatementBuilder stmt,
          ReservedForStatement reservedState
          )
@@ -435,13 +445,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          MoveNextAsyncDelegate<SQLStatementExecutionResult> drMoveNext = null;
 
          // We have to always set moveNext, since we might be executing arbitrary amount of SQL statements in simple StatementBuilder.
-         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = async () =>
+         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = async ( innerToken ) =>
          {
             SQLStatementExecutionResult current = null;
             if ( drMoveNext != null )
             {
                // We are iterating over some query result, check that first.
-               var drNext = await drMoveNext();
+               var drNext = await drMoveNext( innerToken );
                if ( drNext.Item1 )
                {
                   current = drNext.Item2;
@@ -504,7 +514,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                               warningsLazy
                               );
                         current = dataRowCurrent;
-                        drMoveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
+                        drMoveNext = async ( innermostToken ) => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
                         break;
                      case ReadyForQuery rfq:
                         ( (PgReservedForStatement) reservedState ).RFQSeen();
@@ -524,7 +534,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             return (current != null, current);
          };
 
-         var firstResult = await moveNext();
+         var firstResult = await moveNext( default( CancellationToken ) );
 
          return (firstResult.Item1 ? firstResult.Item2 : null, moveNext);
 
@@ -766,8 +776,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-            // Just do "SELECT 1"; If we get any notifications 
-            await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+         // Just do "SELECT 1"; If we get any notifications 
+         await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else

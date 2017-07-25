@@ -22,7 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
-
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.Abstractions.Implementation
 {
@@ -58,19 +58,26 @@ namespace CBAM.Abstractions.Implementation
          Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>>> getGlobalAfterStatementExecutionItemEncountered
          )
       {
-         return new AsyncEnumeratorObservableForClasses<TEnumerableItem, TStatement>( async () =>
+         return AsyncEnumeratorFactory.CreateObservableEnumerator( async ( token ) =>
          {
             var reserved = this.CreateReservationObject( stmt );
             var simpleTuple = await this.UseStreamOutsideStatementAsync(
-               async () => await this.ExecuteStatement( stmt, reserved ),
+               async () => await this.ExecuteStatement( token, stmt, reserved ),
                reserved,
                false
                );
-            return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async () => await this.DisposeStatementAsync( reserved ));
-         }, stmt, getGlobalBeforeStatementExecutionStart, getGlobalAfterStatementExecutionStart, getGlobalBeforeStatementExecutionEnd, getGlobalAfterStatementExecutionEnd, getGlobalAfterStatementExecutionItemEncountered );
+            return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( tkn ) => await this.DisposeStatementAsync( reserved ));
+         },
+         stmt,
+         getGlobalBeforeStatementExecutionStart,
+         getGlobalAfterStatementExecutionStart,
+         getGlobalBeforeStatementExecutionEnd,
+         getGlobalAfterStatementExecutionEnd,
+         getGlobalAfterStatementExecutionItemEncountered
+         );
       }
 
-      protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( TStatement stmt, ReservedForStatement reservationObject );
+      protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatement stmt, ReservedForStatement reservationObject );
 
       protected abstract ReservedForStatement CreateReservationObject( TStatement stmt );
 

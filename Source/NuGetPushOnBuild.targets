@@ -28,12 +28,16 @@
       Command="&quot;$(MSBuildBinPath)\MSBuild.exe&quot; /t:Restore &quot;$(PushOnBuildFile)&quot;"
       />
       
-    <!-- Perform push by calling specific target -->
+    <!--
+    Perform push by calling specific target.
+    Removing "UnloadProjectsOnCompletion" still doesn't cache task factory instances - I'm not sure what could do that.
+    And because task factory instances are not cached, the nuget restore is performed for every project - which is a bit silly.
+    The build engine object given to task factory is also not castable to IBuildEngine4, so we can't cache stuff between builds.
+    -->
     <MSBuild
       Condition=" '$(NuGetPushSourcesProperty)' != '' "
       Projects="$(PushOnBuildFile)"
       Targets="NuGetPush"
-      UnloadProjectsOnCompletion="true"
       Properties="PackageFilePath=$(PackageOutputAbsolutePath)$(PackageID).$(PackageVersion).nupkg;NuGetPushSources=$(NuGetPushSourcesProperty)"
       />
   </Target>

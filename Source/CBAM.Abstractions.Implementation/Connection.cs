@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.AsyncEnumeration;
 using CBAM.Abstractions;
 
 namespace CBAM.Abstractions.Implementation

@@ -20,12 +20,14 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.Abstractions
 {
    public interface Connection<TStatement, in TStatementCreationArgs, out TEnumerableItem, out TVendorFunctionality> : AsyncEnumerationObservation<TEnumerableItem, TStatement>
       where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
+      // TODO the second type parameter should be TStatementInfo in order to prevent statement modification within events...
       AsyncEnumeratorObservable<TEnumerableItem, TStatement> PrepareStatementForExecution( TStatement statement );
       TVendorFunctionality VendorFunctionality { get; }
       CancellationToken CurrentCancellationToken { get; }

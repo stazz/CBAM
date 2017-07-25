@@ -24,10 +24,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-
 namespace CBAM.SQL.Implementation
 {
-   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, CBAM.Abstractions.Implementation.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
+   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
    public abstract class SQLConnectionFunctionalitySU : ConnectionFunctionalitySU<StatementBuilder, SQLStatementExecutionResult>, SQLConnectionFunctionality
    {
@@ -35,29 +34,29 @@ namespace CBAM.SQL.Implementation
       {
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( StatementBuilder stmt, ReservedForStatement reservationObject )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservationObject )
       {
          Task<TStatementExecutionSimpleTaskParameter> retValTask;
          if ( stmt.HasBatchParameters() )
          {
-            retValTask = this.ExecuteStatementAsBatch( stmt, reservationObject );
+            retValTask = this.ExecuteStatementAsBatch( token, stmt, reservationObject );
          }
          else if ( stmt.SQLParameterCount > 0 )
          {
-            retValTask = this.ExecuteStatementAsPrepared( stmt, reservationObject );
+            retValTask = this.ExecuteStatementAsPrepared( token, stmt, reservationObject );
          }
          else
          {
-            retValTask = this.ExecuteStatementAsSimple( stmt, reservationObject );
+            retValTask = this.ExecuteStatementAsSimple( token, stmt, reservationObject );
          }
          return await retValTask;
       }
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
 
    }
 

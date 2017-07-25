@@ -27,6 +27,7 @@ using System.IO;
 
 using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String, System.Threading.Tasks.Task<System.Reflection.Assembly>>;
 using CBAM.Abstractions;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.MSBuild
 {

@@ -26,6 +26,7 @@ using CBAM.SQL.Implementation;
 using CBAM.Abstractions;
 using CBAM.Abstractions.Implementation;
 using CBAM.Tabular;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.Implementation
 {

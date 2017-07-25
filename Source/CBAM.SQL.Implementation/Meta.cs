@@ -24,6 +24,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.Implementation
 {

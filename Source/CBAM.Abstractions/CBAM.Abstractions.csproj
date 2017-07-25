@@ -17,6 +17,7 @@
   
   <ItemGroup>
     <PackageReference Include="UtilPack" Version="1.0.0" />
+    <PackageReference Include="UtilPack.AsyncEnumeration" Version="1.0.0-RC1" />
   </ItemGroup>
   
   <PropertyGroup>
