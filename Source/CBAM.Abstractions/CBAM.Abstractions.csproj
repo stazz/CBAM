@@ -43,7 +43,7 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
     <DebugSymbols>False</DebugSymbols>
-    <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   
   <!-- NuGet package stuff -->
@@ -55,8 +55,8 @@
     <PackageReleaseNotes>Updating to 1.0.0 of UtilPack.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection</PackageTags>
     <Title>Common CBAM Abstractions</Title>
-    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
-    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 

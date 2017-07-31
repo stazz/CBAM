@@ -127,7 +127,7 @@ namespace CBAM.SQL.MSBuild
          }
       }
 
-      private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<StatementBuilder> args )
+      private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<StatementBuilderInformation> args )
       {
          this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Metadata.SQL );
       }

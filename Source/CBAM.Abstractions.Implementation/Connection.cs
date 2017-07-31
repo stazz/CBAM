@@ -26,9 +26,10 @@ using CBAM.Abstractions;
 
 namespace CBAM.Abstractions.Implementation
 {
-   public abstract class ConnectionImpl<TStatement, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
+   public abstract class ConnectionImpl<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
+      where TStatement : TStatementInformation
       where TVendorFunctionality : class, ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
    {
 
       public ConnectionImpl(
@@ -42,7 +43,7 @@ namespace CBAM.Abstractions.Implementation
 
       public TVendorFunctionality VendorFunctionality { get; }
 
-      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> BeforeEnumerationStart
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> BeforeEnumerationStart
       {
          add
          {
@@ -54,7 +55,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> AfterEnumerationStart
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> AfterEnumerationStart
       {
          add
          {
@@ -66,7 +67,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> BeforeEnumerationEnd
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> BeforeEnumerationEnd
       {
          add
          {
@@ -78,7 +79,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> AfterEnumerationEnd
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> AfterEnumerationEnd
       {
          add
          {
@@ -90,7 +91,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>> AfterEnumerationItemEncountered
+      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>> AfterEnumerationItemEncountered
       {
          add
          {
@@ -162,7 +163,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public AsyncEnumeratorObservable<TEnumerableItem, TStatement> PrepareStatementForExecution( TStatement statementBuilder )
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatement statementBuilder )
       {
          return this.ConnectionFunctionality.CreateIterationArguments( statementBuilder );
       }
@@ -172,9 +173,10 @@ namespace CBAM.Abstractions.Implementation
       public CancellationToken CurrentCancellationToken => this.ConnectionFunctionality.CurrentCancellationToken;
    }
 
-   public abstract class DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>, ConnectionFactory<TConnection, TConnectionCreationParameters>
+   public abstract class DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>, ConnectionFactory<TConnection, TConnectionCreationParameters>
+      where TStatement : TStatementInformation
       where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
    {
 
       public abstract TStatement CreateStatementBuilder( TStatementCreationArgs sql );
@@ -214,12 +216,14 @@ namespace CBAM.Abstractions.Implementation
       protected abstract Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
    }
 
-   public interface ConnectionFunctionality<TStatement, out TEnumerableItem> : AsyncEnumerationObservation<TEnumerableItem, TStatement>
+   public interface ConnectionFunctionality<in TStatement, out TStatementInformation, out TEnumerableItem> : AsyncEnumerationObservation<TEnumerableItem, TStatementInformation>
+      where TStatement : TStatementInformation
    {
-      AsyncEnumeratorObservable<TEnumerableItem, TStatement> CreateIterationArguments( TStatement stmt );
+      AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateIterationArguments( TStatement stmt );
    }
 
-   public abstract class DefaultConnectionFunctionality<TStatement, TEnumerableItem> : ConnectionFunctionality<TStatement, TEnumerableItem>
+   public abstract class DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem> : ConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
+      where TStatement : TStatementInformation
    {
 
       private Object _cancellationToken;
@@ -235,13 +239,13 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> BeforeEnumerationStart;
-      public event GenericEventHandler<EnumerationStartedEventArgs<TStatement>> AfterEnumerationStart;
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> BeforeEnumerationStart;
+      public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> AfterEnumerationStart;
 
-      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> BeforeEnumerationEnd;
-      public event GenericEventHandler<EnumerationEndedEventArgs<TStatement>> AfterEnumerationEnd;
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> BeforeEnumerationEnd;
+      public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> AfterEnumerationEnd;
 
-      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>> AfterEnumerationItemEncountered;
+      public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>> AfterEnumerationItemEncountered;
 
       event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationStart
       {
@@ -312,7 +316,7 @@ namespace CBAM.Abstractions.Implementation
          Interlocked.Exchange( ref this._cancellationToken, null );
       }
 
-      public AsyncEnumeratorObservable<TEnumerableItem, TStatement> CreateIterationArguments( TStatement statement )
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateIterationArguments( TStatement statement )
       {
          this.ValidateStatementOrThrow( statement );
          return this.PerformCreateIterationArguments(
@@ -327,13 +331,13 @@ namespace CBAM.Abstractions.Implementation
 
       public abstract Boolean CanBeReturnedToPool { get; }
 
-      protected abstract AsyncEnumeratorObservable<TEnumerableItem, TStatement> PerformCreateIterationArguments(
+      protected abstract AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PerformCreateIterationArguments(
          TStatement statement,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterStatementExecutionItemEncountered
          );
 
       protected abstract void ValidateStatementOrThrow( TStatement statement );

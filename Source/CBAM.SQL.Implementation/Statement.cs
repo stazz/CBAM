@@ -26,37 +26,88 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
-   public abstract class StatementBuilderImpl<TParameter> : StatementBuilder
+   public class StatementBuilderInformationImpl<TParameter, TList> : StatementBuilderInformation
       where TParameter : StatementParameter
+      where TList : class,
+#if NET40
+      IList<TParameter[]>
+#else
+      IReadOnlyList<TParameter[]>
+#endif
    {
-      private readonly List<TParameter[]> _batchParameters;
-      private readonly TParameter[] _currentParameters;
+      protected readonly TList _batchParameters;
+      protected readonly TParameter[] _currentParameters;
 
-      public StatementBuilderImpl(
+      public StatementBuilderInformationImpl(
          String sql,
-         Int32 parameterCount
+         Int32 parameterCount,
+         TParameter[] currentParameters,
+         TList batchParams
          )
       {
          this.SQL = ArgumentValidator.ValidateNotEmpty( nameof( sql ), sql );
          this.SQLParameterCount = parameterCount;
-         this._currentParameters = parameterCount > 0 ?
-            new TParameter[parameterCount] :
-            Empty<TParameter>.Array;
-         this._batchParameters = new List<TParameter[]>();
+         this._currentParameters = currentParameters ?? Empty<TParameter>.Array;
+         this._batchParameters = ArgumentValidator.ValidateNotNull( nameof( batchParams ), batchParams );
       }
-
 
       public Int32 SQLParameterCount { get; }
 
       public String SQL { get; }
 
-      public Int32 BatchParameterCount
+      public Int32 BatchParameterCount => this._batchParameters.Count;
+
+      public StatementParameter GetParameterInfo( Int32 parameterIndex )
       {
-         get
-         {
-            return this._batchParameters.Count;
-         }
+         return this._currentParameters[parameterIndex];
       }
+
+      public StatementParameter GetBatchParameterInfo( Int32 batchIndex, Int32 parameterIndex )
+      {
+         return this._batchParameters[batchIndex][parameterIndex];
+      }
+   }
+
+   public abstract class StatementBuilderImpl<TParameter> : StatementBuilderInformationImpl<TParameter, List<TParameter[]>>, StatementBuilder
+      where TParameter : StatementParameter
+   {
+      private struct ConstructorParams
+      {
+         public ConstructorParams( String sql, Int32 parameterCount )
+         {
+            this.SQL = sql;
+            this.ParameterCount = parameterCount;
+            this.CurrentParams = parameterCount > 0 ? new TParameter[parameterCount] : Empty<TParameter>.Array;
+            this.BatchParams = new List<TParameter[]>();
+         }
+
+         public String SQL { get; }
+         public Int32 ParameterCount { get; }
+         public TParameter[] CurrentParams { get; }
+         public List<TParameter[]> BatchParams { get; }
+      }
+
+      public StatementBuilderImpl(
+         String sql,
+         Int32 parameterCount
+         ) : this( new ConstructorParams( sql, parameterCount ) )
+      {
+      }
+
+      private StatementBuilderImpl(
+         ConstructorParams cParams
+         ) : base( cParams.SQL, cParams.ParameterCount, cParams.CurrentParams, cParams.BatchParams )
+      {
+         this.StatementBuilderInformation = new StatementBuilderInformationImpl<TParameter,
+#if NET40
+            List<TParameter[]>
+#else
+            IReadOnlyList<TParameter[]>
+#endif
+            >( cParams.SQL, cParams.ParameterCount, cParams.CurrentParams, cParams.BatchParams );
+      }
+
+      public StatementBuilderInformation StatementBuilderInformation { get; }
 
       public void AddBatch()
       {
@@ -75,16 +126,6 @@ namespace CBAM.SQL.Implementation
          }
          this._batchParameters.Add( this._currentParameters.CreateArrayCopy() );
          Array.Clear( this._currentParameters, 0, this._currentParameters.Length );
-      }
-
-      public StatementParameter GetParameterInfo( Int32 parameterIndex )
-      {
-         return this._currentParameters[parameterIndex];
-      }
-
-      public StatementParameter GetBatchParameterInfo( Int32 batchIndex, Int32 parameterIndex )
-      {
-         return this._batchParameters[batchIndex][parameterIndex];
       }
 
       public void SetParameterObjectWithType( Int32 parameterIndex, Object value, Type clrType )

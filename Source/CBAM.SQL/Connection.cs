@@ -29,7 +29,7 @@ using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL
 {
-   public interface SQLConnection : Connection<StatementBuilder, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
+   public interface SQLConnection : Connection<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
    {
 
       DatabaseMetadata DatabaseMetadata { get; }

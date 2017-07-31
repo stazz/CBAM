@@ -43,9 +43,10 @@ namespace CBAM.Abstractions.Implementation
       Boolean IsConnectionReturnableToPool { get; }
    }
 
-   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TEnumerableItem, TStream> : AbstractDisposable, ConnectionAcquireInfo<TConnection>
+   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TStatementInformation, TEnumerableItem, TStream> : AbstractDisposable, ConnectionAcquireInfo<TConnection>
+      where TStatement : TStatementInformation
       where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
       where TStream : IDisposable
    {
       private const Int32 NOT_CANCELED = 0;
@@ -89,7 +90,7 @@ namespace CBAM.Abstractions.Implementation
 
       public ConnectionUsageInfo<TConnection> GetConnectionUsageForToken( CancellationToken token )
       {
-         return new CancelableConnectionUsageInfo<TConnection, TConnectionFunctionality, TStatement, TEnumerableItem>(
+         return new CancelableConnectionUsageInfo<TConnection, TConnectionFunctionality, TStatement, TStatementInformation, TEnumerableItem>(
             this.Connection,
             this.ConnectionFunctionality,
             token,
@@ -120,9 +121,10 @@ namespace CBAM.Abstractions.Implementation
       TConnection Connection { get; }
    }
 
-   public class CancelableConnectionUsageInfo<TConnection, TConnectionFunctionality, TStatement, TEnumerableItem> : ConnectionUsageInfo<TConnection>
+   public class CancelableConnectionUsageInfo<TConnection, TConnectionFunctionality, TStatement, TStatementInformation, TEnumerableItem> : ConnectionUsageInfo<TConnection>
+      where TStatement : TStatementInformation
       where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
    {
       private readonly CancellationTokenRegistration _registration;
       private readonly TConnectionFunctionality _connectionFunctionality;
@@ -149,7 +151,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : ConnectionPool<TConnection>
+   public class OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : ConnectionPoolObservable<TConnection>
       where TConnection : class
       where TConnectionCreationParams : class
    {
@@ -178,11 +180,12 @@ namespace CBAM.Abstractions.Implementation
 
       protected Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> InstanceCreator { get; }
 
-      public Task UseConnectionAsync( Func<TConnection, Task> executer, CancellationToken token = default( CancellationToken ) )
+      public Task UseConnectionAsync( Func<TConnection, Task> user, CancellationToken token = default( CancellationToken ) )
       {
+         ArgumentValidator.ValidateNotNull( nameof( user ), user );
          return token.IsCancellationRequested ?
             TaskUtils2.FromCanceled( token ) :
-            this.DoUseConnectionAsync( executer, token );
+            this.DoUseConnectionAsync( user, token );
 
       }
 
@@ -229,8 +232,8 @@ namespace CBAM.Abstractions.Implementation
          {
             using ( var usageInfo = connAcquireInfo.GetConnectionUsageForToken( token ) )
             {
-               await creationEvent.InvokeAndWaitForAwaitables( new AfterConnectionCreationEventArgsImpl<TConnection>( usageInfo.Connection ) );
-               await acquireEvent.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgsImpl<TConnection>( usageInfo.Connection ) );
+               await creationEvent.InvokeAndWaitForAwaitables( new DefaultAfterConnectionCreationEventArgs<TConnection>( usageInfo.Connection ) );
+               await acquireEvent.InvokeAndWaitForAwaitables( new DefaultAfterConnectionAcquiringEventArgs<TConnection>( usageInfo.Connection ) );
             }
          }
 
@@ -257,12 +260,12 @@ namespace CBAM.Abstractions.Implementation
             {
                if ( isConnectionReturned )
                {
-                  await returningEvent.InvokeAndWaitForAwaitables( new BeforeConnectionReturningEventArgsImpl<TConnection>( usageInfo.Connection ) );
+                  await returningEvent.InvokeAndWaitForAwaitables( new DefaultBeforeConnectionReturningEventArgs<TConnection>( usageInfo.Connection ) );
                }
 
                if ( closeConnection )
                {
-                  await closingEvent.InvokeAndWaitForAwaitables( new BeforeConnectionCloseEventArgsImpl<TConnection>( usageInfo.Connection ) );
+                  await closingEvent.InvokeAndWaitForAwaitables( new DefaultBeforeConnectionCloseEventArgs<TConnection>( usageInfo.Connection ) );
                }
             }
          }
@@ -326,7 +329,7 @@ namespace CBAM.Abstractions.Implementation
             {
                using ( var usageInfo = this.ConnectionExtractor( retVal ).GetConnectionUsageForToken( token ) )
                {
-                  await evt.InvokeAndWaitForAwaitables( new AfterConnectionAcquiringEventArgsImpl<TConnection>( usageInfo.Connection ) );
+                  await evt.InvokeAndWaitForAwaitables( new DefaultAfterConnectionAcquiringEventArgs<TConnection>( usageInfo.Connection ) );
                }
             }
          }
@@ -349,7 +352,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
-   public class CachingConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingConnectionPool<TConnection, InstanceHolderWithTimestamp<ConnectionAcquireInfo<TConnection>>, TConnectionCreationParams>, ConnectionPool<TConnection, TimeSpan>
+   public class CachingConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingConnectionPool<TConnection, InstanceHolderWithTimestamp<ConnectionAcquireInfo<TConnection>>, TConnectionCreationParams>, ConnectionPoolObservable<TConnection, TimeSpan>
       where TConnection : class
       where TConnectionCreationParams : class
    {

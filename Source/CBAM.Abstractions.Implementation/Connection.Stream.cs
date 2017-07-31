@@ -27,7 +27,8 @@ using UtilPack.AsyncEnumeration;
 namespace CBAM.Abstractions.Implementation
 {
    // SU = Stream Unseekable
-   public abstract class ConnectionFunctionalitySU<TStatement, TEnumerableItem> : DefaultConnectionFunctionality<TStatement, TEnumerableItem>, ConnectionFunctionality<TStatement, TEnumerableItem>
+   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TEnumerableItem> : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>, ConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
+      where TStatement : TStatementInformation
       where TEnumerableItem : class
    {
       private sealed class NotInUse : ConnectionStreamUsageState
@@ -49,13 +50,13 @@ namespace CBAM.Abstractions.Implementation
          this._currentlyExecutingStatement = NotInUse.Instance;
       }
 
-      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatement> PerformCreateIterationArguments(
+      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PerformCreateIterationArguments(
          TStatement stmt,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatement>>> getGlobalAfterStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatement>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatement>>> getGlobalAfterStatementExecutionItemEncountered
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterStatementExecutionItemEncountered
          )
       {
          return AsyncEnumeratorFactory.CreateObservableEnumerator( async ( token ) =>
@@ -68,7 +69,7 @@ namespace CBAM.Abstractions.Implementation
                );
             return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( tkn ) => await this.DisposeStatementAsync( reserved ));
          },
-         stmt,
+         this.GetInformationFromStatement( stmt ),
          getGlobalBeforeStatementExecutionStart,
          getGlobalAfterStatementExecutionStart,
          getGlobalBeforeStatementExecutionEnd,
@@ -76,6 +77,8 @@ namespace CBAM.Abstractions.Implementation
          getGlobalAfterStatementExecutionItemEncountered
          );
       }
+
+      protected abstract TStatementInformation GetInformationFromStatement( TStatement statement );
 
       protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatement stmt, ReservedForStatement reservationObject );
 
@@ -219,9 +222,10 @@ namespace CBAM.Abstractions.Implementation
 
    }
 
-   public abstract class ConnectionVendorFunctionalitySU<TConnection, TStatement, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality>
+   public abstract class ConnectionVendorFunctionalitySU<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality>
+      where TStatement : TStatementInformation
       where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TEnumerableItem>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
    {
 
       protected override Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error )

@@ -13,7 +13,7 @@ using CBAM.Tabular.Implementation;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   internal sealed class PgSQLDataRowStream : DataRowColumnSUKSWithConnectionFunctionality<PostgreSQLProtocol, StatementBuilder, SQLStatementExecutionResult>
+   internal sealed class PgSQLDataRowStream : DataRowColumnSUKSWithConnectionFunctionality<PostgreSQLProtocol, StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
    {
       private readonly DataFormat _dataFormat;
       private DataRowObject _backendMessage;

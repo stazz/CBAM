@@ -26,13 +26,13 @@ using CBAM.Abstractions;
 
 namespace CBAM.SQL
 {
-   public interface SQLConnectionPool<out TConnection> : ConnectionPool<TConnection>
+   public interface SQLConnectionPool<out TConnection> : ConnectionPoolObservable<TConnection>
       where TConnection : class, SQLConnection
    {
 
    }
 
-   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : ConnectionPool<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
+   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : ConnectionPoolObservable<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
    {
    }

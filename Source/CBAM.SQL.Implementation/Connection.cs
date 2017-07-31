@@ -30,8 +30,8 @@ using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.Implementation
 {
-   public abstract class SQLConnectionImpl<TConnectionFunctionality> : ConnectionImpl<StatementBuilder, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, SQLStatementExecutionResult>, SQLConnectionFunctionality
+   public abstract class SQLConnectionImpl<TConnectionFunctionality> : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TConnectionFunctionality>, SQLConnection
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
    {
       private Object _isReadOnly;
       private Object _isolationLevel;
@@ -115,9 +115,9 @@ namespace CBAM.SQL.Implementation
       protected abstract ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row );
    }
 
-   public abstract class DefaultConnectionVendorFunctionality<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, StatementBuilder, String, SQLStatementExecutionResult, TConnectionCreationParameters, TConnectionFunctionality>, SQLConnectionVendorFunctionality
+   public abstract class DefaultConnectionVendorFunctionality<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TConnectionCreationParameters, TConnectionFunctionality>, SQLConnectionVendorFunctionality
       where TConnection : class, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, SQLStatementExecutionResult>, SQLConnectionFunctionality
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
    {
 
       public abstract void AppendEscapedLiteral( StringBuilder builder, String literal );
@@ -148,7 +148,7 @@ namespace CBAM.SQL.Implementation
 
    }
 
-   public interface SQLConnectionFunctionality : ConnectionFunctionality<StatementBuilder, SQLStatementExecutionResult>
+   public interface SQLConnectionFunctionality : ConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
    {
    }
 

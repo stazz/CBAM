@@ -369,34 +369,4 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return tuple.Protocol;
       }
    }
-
-   //internal sealed class PgSQLIterationArguments : IterationArgumentsSU
-   //{
-   //   // TODO create a copy of statement builder, to prevent modifications..
-   //   public PgSQLIterationArguments( StatementBuilder statement )
-   //      : base( statement )
-   //   {
-   //      //this.IsSimple = statement.IsSimple();
-   //   }
-
-   //   //public PgSQLIterationArguments( PgSQLDataRow row, PgSQLException[] warnings, Boolean isSimple )
-   //   //   : base( row, warnings )
-   //   //{
-   //   //   this.IsSimple = isSimple;
-   //   //}
-
-   //   //public PgSQLIterationArguments( Int32 affectedRows, PgSQLException[] warnings, Boolean isSimple )
-   //   //   : base( affectedRows, warnings )
-   //   //{
-   //   //   this.IsSimple = isSimple;
-   //   //}
-
-   //   //public PgSQLIterationArguments( Int32[] affectedRows, PgSQLException[] warnings, Boolean isSimple )
-   //   //   : base( affectedRows, warnings )
-   //   //{
-   //   //   this.IsSimple = isSimple;
-   //   //}
-
-   //   //public Boolean IsSimple { get; }
-   //}
 }

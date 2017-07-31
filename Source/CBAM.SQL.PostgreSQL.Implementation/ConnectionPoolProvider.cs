@@ -70,12 +70,12 @@ namespace CBAM.SQL.PostgreSQL
 
       public Type DefaultTypeForCreationParameter => typeof( TDefaultConfigurationData );
 
-      ConnectionPool<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
+      ConnectionPoolObservable<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
       {
          return this.CreateOneTimeUseConnectionPool( CheckCreationParameters( creationParameters ) );
       }
 
-      ConnectionPool<PgSQLConnection, TimeSpan> ConnectionPoolProvider<PgSQLConnection>.CreateTimeoutingConnectionPool( Object creationParameters )
+      ConnectionPoolObservable<PgSQLConnection, TimeSpan> ConnectionPoolProvider<PgSQLConnection>.CreateTimeoutingConnectionPool( Object creationParameters )
       {
          return this.CreateTimeoutingConnectionPool( CheckCreationParameters( creationParameters ) );
       }

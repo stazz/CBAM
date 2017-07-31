@@ -125,8 +125,9 @@ namespace CBAM.Tabular.Implementation
 
    }
 
-   public abstract class DataRowColumnSUKSWithConnectionFunctionality<TConnectionFunctionality, TStatement, TEnumerationItem> : DataRowColumnSUKS
-      where TConnectionFunctionality : ConnectionFunctionalitySU<TStatement, TEnumerationItem>
+   public abstract class DataRowColumnSUKSWithConnectionFunctionality<TConnectionFunctionality, TStatement, TStatementInformation, TEnumerationItem> : DataRowColumnSUKS
+      where TStatement : TStatementInformation
+      where TConnectionFunctionality : ConnectionFunctionalitySU<TStatement, TStatementInformation, TEnumerationItem>
       where TEnumerationItem : class
    {
 

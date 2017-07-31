@@ -27,11 +27,8 @@ using UtilPack;
 
 namespace CBAM.SQL
 {
-   public interface StatementBuilder
+   public interface StatementBuilderInformation
    {
-
-      void SetParameterObjectWithType( Int32 parameterIndex, Object value, Type clrType );
-
       Int32 SQLParameterCount { get; }
 
       Int32 BatchParameterCount { get; }
@@ -41,10 +38,17 @@ namespace CBAM.SQL
       StatementParameter GetBatchParameterInfo( Int32 batchIndex, Int32 parameterIndex );
 
       String SQL { get; }
-
-      void AddBatch();
-
    }
+
+   public interface StatementBuilder : StatementBuilderInformation
+   {
+
+      void SetParameterObjectWithType( Int32 parameterIndex, Object value, Type clrType );
+      void AddBatch();
+      StatementBuilderInformation StatementBuilderInformation { get; }
+   }
+
+
 
    public interface StatementParameter // : IEquatable<StatementParameter>
    {
@@ -55,8 +59,6 @@ namespace CBAM.SQL
 
 public static partial class E_CBAM
 {
-   // TODO no BigInteger in PCL for .NET 4...
-
    public static void SetParameterBoolean( this StatementBuilder stmt, Int32 parameterIndex, Boolean? value )
    {
       stmt.SetParameterObjectWithType( parameterIndex, value, typeof( Boolean ) );

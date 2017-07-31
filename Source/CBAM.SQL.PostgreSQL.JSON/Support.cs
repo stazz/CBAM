@@ -26,12 +26,12 @@ using System.Threading.Tasks;
 
 public static partial class E_CBAM
 {
-   public static void EnableJSONSupport( this ConnectionPool<PgSQLConnection> pool )
+   public static void EnableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent += Pool_AfterConnectionCreationEvent;
    }
 
-   public static void DisableJSONSupport( this ConnectionPool<PgSQLConnection> pool )
+   public static void DisableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent -= Pool_AfterConnectionCreationEvent;
    }

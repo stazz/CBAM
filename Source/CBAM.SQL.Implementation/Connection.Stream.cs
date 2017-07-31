@@ -28,7 +28,7 @@ namespace CBAM.SQL.Implementation
 {
    using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
-   public abstract class SQLConnectionFunctionalitySU : ConnectionFunctionalitySU<StatementBuilder, SQLStatementExecutionResult>, SQLConnectionFunctionality
+   public abstract class SQLConnectionFunctionalitySU : ConnectionFunctionalitySU<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
    {
       public SQLConnectionFunctionalitySU()
       {
@@ -50,6 +50,11 @@ namespace CBAM.SQL.Implementation
             retValTask = this.ExecuteStatementAsSimple( token, stmt, reservationObject );
          }
          return await retValTask;
+      }
+
+      protected override StatementBuilderInformation GetInformationFromStatement( StatementBuilder statement )
+      {
+         return statement?.StatementBuilderInformation;
       }
 
       protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
