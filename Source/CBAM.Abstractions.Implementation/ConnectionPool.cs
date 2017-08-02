@@ -397,6 +397,7 @@ namespace CBAM.Abstractions.Implementation
       }
    }
 
+
    public sealed class InstanceHolderWithTimestamp<TInstance> : InstanceWithNextInfo<InstanceHolderWithTimestamp<TInstance>>
    {
       private InstanceHolderWithTimestamp<TInstance> _next;
