@@ -55,9 +55,9 @@ namespace CBAM.Abstractions
       /// </summary>
       /// <value>The current cancellation token for asynchronous operations.</value>
       /// <remarks>
-      /// This will be the <see cref="CancellationToken"/> passed to <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+      /// This will be the <see cref="CancellationToken"/> passed to <see cref="UtilPack.ResourcePooling.AsyncResourcePool{TResource}.UseResourceAsync(Func{TResource, Task}, CancellationToken)"/> method.
       /// </remarks>
-      /// <seealso cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/>
+      /// <seealso cref="UtilPack.ResourcePooling.AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/>
       CancellationToken CurrentCancellationToken { get; }
    }
 

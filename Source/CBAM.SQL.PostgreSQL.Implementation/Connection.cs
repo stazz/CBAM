@@ -25,10 +25,11 @@ using System.Threading;
 using UtilPack;
 using CBAM.Abstractions.Implementation;
 using CBAM.Tabular;
+using UtilPack.ResourcePooling;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   internal sealed class PgSQLConnectionImpl : SQLConnectionImpl<PostgreSQLProtocol>, PgSQLConnection
+   internal sealed class PgSQLConnectionImpl : SQLConnectionImpl<PostgreSQLProtocol, PgSQLConnectionVendorFunctionality>, PgSQLConnection
    {
       private const String TRANSACTION_ISOLATION_PREFIX = "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ";
 
@@ -38,11 +39,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private const String SERIALIZABLE = TRANSACTION_ISOLATION_PREFIX + "SERIALIZABLE";
 
       public PgSQLConnectionImpl(
-         PgSQLConnectionVendorFunctionality vendorFunctionality,
          PostgreSQLProtocol functionality,
          DatabaseMetadata metaData
          )
-         : base( vendorFunctionality, functionality, metaData )
+         : base( functionality, metaData )
       {
       }
 
@@ -159,7 +159,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal abstract class PgSQLConnectionVendorFunctionalityImpl<TConnectionCreationParameters> : SQLConnectionVendorFunctionalitySU<PgSQLConnection, TConnectionCreationParameters, PostgreSQLProtocol>, PgSQLConnectionVendorFunctionality
+   internal sealed class PgSQLConnectionVendorFunctionalityImpl : DefaultConnectionVendorFunctionality, PgSQLConnectionVendorFunctionality
    {
       public PgSQLConnectionVendorFunctionalityImpl()
       {
@@ -198,7 +198,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override StatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices )
       {
-         return new PgSQLStatementBuilder( sql, parameterIndices );
+         var paramz = new StatementParameter[parameterIndices?.Length ?? 0];
+         var batchParams = new List<StatementParameter[]>();
+         var info = new PgSQLStatementBuilderInformation( sql, paramz, batchParams, parameterIndices );
+         return new PgSQLStatementBuilder( info, paramz, batchParams );
       }
 
       protected override Boolean TryParseStatementSQL( String sql, out Int32[] parameterIndices )
@@ -241,6 +244,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return new ValueTask<Boolean>( false );
       }
 
+      // TODO: allow this to reflect the configurable propery of backend.
       public Boolean StandardConformingStrings { get; set; }
 
       //private static Boolean AllSpaces( String sql, Int32 startIdxInclusive )
@@ -311,30 +315,32 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //   return ch == '\n' || ch == '\r';
       //}
 
+   }
 
-
-      protected override ValueTask<PgSQLConnection> CreateConnection( PostgreSQLProtocol functionality )
+   internal abstract class PgSQLConnectionFactory<TConnectionCreationParameters> : SQLConnectionFactorySU<PgSQLConnectionImpl, PgSQLConnectionVendorFunctionality, TConnectionCreationParameters, PostgreSQLProtocol>
+   {
+      protected override ValueTask<PgSQLConnectionImpl> CreateConnection( PostgreSQLProtocol functionality )
       {
-         return new ValueTask<PgSQLConnection>( new PgSQLConnectionImpl( this, functionality, new PgSQLDatabaseMetaData( this, functionality ) ) );
+         return new ValueTask<PgSQLConnectionImpl>( new PgSQLConnectionImpl( functionality, new PgSQLDatabaseMetaData( functionality ) ) );
       }
 
-      protected override ConnectionAcquireInfo<PgSQLConnection> CreateConnectionAcquireInfo( PostgreSQLProtocol functionality, PgSQLConnection connection )
+      protected override ResourceAcquireInfo<PgSQLConnectionImpl> CreateConnectionAcquireInfo( PostgreSQLProtocol functionality, PgSQLConnectionImpl connection )
       {
          return new PgSQLConnectionAcquireInfo(
             connection,
-            functionality,
             functionality.Stream
             );
       }
 
-      protected override IDisposable ExtractStreamOnConnectionAcquirementError( PostgreSQLProtocol functionality, PgSQLConnection connection, CancellationToken token, Exception error )
+
+      protected override IDisposable ExtractStreamOnConnectionAcquirementError( PostgreSQLProtocol functionality, PgSQLConnectionImpl connection, CancellationToken token, Exception error )
       {
          return functionality?.Stream;
       }
    }
 
 #if !NETSTANDARD1_0
-   internal sealed class PgSQLConnectionVendorFunctionalityImpl : PgSQLConnectionVendorFunctionalityImpl<PgSQLConnectionCreationInfo>
+   internal sealed class PgSQLConnectionFactory : PgSQLConnectionFactory<PgSQLConnectionCreationInfo>
    {
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfo parameters,
@@ -342,7 +348,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          var tuple = await PostgreSQLProtocol.PerformStartup(
-            this,
+            new PgSQLConnectionVendorFunctionalityImpl(),
             parameters,
             token
             );
@@ -352,7 +358,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
    }
 #endif
 
-   internal sealed class PgSQLConnectionVendorFunctionalityForReadyMadeStreams : PgSQLConnectionVendorFunctionalityImpl<PgSQLConnectionCreationInfoForReadyMadeStreams>
+   internal sealed class PgSQLConnectionFactoryForReadyMadeStreams : PgSQLConnectionFactory<PgSQLConnectionCreationInfoForReadyMadeStreams>
    {
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfoForReadyMadeStreams parameters,
@@ -360,7 +366,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          var tuple = await PostgreSQLProtocol.PerformStartup(
-            this,
+            new PgSQLConnectionVendorFunctionalityImpl(),
             parameters.Initialization,
             token,
             parameters.Stream

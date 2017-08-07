@@ -38,7 +38,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const Int32 THIRD = 3;
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
-         var tuple = await pool.UseConnectionAsync( async conn =>
+         var tuple = await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
             stmt.SetParameterInt32( 0, FIRST );
@@ -79,7 +79,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const String THIRD = "third";
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
-         var tuple = await pool.UseConnectionAsync( async conn =>
+         var tuple = await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM ( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
             stmt.SetParameterString( 0, FIRST );
@@ -175,7 +175,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var bytez = new Byte[256];
          UtilPack.Cryptography.Digest.DigestBasedRandomGenerator.CreateAndSeedWithDefaultLogic( new UtilPack.Cryptography.Digest.SHA512() ).NextBytes( bytez );
 
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ) ) AS tmp" );
             stmt.SetParameterObject<Byte[]>( 0, bytez );

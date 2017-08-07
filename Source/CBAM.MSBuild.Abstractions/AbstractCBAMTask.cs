@@ -26,6 +26,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.ResourcePooling;
 
 using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String, System.Threading.Tasks.Task<System.Reflection.Assembly>>;
 
@@ -103,7 +104,7 @@ namespace CBAM.MSBuild.Abstractions
          {
             var poolCreationArgs = await this.ProvideConnectionCreationParameters( poolProvider );
             var pool = await this.AcquireConnectionPool( poolProvider, poolCreationArgs );
-            await pool.UseConnectionAsync( this.UseConnection, this._cancellationSource.Token );
+            await pool.UseResourceAsync( this.UseConnection, this._cancellationSource.Token );
          }
       }
 
@@ -125,12 +126,12 @@ namespace CBAM.MSBuild.Abstractions
             .Get( poolProvider.DefaultTypeForCreationParameter ) );
       }
 
-      protected virtual ValueTask<ConnectionPool<TConnection>> AcquireConnectionPool(
+      protected virtual ValueTask<AsyncResourcePool<TConnection>> AcquireConnectionPool(
          ConnectionPoolProvider<TConnection> provider,
          Object poolCreationArgs
          )
       {
-         return new ValueTask<ConnectionPool<TConnection>>( provider.CreateOneTimeUseConnectionPool( poolCreationArgs ) );
+         return new ValueTask<AsyncResourcePool<TConnection>>( provider.CreateOneTimeUseConnectionPool( poolCreationArgs ) );
       }
 
       protected abstract Task UseConnection( TConnection connection );

@@ -43,7 +43,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 {
    using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
-   internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU
+   internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU<PgSQLConnectionVendorFunctionality>
    {
 
 
@@ -51,7 +51,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private readonly IDictionary<String, String> _serverParameters;
       //private Int32 _standardConformingStrings;
       private readonly Version _serverVersion;
-      private readonly PgSQLConnectionVendorFunctionality _vendorFunctionality;
 
       public PostgreSQLProtocol(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
@@ -66,9 +65,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 #if !NETSTANDARD1_0
          , Socket socket
 #endif
-         )
+         ) : base( vendorFunctionality )
       {
-         this._vendorFunctionality = ArgumentValidator.ValidateNotNull( nameof( vendorFunctionality ), vendorFunctionality );
          this.DisableBinaryProtocolSend = disableBinaryProtocolSend;
          this.DisableBinaryProtocolReceive = disableBinaryProtocolReceive;
          this.MessageIOArgs = ArgumentValidator.ValidateNotNull( nameof( messageIOArgs ), messageIOArgs );
@@ -108,13 +106,14 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Int32 BackendProcessID { get; }
 
-      protected override ReservedForStatement CreateReservationObject( StatementBuilder stmt )
+      protected override ReservedForStatement CreateReservationObject( StatementBuilderInformation stmt )
       {
          return new PgReservedForStatement( stmt.IsSimple(), stmt.HasBatchParameters() ? "cbam_statement" : null );
       }
 
-      protected override void ValidateStatementOrThrow( StatementBuilder statement )
+      protected override void ValidateStatementOrThrow( StatementBuilderInformation statement )
       {
+         ArgumentValidator.ValidateNotNull( nameof( statement ), statement );
          if ( statement.BatchParameterCount > 1 )
          {
             // Verify that all columns have same typeIDs
@@ -139,9 +138,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       private static (Int32[] ParameterIndices, TBoundTypeInfo[] TypeInfos, Int32[] TypeIDs) GetVariablesForExtendedQuerySequence(
-         StatementBuilder stmt,
+         StatementBuilderInformation stmt,
          TypeRegistry typeRegistry,
-         Func<StatementBuilder, Int32, StatementParameter> paramExtractor
+         Func<StatementBuilderInformation, Int32, StatementParameter> paramExtractor
          )
       {
          var pCount = stmt.SQLParameterCount;
@@ -165,7 +164,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             typeIDs = Empty<Int32>.Array;
          }
 
-         return (( (PgSQLStatementBuilder) stmt ).ParameterIndices, typeInfos, typeIDs);
+         return (( (PgSQLStatementBuilderInformation) stmt ).ParameterIndices, typeInfos, typeIDs);
       }
 
       private MessageIOArgs GetIOArgs( ResizableArray<Byte> bufferToUse = null, CancellationToken? tokenToUse = null )
@@ -175,7 +174,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
          CancellationToken token,
-         StatementBuilder statement,
+         StatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
       {
@@ -264,7 +263,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       private async Task SendMessagesForBatch(
-         StatementBuilder statement,
+         StatementBuilderInformation statement,
          TBoundTypeInfo[] typeInfos,
          String statementName,
          MessageIOArgs ioArgs,
@@ -337,7 +336,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
          CancellationToken token,
-         StatementBuilder statement,
+         StatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
       {
@@ -433,7 +432,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
          CancellationToken token,
-         StatementBuilder stmt,
+         StatementBuilderInformation stmt,
          ReservedForStatement reservedState
          )
       {
@@ -776,8 +775,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-         // Just do "SELECT 1"; If we get any notifications 
-         await this.CreateIterationArguments( this._vendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+            // Just do "SELECT 1"; to get any notifications 
+            await this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else

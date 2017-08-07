@@ -42,7 +42,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          //const Int32 SECOND = 2;
          //const Int32 THIRD = 3;
 
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             await conn.ExecuteNonQueryAsync( "CREATE TEMPORARY TABLE batch_test( id SERIAL, value TEXT, PRIMARY KEY (id) )" );
 
@@ -78,7 +78,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             await conn.ExecuteNonQueryAsync( "CREATE TEMPORARY TABLE batch_test( id SERIAL, PRIMARY KEY (id) )" );
 

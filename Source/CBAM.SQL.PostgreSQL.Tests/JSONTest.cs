@@ -71,7 +71,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          pool.EnableJSONSupport();
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             foreach ( var jsonInfo in generator.GenerateJSONValues() )
             {
@@ -97,7 +97,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          pool.EnableJSONSupport();
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.VendorFunctionality.CreateStatementBuilder( "SELECT ?" );
             foreach ( var jsonInfo in generator.GenerateJSONValues() )
@@ -128,7 +128,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          pool.EnableJSONSupport();
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.VendorFunctionality.CreateStatementBuilder( "SELECT ?" );
             stmt.SetParameterObject<JObject>( 0, new JObject( new JProperty( "testKey", "testValue" ) ) );

@@ -26,10 +26,20 @@ using UtilPack.AsyncEnumeration;
 
 namespace CBAM.Abstractions.Implementation
 {
-   // SU = Stream Unseekable
-   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TEnumerableItem> : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>, ConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
+
+   /// <summary>
+   /// This class extends <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> in order to provide specialized implementation for situations when unseekable stream (SU) (e.g. <see cref="T:System.Net.Sockets.NetworkStream"/>) is used to communicate with remote resource.
+   /// In such scenarios, the whole stream is typically reserved for execution of single statement at a time.
+   /// </summary>
+   /// <typeparam name="TStatement">The type of statement to modify/query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The read-only information about the statement.</typeparam>
+   /// <typeparam name="TStatementCreationArgs">The type of arguments to create a new statement.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of items enumerated by statement.</typeparam>
+   /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
+   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor>
       where TStatement : TStatementInformation
       where TEnumerableItem : class
+      where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
       private sealed class NotInUse : ConnectionStreamUsageState
       {
@@ -45,53 +55,83 @@ namespace CBAM.Abstractions.Implementation
 
       private ConnectionStreamUsageState _currentlyExecutingStatement;
 
-      public ConnectionFunctionalitySU()
+      /// <summary>
+      /// Creates a new instance of <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
+      /// </summary>
+      /// <param name="vendor">The <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</param>
+      public ConnectionFunctionalitySU( TVendor vendor )
+         : base( vendor )
       {
          this._currentlyExecutingStatement = NotInUse.Instance;
       }
 
-      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PerformCreateIterationArguments(
-         TStatement stmt,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterStatementExecutionItemEncountered
+      /// <summary>
+      /// Overrides the <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.InitialMoveNext(TStatementInformation, CancellationToken)"/> so that it marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
+      /// </summary>
+      /// <param name="statement">The read-only statement information.</param>
+      /// <param name="token">The <see cref="CancellationToken"/> passed to initial call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
+      /// <returns>The information about the statement execution and enumeration.</returns>
+      /// <remarks>
+      /// In order to mark this connection as reserved, a new instance of <see cref="ReservedForStatement"/> is created by calling <see cref="CreateReservationObject(TStatementInformation)"/> method.
+      /// Then <see cref="UseStreamOutsideStatementAsync(Func{Task}, ReservedForStatement, bool)"/> is called such that it would call <see cref="ExecuteStatement(CancellationToken, TStatementInformation, ReservedForStatement)"/> if current connection is not markeda s reserved by other statement.
+      /// </remarks>
+      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
+      /// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
+      /// <seealso cref="AsyncEnumerator{T}"/>
+      protected override async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, DisposeAsyncDelegate)> InitialMoveNext(
+         TStatementInformation statement,
+         CancellationToken token
          )
       {
-         return AsyncEnumeratorFactory.CreateObservableEnumerator( async ( token ) =>
-         {
-            var reserved = this.CreateReservationObject( stmt );
-            var simpleTuple = await this.UseStreamOutsideStatementAsync(
-               async () => await this.ExecuteStatement( token, stmt, reserved ),
-               reserved,
-               false
-               );
-            return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( tkn ) => await this.DisposeStatementAsync( reserved ));
-         },
-         this.GetInformationFromStatement( stmt ),
-         getGlobalBeforeStatementExecutionStart,
-         getGlobalAfterStatementExecutionStart,
-         getGlobalBeforeStatementExecutionEnd,
-         getGlobalAfterStatementExecutionEnd,
-         getGlobalAfterStatementExecutionItemEncountered
-         );
+         var reserved = this.CreateReservationObject( statement );
+         var simpleTuple = await this.UseStreamOutsideStatementAsync(
+            async () => await this.ExecuteStatement( token, statement, reserved ),
+            reserved,
+            false
+            );
+         return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( tkn ) => await this.DisposeStatementAsync( reserved ));
       }
 
-      protected abstract TStatementInformation GetInformationFromStatement( TStatement statement );
+      /// <summary>
+      /// Derived classes should override this abstract method to provide custom execution logic for statement.
+      /// </summary>
+      /// <param name="token">The <see cref="CancellationToken"/> passed to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
+      /// <param name="stmt">The read-only information about statement being executed.</param>
+      /// <param name="reservationObject">The reservation object created by <see cref="CreateReservationObject(TStatementInformation)"/>.</param>
+      /// <returns>Information about the backend result and how to enumerate more results.</returns>
+      /// <seealso cref="InitialMoveNext(TStatementInformation, CancellationToken)"/>
+      /// <remarks>
+      /// The connection will be marked as reserved to the statement before this method is called.
+      /// </remarks>
+      protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatementInformation stmt, ReservedForStatement reservationObject );
 
-      protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatement stmt, ReservedForStatement reservationObject );
+      /// <summary>
+      /// Derived classes should override this abstract method to create custom <see cref="ReservedForStatement"/> objects.
+      /// </summary>
+      /// <param name="stmt">The read-only information about statement being executed.</param>
+      /// <returns>A new instance of <see cref="ReservedForStatement"/> which will be used to mark this connection as being in use to execute the <paramref name="stmt"/>.</returns>
+      protected abstract ReservedForStatement CreateReservationObject( TStatementInformation stmt );
 
-      protected abstract ReservedForStatement CreateReservationObject( TStatement stmt );
-
-      protected async Task UseStreamOutsideStatementAsync( Func<Task> action )
+      /// <summary>
+      /// This is helper method to mark this connection as reserved for anonymous statement, execute custom callback, and then free the connection.
+      /// </summary>
+      /// <param name="action">The asynchronous callback to execute after reserving and before freeing the connection.</param>
+      /// <returns>A task which will complete after connection is freed up.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
+      protected Task UseStreamOutsideStatementAsync( Func<Task> action )
       {
-         await this.UseStreamOutsideStatementAsync( action, _NoStatement, true );
+         return this.UseStreamOutsideStatementAsync( action, _NoStatement, true );
       }
 
-      protected async Task<T> UseStreamOutsideStatementAsync<T>( Func<Task<T>> action )
+      /// <summary>
+      /// This is helper method to mark this connection as reserved for anonymous statement, execute custom callback, and then free the connection.
+      /// </summary>
+      /// <param name="func">The asynchronous callback to execute after reserving and before freeing the connection.</param>
+      /// <returns>A task which will complete after connection is freed up, returning result of the <paramref name="func"/>.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
+      protected async Task<T> UseStreamOutsideStatementAsync<T>( Func<Task<T>> func )
       {
-         return await this.UseStreamOutsideStatementAsync( action, _NoStatement, true );
+         return await this.UseStreamOutsideStatementAsync( func, _NoStatement, true );
       }
 
       private async Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly )
@@ -138,7 +178,14 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public async Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action ) //, Boolean throwIfNotReserved = true )
+      /// <summary>
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
+      /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
+      /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      public async Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
          ConnectionStreamUsageState prevState;
@@ -161,7 +208,14 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public async Task<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<Task<T>> action )
+      /// <summary>
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
+      /// <param name="func">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
+      /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      public async Task<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<Task<T>> func )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
          ConnectionStreamUsageState prevState;
@@ -171,7 +225,7 @@ namespace CBAM.Abstractions.Implementation
          {
             try
             {
-               return await action();
+               return await func();
             }
             finally
             {
@@ -196,48 +250,61 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Derived classes should override this abstract method to implement custom dispose functionality when the statement represented by given <see cref="ReservedForStatement"/> is being disposed.
+      /// </summary>
+      /// <param name="reservationObject">The <see cref="ReservedForStatement"/> identifying the statement.</param>
+      /// <returns>The task which will complete when the dispose procedure has been completed.</returns>
       protected abstract Task PerformDisposeStatementAsync( ReservedForStatement reservationObject );
 
+      /// <summary>
+      /// This property implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
+      /// </summary>
+      /// <value>Will return <c>true</c> if this connection is not reserved for any statement.</value>
       public override Boolean CanBeReturnedToPool => ReferenceEquals( this._currentlyExecutingStatement, NotInUse.Instance );
 
    }
 
+   /// <summary>
+   /// This is common class which is used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as either being reserved for idle statement, or statement processing being in progress.
+   /// </summary>
    public abstract class ConnectionStreamUsageState
    {
 
    }
 
+   /// <summary>
+   /// This class is used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as being reserved to a statement.
+   /// Whenever any actual communication with remote resource is being done, the value of <see cref="UsageState"/> property is used.
+   /// </summary>
    public class ReservedForStatement : ConnectionStreamUsageState
    {
+      /// <summary>
+      /// Creates a new instance of <see cref="ReservedForStatement"/> and also new instance of <see cref="CurrentlyInUse"/> for <see cref="UsageState"/>.
+      /// </summary>
       public ReservedForStatement()
       {
          this.UsageState = new CurrentlyInUse();
       }
 
+      /// <summary>
+      /// Gets the <see cref="CurrentlyInUse"/> object used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as using underlying connection for communicating with remote resource.
+      /// </summary>
+      /// <value>The <see cref="CurrentlyInUse"/> object used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as using underlying connection for communicating with remote resource.</value>
       public CurrentlyInUse UsageState { get; }
    }
 
+   /// <summary>
+   /// This class is used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as being in use for a statement represented by <see cref="ReservedForStatement"/>, which has this object in its <see cref="ReservedForStatement.UsageState"/> property.
+   /// </summary>
+   /// <remarks>
+   /// The instances of this class can only be created by constructor of <see cref="ReservedForStatement"/> class.
+   /// </remarks>
    public sealed class CurrentlyInUse : ConnectionStreamUsageState
    {
-
-   }
-
-   public abstract class ConnectionVendorFunctionalitySU<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality>
-      where TStatement : TStatementInformation
-      where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
-   {
-
-      protected override Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error )
+      internal CurrentlyInUse()
       {
-         this.ExtractStreamOnConnectionAcquirementError( functionality, connection, token, error ).DisposeSafely();
-         return TaskUtils.CompletedTask;
+
       }
-
-      protected abstract IDisposable ExtractStreamOnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
    }
-
-
-
-
 }

@@ -21,6 +21,7 @@ using CBAM.SQL.PostgreSQL.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UtilPack.ResourcePooling;
 
 using TDefaultConfiguration = CBAM.SQL.PostgreSQL.
 #if NETSTANDARD1_0
@@ -42,40 +43,42 @@ namespace CBAM.SQL.PostgreSQL
    public sealed class PgSQLConnectionPoolProvider : ConnectionPoolProvider<PgSQLConnection>
    {
 #if !NETSTANDARD1_0
-      private static readonly PgSQLConnectionVendorFunctionalityImpl _VendorFunctionality;
+      private static readonly PgSQLConnectionFactory _Factory;
 #endif
-      private static readonly PgSQLConnectionVendorFunctionalityForReadyMadeStreams _VendorFunctionalityForReadyMadeStreams;
+      private static readonly PgSQLConnectionFactoryForReadyMadeStreams _FactoryForReadyMadeStreams;
 
       static PgSQLConnectionPoolProvider()
       {
+         //VendorFunctionality = new PgSQLConnectionVendorFunctionalityImpl();
 #if !NETSTANDARD1_0
-         _VendorFunctionality = new PgSQLConnectionVendorFunctionalityImpl();
+         _Factory = new PgSQLConnectionFactory();
 #endif
-         _VendorFunctionalityForReadyMadeStreams = new PgSQLConnectionVendorFunctionalityForReadyMadeStreams();
+         _FactoryForReadyMadeStreams = new PgSQLConnectionFactoryForReadyMadeStreams();
 
          Instance = new PgSQLConnectionPoolProvider();
       }
 
       public static PgSQLConnectionPoolProvider Instance { get; }
-      public static PgSQLConnectionVendorFunctionality VendorFunctionality =>
-#if NETSTANDARD1_0
-         _VendorFunctionalityForReadyMadeStreams
-#else
-         _VendorFunctionality
-#endif
-         ;
+      //public static PgSQLConnectionVendorFunctionality VendorFunctionality { get; }
+      //      public static CBAM.Abstractions.Implementation.ConnectionFactory<PgSQLConnection, PgSQLConnectionVendorFunctionality,  FactoryFunctionality =>
+      //#if NETSTANDARD1_0
+      //         _FactoryForReadyMadeStreams
+      //#else
+      //         _FactoryFunctionality
+      //#endif
+      //         ;
 
       // We leave constructor as public so that this class could be instantiated by dynamic loading (e.g. CBAM.Abstractions.MSBuild project)
 
 
       public Type DefaultTypeForCreationParameter => typeof( TDefaultConfigurationData );
 
-      ConnectionPoolObservable<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
       {
          return this.CreateOneTimeUseConnectionPool( CheckCreationParameters( creationParameters ) );
       }
 
-      ConnectionPoolObservable<PgSQLConnection, TimeSpan> ConnectionPoolProvider<PgSQLConnection>.CreateTimeoutingConnectionPool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> ConnectionPoolProvider<PgSQLConnection>.CreateTimeoutingConnectionPool( Object creationParameters )
       {
          return this.CreateTimeoutingConnectionPool( CheckCreationParameters( creationParameters ) );
       }
@@ -84,8 +87,8 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfo connectionConfig
          )
       {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
-            _VendorFunctionality,
+         return new OneTimeUseSQLConnectionPool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
+            _Factory,
             connectionConfig,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
@@ -96,8 +99,8 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfo connectionConfig
          )
       {
-         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnection, PgSQLConnectionCreationInfo>(
-            _VendorFunctionality,
+         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfo>(
+            _Factory,
             connectionConfig
             );
       }
@@ -107,8 +110,8 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfoForReadyMadeStreams connectionConfig
          )
       {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnection, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfoForReadyMadeStreams>(
-            _VendorFunctionalityForReadyMadeStreams,
+         return new OneTimeUseSQLConnectionPool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfoForReadyMadeStreams>(
+            _FactoryForReadyMadeStreams,
             connectionConfig,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
@@ -119,8 +122,8 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfoForReadyMadeStreams connectionConfig
          )
       {
-         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnection, PgSQLConnectionCreationInfoForReadyMadeStreams>(
-            _VendorFunctionalityForReadyMadeStreams,
+         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfoForReadyMadeStreams>(
+            _FactoryForReadyMadeStreams,
             connectionConfig
             );
       }

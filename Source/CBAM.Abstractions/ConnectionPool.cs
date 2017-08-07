@@ -22,15 +22,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.ResourcePooling;
 
-namespace CBAM.Abstractions
+namespace UtilPack.ResourcePooling
 {
    /// <summary>
    /// This interface is typically entrypoint for scenarios using CBAM.
-   /// It provides a way to use connections via <see cref="UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+   /// It provides a way to use connections via <see cref="UseResourceAsync(Func{TResource, Task}, CancellationToken)"/> method.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   public interface ConnectionPool<out TConnection>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   public interface AsyncResourcePool<out TResource>
    {
       /// <summary>
       /// Takes an existing connection or creates a new one, runs the given asynchronous callback for it, and returns it back into the pool.
@@ -38,54 +39,62 @@ namespace CBAM.Abstractions
       /// <param name="user">The asynchronous callback to use the connection.</param>
       /// <param name="token">The optional <see cref="CancellationToken"/> to use during asynchronous operations inside <paramref name="user"/> callback.</param>
       /// <returns>A task which completes when <paramref name="user"/> callback completes and connection is returned back to the pool.</returns>
-      Task UseConnectionAsync( Func<TConnection, Task> user, CancellationToken token = default( CancellationToken ) );
+      Task UseResourceAsync( Func<TResource, Task> user, CancellationToken token = default( CancellationToken ) );
    }
 
    /// <summary>
-   /// This interface exposes events related to observing a <see cref="ConnectionPool{TConnection}"/>.
+   /// This interface exposes events related to observing a <see cref="AsyncResourcePool{TConnection}"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   public interface ConnectionPoolObservation<out TConnection>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TCreationArgs">The type of event arguments for <see cref="AfterConnectionCreationEvent"/> event.</typeparam>
+   /// <typeparam name="TAcquiringArgs">The type of event arguments for <see cref="AfterConnectionAcquiringEvent"/> event.</typeparam>
+   /// <typeparam name="TReturningArgs">The type of event arguments for <see cref="BeforeConnectionReturningEvent"/> event.</typeparam>
+   /// <typeparam name="TCloseArgs">The type of event arguments for <see cref="BeforeConnectionCloseEvent"/> event.</typeparam>
+   public interface ResourcePoolObservation<out TResource, out TCreationArgs, out TAcquiringArgs, out TReturningArgs, out TCloseArgs>
+      where TCreationArgs : AbstractResourcePoolEventArgs<TResource>
+      where TAcquiringArgs : AbstractResourcePoolEventArgs<TResource>
+      where TReturningArgs : AbstractResourcePoolEventArgs<TResource>
+      where TCloseArgs : AbstractResourcePoolEventArgs<TResource>
    {
       /// <summary>
-      /// This event is triggered after a new instance of <typeparamref name="TConnection"/> is created (i.e. when there was no previously used pooled connection available).
+      /// This event is triggered after a new instance of <typeparamref name="TResource"/> is created (i.e. when there was no previously used pooled connection available).
       /// </summary>
-      event GenericEventHandler<AfterConnectionCreationEventArgs<TConnection>> AfterConnectionCreationEvent;
+      event GenericEventHandler<TCreationArgs> AfterConnectionCreationEvent;
 
       /// <summary>
-      /// This event is triggered just before an instance of <typeparamref name="TConnection"/> is given to callback of <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+      /// This event is triggered just before an instance of <typeparamref name="TResource"/> is given to callback of <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> method.
       /// </summary>
-      event GenericEventHandler<AfterConnectionAcquiringEventArgs<TConnection>> AfterConnectionAcquiringEvent;
+      event GenericEventHandler<TAcquiringArgs> AfterConnectionAcquiringEvent;
 
       /// <summary>
-      /// This event is triggered right after an instance of <typeparamref name="TConnection"/> is re-acquired by connection pool from callback in <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+      /// This event is triggered right after an instance of <typeparamref name="TResource"/> is re-acquired by connection pool from callback in <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> method.
       /// </summary>
-      event GenericEventHandler<BeforeConnectionReturningEventArgs<TConnection>> BeforeConnectionReturningEvent;
+      event GenericEventHandler<TReturningArgs> BeforeConnectionReturningEvent;
 
       /// <summary>
-      /// This event is triggered just before the connection is closed (and thus becomes unusuable) by <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> or <see cref="ConnectionPoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> methods.
+      /// This event is triggered just before the connection is closed (and thus becomes unusuable) by <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> or <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> methods.
       /// </summary>
-      event GenericEventHandler<BeforeConnectionCloseEventArgs<TConnection>> BeforeConnectionCloseEvent;
+      event GenericEventHandler<TCloseArgs> BeforeConnectionCloseEvent;
    }
 
    /// <summary>
-   /// This interface augments <see cref="ConnectionPool{TConnection}"/> with observability aspect from <see cref="ConnectionPoolObservation{TConnection}"/> interface.
+   /// This interface augments <see cref="AsyncResourcePool{TResource}"/> with observability aspect from <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   /// <seealso cref="ConnectionPoolObservation{TConnection}"/>
-   public interface ConnectionPoolObservable<out TConnection> : ConnectionPool<TConnection>, ConnectionPoolObservation<TConnection>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <seealso cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}"/>
+   public interface AsyncResourcePoolObservable<out TResource> : AsyncResourcePool<TResource>, ResourcePoolObservation<TResource, AfterAsyncResourceCreationEventArgs<TResource>, AfterAsyncResourceAcquiringEventArgs<TResource>, BeforeAsyncResourceReturningEventArgs<TResource>, BeforeAsyncResourceCloseEventArgs<TResource>>
    {
 
    }
 
    /// <summary>
-   /// This interface can be used to augment <see cref="ConnectionPool{TConnection}"/> with clean-up routine.
+   /// This interface can be used to augment <see cref="AsyncResourcePool{TConnection}"/> with clean-up routine.
    /// </summary>
    /// <typeparam name="TCleanUpParameter">The type of parameter for clean-up routine.</typeparam>
    /// <remarks>
    /// Typically <typeparamref name="TCleanUpParameter"/> is <see cref="TimeSpan"/> in order to clean up all connection that have been idle for at least given time period.
    /// </remarks>
-   public interface ConnectionPoolCleanUp<in TCleanUpParameter> : IDisposable
+   public interface AsyncResourcePoolCleanUp<in TCleanUpParameter> : IDisposable
    {
       /// <summary>
       /// Asynchronously cleans up connections that do not fulfille the given requirements specified by <paramref name="cleanupParameter"/>.
@@ -98,100 +107,108 @@ namespace CBAM.Abstractions
    }
 
    /// <summary>
-   /// This interface augments <see cref="ConnectionPool{TConnection}"/> with clean-up aspect from <see cref="ConnectionPoolCleanUp{TCleanUpParameter}"/> interface.
+   /// This interface augments <see cref="AsyncResourcePool{TConnection}"/> with clean-up aspect from <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   /// <typeparam name="TCleanUpParameters">The type of parameter for <see cref="ConnectionPoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> method.</typeparam>
-   /// <seealso cref="ConnectionPoolCleanUp{TCleanUpParameter}"/>
-   public interface ConnectionPool<out TConnection, in TCleanUpParameters>
-      : ConnectionPool<TConnection>,
-        ConnectionPoolCleanUp<TCleanUpParameters>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TCleanUpParameters">The type of parameter for <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> method.</typeparam>
+   /// <seealso cref="AsyncResourcePoolCleanUp{TCleanUpParameter}"/>
+   public interface AsyncResourcePool<out TResource, in TCleanUpParameters>
+      : AsyncResourcePool<TResource>,
+        AsyncResourcePoolCleanUp<TCleanUpParameters>
    {
 
    }
 
    /// <summary>
-   /// This interface further augments <see cref="ConnectionPool{TConnection, TCleanUpParameters}"/> with observability aspect from <see cref="ConnectionPoolObservation{TConnection}"/> interface.
+   /// This interface further augments <see cref="AsyncResourcePool{TConnection, TCleanUpParameters}"/> with observability aspect from <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   /// <typeparam name="TCleanUpParameter">The type of parameter for <see cref="ConnectionPoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> method.</typeparam>
-   public interface ConnectionPoolObservable<out TConnection, in TCleanUpParameter> : ConnectionPool<TConnection, TCleanUpParameter>, ConnectionPoolObservation<TConnection>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TCleanUpParameter">The type of parameter for <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, CancellationToken)"/> method.</typeparam>
+   public interface AsyncResourcePoolObservable<out TResource, in TCleanUpParameter> : AsyncResourcePool<TResource, TCleanUpParameter>, ResourcePoolObservation<TResource, AfterAsyncResourceCreationEventArgs<TResource>, AfterAsyncResourceAcquiringEventArgs<TResource>, BeforeAsyncResourceReturningEventArgs<TResource>, BeforeAsyncResourceCloseEventArgs<TResource>>
    {
 
    }
 
    /// <summary>
-   /// This is common interface for event arguments for events in <see cref="ConnectionPoolObservation{TConnection}"/> interface.
+   /// This is common interface for event arguments for events in <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   /// <remarks>
-   /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
-   /// </remarks>
-   public interface AbstractConnectionPoolEventArgs<out TConnection> : EventArgsWithAsyncContext
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public interface AbstractResourcePoolEventArgs<out TResource>
    {
       /// <summary>
       /// Gets the connection related to this event argument interface.
       /// </summary>
       /// <value>The connection related to this event argument interface.</value>
-      TConnection Connection { get; }
+      TResource Connection { get; }
    }
 
    /// <summary>
-   /// This is event argument interface for <see cref="ConnectionPoolObservation{TConnection}.AfterConnectionCreationEvent"/> event.
+   /// This interface is common interface for event arguments for events in <see cref="AsyncResourcePoolObservable{TResource}"/> and <see cref="AsyncResourcePoolObservable{TResource, TCleanUpParameter}"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
    /// <remarks>
    /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
    /// </remarks>
-   public interface AfterConnectionCreationEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public interface AbstractAsyncResourcePoolEventArgs<out TResource> : AbstractResourcePoolEventArgs<TResource>, EventArgsWithAsyncContext
    {
    }
 
    /// <summary>
-   /// This is event argument interface for <see cref="ConnectionPoolObservation{TConnection}.AfterConnectionAcquiringEvent"/> event.
+   /// This is event argument interface for asynchronous version of <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}.AfterConnectionCreationEvent"/> event.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
    /// <remarks>
    /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
    /// </remarks>
-   public interface AfterConnectionAcquiringEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public interface AfterAsyncResourceCreationEventArgs<out TResource> : AbstractAsyncResourcePoolEventArgs<TResource>
    {
    }
 
    /// <summary>
-   /// This is event argument interface for <see cref="ConnectionPoolObservation{TConnection}.BeforeConnectionReturningEvent"/> event.
+   /// This is event argument interface for asynchronous version of <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}.AfterConnectionAcquiringEvent"/> event.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
    /// <remarks>
    /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
    /// </remarks>
-   public interface BeforeConnectionReturningEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public interface AfterAsyncResourceAcquiringEventArgs<out TResource> : AbstractAsyncResourcePoolEventArgs<TResource>
    {
    }
 
    /// <summary>
-   /// This is event argument interface for <see cref="ConnectionPoolObservation{TConnection}.BeforeConnectionCloseEvent"/> event.
+   /// This is event argument interface for asynchronous version of <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}.BeforeConnectionReturningEvent"/> event.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
    /// <remarks>
    /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
    /// </remarks>
-   public interface BeforeConnectionCloseEventArgs<out TConnection> : AbstractConnectionPoolEventArgs<TConnection>
+   public interface BeforeAsyncResourceReturningEventArgs<out TResource> : AbstractAsyncResourcePoolEventArgs<TResource>
    {
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="AbstractConnectionPoolEventArgs{TConnection}"/> interface.
+   /// This is event argument interface for asynchronous version of <see cref="ResourcePoolObservation{TConnection, TCreationArgs, TAcquiringArgs, TReturningArgs, TCloseArg}.BeforeConnectionCloseEvent"/> event.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   public class DefaultAbstractConnectionPoolEventArgs<TConnection> : EventArgsWithAsyncContextImpl, AbstractConnectionPoolEventArgs<TConnection>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   /// <remarks>
+   /// This interface extends <see cref="EventArgsWithAsyncContext"/>, so that event handlers could add asynchronous callbacks to be waited by the invoker of the event.
+   /// </remarks>
+   public interface BeforeAsyncResourceCloseEventArgs<out TResource> : AbstractAsyncResourcePoolEventArgs<TResource>
+   {
+   }
+
+   /// <summary>
+   /// This class provides default implementation for <see cref="AbstractAsyncResourcePoolEventArgs{TConnection}"/> interface.
+   /// </summary>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public class DefaultAbstractAsyncResourcePoolEventArgs<TResource> : EventArgsWithAsyncContextImpl, AbstractAsyncResourcePoolEventArgs<TResource>
    {
       /// <summary>
-      /// Creates a new instance of <see cref="DefaultAbstractConnectionPoolEventArgs{TConnection}"/> with given connection.
+      /// Creates a new instance of <see cref="DefaultAbstractAsyncResourcePoolEventArgs{TConnection}"/> with given connection.
       /// </summary>
       /// <param name="connection">The connection related to the event argument.</param>
-      public DefaultAbstractConnectionPoolEventArgs(
-         TConnection connection
+      public DefaultAbstractAsyncResourcePoolEventArgs(
+         TResource connection
          )
       {
          this.Connection = connection;
@@ -201,21 +218,21 @@ namespace CBAM.Abstractions
       /// Gets the connection related to the event argument.
       /// </summary>
       /// <value>The connection related to the event argument.</value>
-      public TConnection Connection { get; }
+      public TResource Connection { get; }
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="AfterConnectionCreationEventArgs{TConnection}"/> interface.
+   /// This class provides default implementation for <see cref="AfterAsyncResourceCreationEventArgs{TConnection}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   public class DefaultAfterConnectionCreationEventArgs<TConnection> : DefaultAbstractConnectionPoolEventArgs<TConnection>, AfterConnectionCreationEventArgs<TConnection>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public class DefaultAfterAsyncResourceCreationEventArgs<TResource> : DefaultAbstractAsyncResourcePoolEventArgs<TResource>, AfterAsyncResourceCreationEventArgs<TResource>
    {
       /// <summary>
-      /// Creates new instance of <see cref="DefaultAfterConnectionCreationEventArgs{TConnection}"/> with given connection.
+      /// Creates new instance of <see cref="DefaultAfterAsyncResourceCreationEventArgs{TConnection}"/> with given connection.
       /// </summary>
       /// <param name="connection">The connection related to the event argument.</param>
-      public DefaultAfterConnectionCreationEventArgs(
-         TConnection connection
+      public DefaultAfterAsyncResourceCreationEventArgs(
+         TResource connection
          )
          : base( connection )
       {
@@ -223,17 +240,17 @@ namespace CBAM.Abstractions
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="AfterConnectionAcquiringEventArgs{TConnection}"/> interface.
+   /// This class provides default implementation for <see cref="AfterAsyncResourceAcquiringEventArgs{TConnection}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   public class DefaultAfterConnectionAcquiringEventArgs<TConnection> : DefaultAbstractConnectionPoolEventArgs<TConnection>, AfterConnectionAcquiringEventArgs<TConnection>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public class DefaultAfterAsyncResourceAcquiringEventArgs<TResource> : DefaultAbstractAsyncResourcePoolEventArgs<TResource>, AfterAsyncResourceAcquiringEventArgs<TResource>
    {
       /// <summary>
-      /// Creates new instance of <see cref="DefaultAfterConnectionAcquiringEventArgs{TConnection}"/> with given connection.
+      /// Creates new instance of <see cref="DefaultAfterAsyncResourceAcquiringEventArgs{TConnection}"/> with given connection.
       /// </summary>
       /// <param name="connection">The connection related to the event argument.</param>
-      public DefaultAfterConnectionAcquiringEventArgs(
-         TConnection connection
+      public DefaultAfterAsyncResourceAcquiringEventArgs(
+         TResource connection
          )
          : base( connection )
       {
@@ -241,17 +258,17 @@ namespace CBAM.Abstractions
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="BeforeConnectionReturningEventArgs{TConnection}"/> interface.
+   /// This class provides default implementation for <see cref="BeforeAsyncResourceReturningEventArgs{TConnection}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   public class DefaultBeforeConnectionReturningEventArgs<TConnection> : DefaultAbstractConnectionPoolEventArgs<TConnection>, BeforeConnectionReturningEventArgs<TConnection>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public class DefaultBeforeAsyncResourceReturningEventArgs<TResource> : DefaultAbstractAsyncResourcePoolEventArgs<TResource>, BeforeAsyncResourceReturningEventArgs<TResource>
    {
       /// <summary>
-      /// Creates new instance of <see cref="DefaultBeforeConnectionReturningEventArgs{TConnection}"/> with given connection.
+      /// Creates new instance of <see cref="DefaultBeforeAsyncResourceReturningEventArgs{TConnection}"/> with given connection.
       /// </summary>
       /// <param name="connection">The connection related to the event argument.</param>
-      public DefaultBeforeConnectionReturningEventArgs(
-         TConnection connection
+      public DefaultBeforeAsyncResourceReturningEventArgs(
+         TResource connection
          )
          : base( connection )
       {
@@ -259,17 +276,17 @@ namespace CBAM.Abstractions
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="BeforeConnectionCloseEventArgs{TConnection}"/> interface.
+   /// This class provides default implementation for <see cref="BeforeAsyncResourceCloseEventArgs{TConnection}"/> interface.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connection exposed by this event argument interface.</typeparam>
-   public class DefaultBeforeConnectionCloseEventArgs<TConnection> : DefaultAbstractConnectionPoolEventArgs<TConnection>, BeforeConnectionCloseEventArgs<TConnection>
+   /// <typeparam name="TResource">The type of connection exposed by this event argument interface.</typeparam>
+   public class DefaultBeforeAsyncResourceCloseEventArgs<TResource> : DefaultAbstractAsyncResourcePoolEventArgs<TResource>, BeforeAsyncResourceCloseEventArgs<TResource>
    {
       /// <summary>
-      /// Creates new instance of <see cref="DefaultBeforeConnectionCloseEventArgs{TConnection}"/> with given connection.
+      /// Creates new instance of <see cref="DefaultBeforeAsyncResourceCloseEventArgs{TConnection}"/> with given connection.
       /// </summary>
       /// <param name="connection">The connection related to the event argument.</param>
-      public DefaultBeforeConnectionCloseEventArgs(
-         TConnection connection
+      public DefaultBeforeAsyncResourceCloseEventArgs(
+         TResource connection
          )
          : base( connection )
       {
@@ -277,41 +294,41 @@ namespace CBAM.Abstractions
    }
 
    /// <summary>
-   /// This interface represents a <see cref="ConnectionPool{TConnection}"/> bound to specific <see cref="CancellationToken"/>.
-   /// It is useful when one wants to bind the cancellation token, and let custom callbacks only customize the callback for <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+   /// This interface represents a <see cref="AsyncResourcePool{TConnection}"/> bound to specific <see cref="CancellationToken"/>.
+   /// It is useful when one wants to bind the cancellation token, and let custom callbacks only customize the callback for <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> method.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by the originating pool.</typeparam>
-   public interface ConnectionPoolUser<out TConnection>
+   /// <typeparam name="TResource">The type of connections handled by the originating pool.</typeparam>
+   public interface AsyncResourcePoolUser<out TResource>
    {
       /// <summary>
-      /// Gets the <see cref="CancellationToken"/> that will be passed to <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.
+      /// Gets the <see cref="CancellationToken"/> that will be passed to <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> method.
       /// </summary>
-      /// <value>The <see cref="CancellationToken"/> that will be passed to <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> method.</value>
+      /// <value>The <see cref="CancellationToken"/> that will be passed to <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> method.</value>
       CancellationToken Token { get; }
 
       /// <summary>
-      /// Invokes the <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> with given asynchronous callback, and the value of <see cref="Token"/> property as <see cref="CancellationToken"/>.
+      /// Invokes the <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> with given asynchronous callback, and the value of <see cref="Token"/> property as <see cref="CancellationToken"/>.
       /// </summary>
       /// <param name="user">The asynchronous callback to use the connection.</param>
       /// <returns>A task which completes when <paramref name="user"/> callback completes and connection is returned back to the pool.</returns>
-      Task UseConnectionAsync( Func<TConnection, Task> user );
+      Task UseConnectionAsync( Func<TResource, Task> user );
    }
 
    /// <summary>
-   /// This class provides default implementation for <see cref="ConnectionPoolUser{TConnection}"/>.
+   /// This class provides default implementation for <see cref="AsyncResourcePoolUser{TConnection}"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by the originating pool.</typeparam>
-   public class DefaultConnectionPoolUser<TConnection> : ConnectionPoolUser<TConnection>
+   /// <typeparam name="TResource">The type of connections handled by the originating pool.</typeparam>
+   public class DefaultAsyncResourcePoolUser<TResource> : AsyncResourcePoolUser<TResource>
    {
-      private readonly ConnectionPool<TConnection> _pool;
+      private readonly AsyncResourcePool<TResource> _pool;
 
       /// <summary>
-      /// Creates a new instance of <see cref="DefaultConnectionPoolUser{TConnection}"/> with given parameters.
+      /// Creates a new instance of <see cref="DefaultAsyncResourcePoolUser{TConnection}"/> with given parameters.
       /// </summary>
       /// <param name="pool">The connection pool.</param>
       /// <param name="token">The cancellation token.</param>
       /// <exception cref="ArgumentNullException">If <paramref name="pool"/> is <c>null</c>.</exception>
-      public DefaultConnectionPoolUser( ConnectionPool<TConnection> pool, CancellationToken token )
+      public DefaultAsyncResourcePoolUser( AsyncResourcePool<TResource> pool, CancellationToken token )
       {
          this._pool = ArgumentValidator.ValidateNotNull( nameof( pool ), pool );
          this.Token = token;
@@ -321,9 +338,9 @@ namespace CBAM.Abstractions
       public CancellationToken Token { get; }
 
       /// <inheritdoc />
-      public Task UseConnectionAsync( Func<TConnection, Task> user )
+      public Task UseConnectionAsync( Func<TResource, Task> user )
       {
-         return this._pool.UseConnectionAsync( user, this.Token );
+         return this._pool.UseResourceAsync( user, this.Token );
       }
    }
 }
@@ -334,36 +351,36 @@ namespace CBAM.Abstractions
 public static partial class E_CBAM
 {
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which asynchronously returns value of type <typeparamref name="T"/>.
+   /// Helper method to invoke <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which asynchronously returns value of type <typeparamref name="T"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
    /// <typeparam name="T">The type of return value of asynchronous callback.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPool{TConnection}"/>.</param>
+   /// <param name="pool">This <see cref="AsyncResourcePool{TConnection}"/>.</param>
    /// <param name="user">The callback which asynchronously returns some value of type <typeparamref name="T"/>.</param>
    /// <param name="token">The optional <see cref="CancellationToken"/> to use during asynchronous operations inside <paramref name="user"/> callback.</param>
    /// <returns>A task which returns the result of <paramref name="user"/> on its completion.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPool{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPool<TConnection> pool, Func<TConnection, Task<T>> user, CancellationToken token = default( CancellationToken ) )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePool{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task<T> UseResourceAsync<TResource, T>( this AsyncResourcePool<TResource> pool, Func<TResource, Task<T>> user, CancellationToken token = default( CancellationToken ) )
    {
       var retVal = default( T );
-      await pool.UseConnectionAsync( async connection => retVal = await user( connection ), token );
+      await pool.UseResourceAsync( async connection => retVal = await user( connection ), token );
       return retVal;
    }
 
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which synchronously returns value of type <typeparamref name="T"/>.
+   /// Helper method to invoke <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which synchronously returns value of type <typeparamref name="T"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
    /// <typeparam name="T">The type of return value of synchronous callback.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPool{TConnection}"/>.</param>
+   /// <param name="pool">This <see cref="AsyncResourcePool{TConnection}"/>.</param>
    /// <param name="user">The callback which synchronously returns some value of type <typeparamref name="T"/>.</param>
    /// <param name="token">The optional <see cref="CancellationToken"/> to use during connection acquirement.</param>
    /// <returns>A task which returns the result of <paramref name="user"/> on its completion.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPool{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPool<TConnection> pool, Func<TConnection, T> user, CancellationToken token = default( CancellationToken ) )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePool{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task<T> UseResourceAsync<TResource, T>( this AsyncResourcePool<TResource> pool, Func<TResource, T> user, CancellationToken token = default( CancellationToken ) )
    {
       var retVal = default( T );
-      await pool.UseConnectionAsync( connection =>
+      await pool.UseResourceAsync( connection =>
       {
          retVal = user( connection );
          return TaskUtils.CompletedTask;
@@ -373,17 +390,17 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPool{TConnection}.UseConnectionAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which synchronously uses the connection.
+   /// Helper method to invoke <see cref="AsyncResourcePool{TConnection}.UseResourceAsync(Func{TConnection, Task}, CancellationToken)"/> with callback which synchronously uses the connection.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPool{TConnection}"/>.</param>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <param name="pool">This <see cref="AsyncResourcePool{TConnection}"/>.</param>
    /// <param name="user">The callback which synchronously uses connection.</param>
    /// <param name="token">The optional <see cref="CancellationToken"/> to use during connection acquirement.</param>
    /// <returns>A task which completes after connection has been returned to the pool.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPool{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task UseConnectionAsync<TConnection>( this ConnectionPool<TConnection> pool, Action<TConnection> user, CancellationToken token = default( CancellationToken ) )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePool{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task UseResourceAsync<TResource>( this AsyncResourcePool<TResource> pool, Action<TResource> user, CancellationToken token = default( CancellationToken ) )
    {
-      await pool.UseConnectionAsync( connection =>
+      await pool.UseResourceAsync( connection =>
       {
          user( connection );
          return TaskUtils.CompletedTask;
@@ -391,15 +408,15 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which asynchronously returns value of type <typeparamref name="T"/>.
+   /// Helper method to invoke <see cref="AsyncResourcePoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which asynchronously returns value of type <typeparamref name="T"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
    /// <typeparam name="T">The type of return value of asynchronous callback.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPoolUser{TConnection}"/>.</param>
+   /// <param name="pool">This <see cref="AsyncResourcePoolUser{TConnection}"/>.</param>
    /// <param name="user">The callback which asynchronously returns some value of type <typeparamref name="T"/>.</param>
    /// <returns>A task which returns the result of <paramref name="user"/> on its completion.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPoolUser{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUser<TConnection> pool, Func<TConnection, Task<T>> user )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePoolUser{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task<T> UseResourceAsync<TResource, T>( this AsyncResourcePoolUser<TResource> pool, Func<TResource, Task<T>> user )
    {
       var retVal = default( T );
       await pool.UseConnectionAsync( async connection => retVal = await user( connection ) );
@@ -407,15 +424,15 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which synchronously returns value of type <typeparamref name="T"/>.
+   /// Helper method to invoke <see cref="AsyncResourcePoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which synchronously returns value of type <typeparamref name="T"/>.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
    /// <typeparam name="T">The type of return value of synchronous callback.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPoolUser{TConnection}"/>.</param>
+   /// <param name="pool">This <see cref="AsyncResourcePoolUser{TConnection}"/>.</param>
    /// <param name="user">The callback which synchronously returns some value of type <typeparamref name="T"/>.</param>
    /// <returns>A task which returns the result of <paramref name="user"/> on its completion.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPoolUser{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task<T> UseConnectionAsync<TConnection, T>( this ConnectionPoolUser<TConnection> pool, Func<TConnection, T> user )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePoolUser{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task<T> UseResourceAsync<TResource, T>( this AsyncResourcePoolUser<TResource> pool, Func<TResource, T> user )
    {
       var retVal = default( T );
       await pool.UseConnectionAsync( connection =>
@@ -428,14 +445,14 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Helper method to invoke <see cref="ConnectionPoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which synchronously uses the connection.
+   /// Helper method to invoke <see cref="AsyncResourcePoolUser{TConnection}.UseConnectionAsync(Func{TConnection, Task})"/> with callback which synchronously uses the connection.
    /// </summary>
-   /// <typeparam name="TConnection">The type of connections handled by this pool.</typeparam>
-   /// <param name="pool">This <see cref="ConnectionPoolUser{TConnection}"/>.</param>
+   /// <typeparam name="TResource">The type of connections handled by this pool.</typeparam>
+   /// <param name="pool">This <see cref="AsyncResourcePoolUser{TConnection}"/>.</param>
    /// <param name="user">The callback which synchronously uses connection.</param>
    /// <returns>A task which completes after connection has been returned to the pool.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="ConnectionPoolUser{TConnection}"/> is <c>null</c>.</exception>
-   public static async Task UseConnectionAsync<TConnection>( this ConnectionPoolUser<TConnection> pool, Action<TConnection> user )
+   /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePoolUser{TConnection}"/> is <c>null</c>.</exception>
+   public static async Task UseResourceAsync<TResource>( this AsyncResourcePoolUser<TResource> pool, Action<TResource> user )
    {
       await pool.UseConnectionAsync( connection =>
       {

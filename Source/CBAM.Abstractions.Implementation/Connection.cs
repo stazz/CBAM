@@ -26,23 +26,42 @@ using CBAM.Abstractions;
 
 namespace CBAM.Abstractions.Implementation
 {
+   /// <summary>
+   /// This class provides facade implementation of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface.
+   /// It does having a reference to another <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> object, which it receives as argument to constructor.
+   /// This way, any components of this connection may use connection-related services (e.g. creating <see cref="AsyncEnumerator{T}"/>) without lifecycle problems (e.g. calling virtual method in constructor).
+   /// </summary>
+   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   /// <typeparam name="TStatementCreationArgs">The type of object used to create an instance of <typeparamref name="TStatement"/>.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   /// <typeparam name="TConnectionFunctionality">The type of object actually implementing functionality for this facade.</typeparam>
    public abstract class ConnectionImpl<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
       where TStatement : TStatementInformation
-      where TVendorFunctionality : class, ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
+      where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
+      where TConnectionFunctionality : class, Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
    {
-
+      /// <summary>
+      /// Creats a new instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> with given parameters.
+      /// </summary>
+      /// <param name="functionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> implementation.</param>
       public ConnectionImpl(
-         TVendorFunctionality vendorFunctionality,
          TConnectionFunctionality functionality
          )
       {
-         this.VendorFunctionality = ArgumentValidator.ValidateNotNull( nameof( vendorFunctionality ), vendorFunctionality );
          this.ConnectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( functionality ), functionality );
       }
 
-      public TVendorFunctionality VendorFunctionality { get; }
+      /// <summary>
+      /// Forwards the property to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
+      /// <value>The value of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.</value>
+      public TVendorFunctionality VendorFunctionality => this.ConnectionFunctionality.VendorFunctionality;
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationStart"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> BeforeEnumerationStart
       {
          add
@@ -55,6 +74,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationStart"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> AfterEnumerationStart
       {
          add
@@ -67,6 +89,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationEnd"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> BeforeEnumerationEnd
       {
          add
@@ -79,6 +104,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationEnd"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> AfterEnumerationEnd
       {
          add
@@ -91,6 +119,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationItemEncountered"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>> AfterEnumerationItemEncountered
       {
          add
@@ -103,6 +134,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T}.BeforeEnumerationStart"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationStart
       {
          add
@@ -115,6 +149,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationStart"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationStart
       {
          add
@@ -127,6 +164,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationItemEncountered"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationItemEncountered
       {
          add
@@ -139,6 +179,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T}.BeforeEnumerationEnd"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationEnd
       {
          add
@@ -151,6 +194,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationEnd"/> event of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
       event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationEnd
       {
          add
@@ -163,75 +209,72 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Forwards the method call to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatement)"/> method of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
+      /// <param name="statementBuilder">The statement builder, created by <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> of this <see cref="VendorFunctionality"/>.</param>
+      /// <returns>A new instance of <see cref="AsyncEnumeratorObservable{T, TMetadata}"/>.</returns>
       public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatement statementBuilder )
       {
-         return this.ConnectionFunctionality.CreateIterationArguments( statementBuilder );
+         return this.ConnectionFunctionality.PrepareStatementForExecution( statementBuilder );
       }
 
-      protected TConnectionFunctionality ConnectionFunctionality { get; }
+      /// <summary>
+      /// Gets the <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> is facade of.
+      /// </summary>
+      /// <value>The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> is facade of.</value>
+      internal protected TConnectionFunctionality ConnectionFunctionality { get; }
 
+      /// <summary>
+      /// Gets the current <see cref="CancellationToken"/> of this connection.
+      /// </summary>
+      /// <value>The current <see cref="CancellationToken"/>.</value>
+      /// <exception cref="InvalidOperationException">If there currently is no cancellation token available.</exception>
       public CancellationToken CurrentCancellationToken => this.ConnectionFunctionality.CurrentCancellationToken;
    }
 
-   public abstract class DefaultConnectionVendorFunctionality<TConnection, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>, ConnectionFactory<TConnection, TConnectionCreationParameters>
+   /// <summary>
+   /// This class provides the actual implementation for <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface.
+   /// </summary>
+   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   /// <typeparam name="TStatementCreationArgs">The type of object used to create an instance of <typeparamref name="TStatement"/>.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   /// <typeparam name="TVendor">The type of object describing vendor-specific information.</typeparam>
+   public abstract class DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor>
       where TStatement : TStatementInformation
-      where TConnection : class
-      where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
-   {
-
-      public abstract TStatement CreateStatementBuilder( TStatementCreationArgs sql );
-
-      public async Task<ConnectionAcquireInfo<TConnection>> AcquireConnection( TConnectionCreationParameters parameters, CancellationToken token )
-      {
-         TConnectionFunctionality functionality = null;
-         TConnection connection = null;
-         try
-         {
-            functionality = await this.CreateConnectionFunctionality( parameters, token );
-            functionality.CurrentCancellationToken = token;
-            connection = await this.CreateConnection( functionality );
-            return this.CreateConnectionAcquireInfo( functionality, connection );
-         }
-         catch ( Exception exc )
-         {
-            try
-            {
-               await this.OnConnectionAcquirementError( functionality, connection, token, exc );
-            }
-            catch
-            {
-               // Ignore this one
-            }
-            throw;
-         }
-         finally
-         {
-            functionality?.ResetCancellationToken();
-         }
-      }
-
-      protected abstract ValueTask<TConnectionFunctionality> CreateConnectionFunctionality( TConnectionCreationParameters parameters, CancellationToken token );
-      protected abstract ValueTask<TConnection> CreateConnection( TConnectionFunctionality functionality );
-      protected abstract ConnectionAcquireInfo<TConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TConnection connection );
-      protected abstract Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
-   }
-
-   public interface ConnectionFunctionality<in TStatement, out TStatementInformation, out TEnumerableItem> : AsyncEnumerationObservation<TEnumerableItem, TStatementInformation>
-      where TStatement : TStatementInformation
-   {
-      AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateIterationArguments( TStatement stmt );
-   }
-
-   public abstract class DefaultConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem> : ConnectionFunctionality<TStatement, TStatementInformation, TEnumerableItem>
-      where TStatement : TStatementInformation
+      where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
 
       private Object _cancellationToken;
+
+      /// <summary>
+      /// Creates a new instance of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> with given <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.
+      /// </summary>
+      /// <param name="vendorFunctionality">The connection vendor.</param>
+      public DefaultConnectionFunctionality( TVendor vendorFunctionality )
+      {
+         this.VendorFunctionality = vendorFunctionality;
+      }
+
+
+      /// <summary>
+      /// Gets or sets the current cancellation token.
+      /// </summary>
+      /// <value>The current cancellation token.</value>
+      /// <remarks>
+      /// Unlike <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>, this class also provides a setter for this property. 
+      /// </remarks>
       public CancellationToken CurrentCancellationToken
       {
          get
          {
-            return (CancellationToken) this._cancellationToken;
+            var retVal = this._cancellationToken;
+            if ( retVal == null )
+            {
+               throw new InvalidOperationException( "There currently is no cancellation token set for connection." );
+            }
+            return (CancellationToken) retVal;
          }
          internal protected set
          {
@@ -239,14 +282,46 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationStart"/> event (initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>).
+      /// Will be invoked every time something will start enumerating statement results for this connection.
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationStart"/>
       public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> BeforeEnumerationStart;
+
+      /// <summary>
+      /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationStart"/> event.
+      /// Will be invoked every time something will start enumerating statement results for this connection (initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationStart"/>
       public event GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>> AfterEnumerationStart;
 
+      /// <summary>
+      /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationEnd"/> event.
+      /// Will be invoked every time something will encounter end of enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>false</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationEnd"/>
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> BeforeEnumerationEnd;
+
+      /// <summary>
+      /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationEnd"/> event.
+      /// Will be invoked every time something will encounter end of enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>false</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationEnd"/>
       public event GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>> AfterEnumerationEnd;
 
+      /// <summary>
+      /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationItemEncountered"/> event.
+      /// Will be invoked every time something will encounter an item when enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>true</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T, TMetadata}.AfterEnumerationItemEncountered"/>
       public event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>> AfterEnumerationItemEncountered;
 
+      /// <summary>
+      /// Explicitly implements the <see cref="AsyncEnumerationObservation{T}.BeforeEnumerationStart"/> event (initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>).
+      /// Will be invoked every time something will start enumerating statement results for this connection.
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T}.BeforeEnumerationStart"/>
       event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationStart
       {
          add
@@ -260,6 +335,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Explicitly implements the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationStart"/> event.
+      /// Will be invoked every time something will start enumerating statement results for this connection (initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T}.AfterEnumerationStart"/>
       event GenericEventHandler<EnumerationStartedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationStart
       {
          add
@@ -273,6 +353,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Explicitly implements the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationItemEncountered"/> event.
+      /// Will be invoked every time something will encounter an item when enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>true</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T}.AfterEnumerationItemEncountered"/>
       event GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem>> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationItemEncountered
       {
          add
@@ -285,6 +370,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Explicitly implements the <see cref="AsyncEnumerationObservation{T}.BeforeEnumerationEnd"/> event.
+      /// Will be invoked every time something will encounter end of enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>false</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T}.BeforeEnumerationEnd"/>
       event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.BeforeEnumerationEnd
       {
          add
@@ -298,6 +388,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// Explicitly implements the <see cref="AsyncEnumerationObservation{T}.AfterEnumerationEnd"/> event.
+      /// Will be invoked every time something will encounter end of enumerating statement results for this connection (<see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> will return <c>false</c>).
+      /// </summary>
+      /// <seealso cref="AsyncEnumerationObservation{T}.AfterEnumerationEnd"/>
       event GenericEventHandler<EnumerationEndedEventArgs> AsyncEnumerationObservation<TEnumerableItem>.AfterEnumerationEnd
       {
          add
@@ -311,16 +406,32 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <summary>
+      /// This method resets current cancellation token, so that <see cref="CurrentCancellationToken"/> property getter will throw.
+      /// </summary>
       internal protected void ResetCancellationToken()
       {
          Interlocked.Exchange( ref this._cancellationToken, null );
       }
 
-      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateIterationArguments( TStatement statement )
+      /// <summary>
+      /// Gets the <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/> of this <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
+      /// </summary>
+      /// <value>The <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/> of this <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</value>
+      public TVendor VendorFunctionality { get; }
+
+      /// <summary>
+      /// Validates the statement by calling <see cref="ValidateStatementOrThrow(TStatementInformation)"/> and then creates a new <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> using <see cref="AsyncEnumeratorFactory.CreateObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/> and passing <see cref="InitialMoveNext(TStatementInformation, CancellationToken)"/> as callback and result of <see cref="GetInformationFromStatement(TStatement)"/> as metadata.
+      /// </summary>
+      /// <param name="statement">The statement which describes how to manipulate/query remote resource.</param>
+      /// <returns>The <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> which can be used to execute the <paramref name="statement"/> statement and iterate the possible results.</returns>
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatement statement )
       {
-         this.ValidateStatementOrThrow( statement );
-         return this.PerformCreateIterationArguments(
-            statement,
+         var info = this.GetInformationFromStatement( statement );
+         this.ValidateStatementOrThrow( info );
+         return AsyncEnumeratorFactory.CreateObservableEnumerator(
+            token => this.InitialMoveNext( info, token ),
+            info,
             () => this.BeforeEnumerationStart,
             () => this.AfterEnumerationStart,
             () => this.BeforeEnumerationEnd,
@@ -329,18 +440,38 @@ namespace CBAM.Abstractions.Implementation
             );
       }
 
+      /// <summary>
+      /// Gets the value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).
+      /// </summary>
+      /// <value>The value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).</value>
       public abstract Boolean CanBeReturnedToPool { get; }
 
-      protected abstract AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PerformCreateIterationArguments(
-         TStatement statement,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterStatementExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterStatementExecutionItemEncountered
-         );
+      /// <summary>
+      /// Derived classes should override this abstract method in order to extract read-only statement information object from modifiable statement.
+      /// </summary>
+      /// <param name="statement">The modifiable statement object.</param>
+      /// <returns>Read-only information about the <paramref name="statement"/>.</returns>
+      protected abstract TStatementInformation GetInformationFromStatement( TStatement statement );
 
-      protected abstract void ValidateStatementOrThrow( TStatement statement );
+      /// <summary>
+      /// Derived classes should override this abstract method in order to implement the functionality to send the statement to remote resource and iterate the results.
+      /// This can be thought as the core functionality for any CBAM project.
+      /// </summary>
+      /// <param name="statement">The read-only information about the statement.</param>
+      /// <param name="token">The <see cref="CancellationToken"/> passed to the initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
+      /// <returns>The information about the statement execution and enumeration.</returns>
+      /// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
+      /// <seealso cref="AsyncEnumerator{T}"/>
+      protected abstract ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, DisposeAsyncDelegate)> InitialMoveNext( TStatementInformation statement, CancellationToken token );
+
+      /// <summary>
+      /// This method should validate the given read-only information about a statement.
+      /// </summary>
+      /// <param name="statement">The read-only information about the statement.</param>
+      /// <remarks>
+      /// The <paramref name="statement"/> may be <c>null</c> at this point.
+      /// </remarks>
+      protected abstract void ValidateStatementOrThrow( TStatementInformation statement );
    }
 
 }

@@ -109,17 +109,17 @@ public static partial class E_CBAM
       stmt.SetParameterObjectWithType( parameterIndex, null, clrType );
    }
 
-   public static Boolean IsSimple( this StatementBuilder stmt )
+   public static Boolean IsSimple( this StatementBuilderInformation stmt )
    {
       return !stmt.HasBatchParameters() && stmt.SQLParameterCount == 0;
    }
 
-   public static Boolean HasBatchParameters( this StatementBuilder stmt )
+   public static Boolean HasBatchParameters( this StatementBuilderInformation stmt )
    {
       return ( stmt?.BatchParameterCount ?? 0 ) > 0;
    }
 
-   public static IEnumerable<StatementParameter> GetParameterEnumerable( this StatementBuilder stmt )
+   public static IEnumerable<StatementParameter> GetParameterEnumerable( this StatementBuilderInformation stmt )
    {
       var max = stmt.SQLParameterCount;
       for ( var i = 0; i < max; ++i )
@@ -128,7 +128,7 @@ public static partial class E_CBAM
       }
    }
 
-   public static IEnumerable<StatementParameter> GetParameterEnumerable( this StatementBuilder stmt, Int32 batchIndex )
+   public static IEnumerable<StatementParameter> GetParameterEnumerable( this StatementBuilderInformation stmt, Int32 batchIndex )
    {
       var max = stmt.SQLParameterCount;
       for ( var i = 0; i < max; ++i )

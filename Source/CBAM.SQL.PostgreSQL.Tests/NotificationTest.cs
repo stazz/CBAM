@@ -31,7 +31,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          const String NOTIFICATION_NAME = "testing";
          var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
-         await pool.UseConnectionAsync( async conn =>
+         await pool.UseResourceAsync( async conn =>
          {
             NotificationEventArgs notificationArgs = null;
             conn.NotificationEvent += ( sender, nArgs ) => notificationArgs = nArgs;
@@ -44,7 +44,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
             await conn.ExecuteNonQueryAsync( "LISTEN " + NOTIFICATION_NAME );
 
             // Use another connection pool to issue notify
-            await pool.UseConnectionAsync( async conn2 => await conn2.ExecuteNonQueryAsync( "NOTIFY " + NOTIFICATION_NAME ) );
+            await pool.UseResourceAsync( async conn2 => await conn2.ExecuteNonQueryAsync( "NOTIFY " + NOTIFICATION_NAME ) );
 
             // Make sure that we have received it
             await conn.CheckNotificationsAsync();

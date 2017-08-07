@@ -19,10 +19,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CBAM.Abstractions
+namespace UtilPack.ResourcePooling
 {
    /// <summary>
-   /// This interface creates instances of <see cref="ConnectionPoolObservable{TConnection}"/> and <see cref="ConnectionPoolObservable{TConnection, TCleanUpParameter}"/> connection pools.
+   /// This interface provides API to create instances of <see cref="AsyncResourcePoolObservable{TConnection}"/> and <see cref="AsyncResourcePoolObservable{TConnection, TCleanUpParameter}"/> connection pools.
    /// The creation parameters are not type-constrained in order for this interface to be used in generic scenarios.
    /// E.g. in SQL connections, the type of connection is constrained for all SQL connections, but creation parameter type is usually very vendor-specific.
    /// </summary>
@@ -34,25 +34,25 @@ namespace CBAM.Abstractions
    public interface ConnectionPoolProvider<out TConnection>
    {
       /// <summary>
-      /// Creates a new instance of <see cref="ConnectionPoolObservable{TConnection}"/>, which will close all connections as they are returned to pool.
+      /// Creates a new instance of <see cref="AsyncResourcePoolObservable{TConnection}"/>, which will close all connections as they are returned to pool.
       /// This is typically useful in test scenarios.
       /// </summary>
       /// <param name="creationParameters">The creation parameters for the connection pool.</param>
-      /// <returns>A new instance of <see cref="ConnectionPoolObservable{TConnection}"/>.</returns>
+      /// <returns>A new instance of <see cref="AsyncResourcePoolObservable{TConnection}"/>.</returns>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is somehow invalid, e.g. of wrong type.</exception>
-      ConnectionPoolObservable<TConnection> CreateOneTimeUseConnectionPool( Object creationParameters );
+      AsyncResourcePoolObservable<TConnection> CreateOneTimeUseConnectionPool( Object creationParameters );
 
       /// <summary>
-      /// Creates a new instance of <see cref="ConnectionPoolObservable{TConnection, TCleanUpParameter}"/>, which will provide a method to clean up connections which have been idle for longer than given time.
+      /// Creates a new instance of <see cref="AsyncResourcePoolObservable{TConnection, TCleanUpParameter}"/>, which will provide a method to clean up connections which have been idle for longer than given time.
       /// </summary>
       /// <param name="creationParameters">The creation parameters for the connection pool.</param>
-      /// <returns>A new instance of <see cref="ConnectionPoolObservable{TConnection, TCleanUpParameter}"/>.</returns>
+      /// <returns>A new instance of <see cref="AsyncResourcePoolObservable{TConnection, TCleanUpParameter}"/>.</returns>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is somehow invalid, e.g. of wrong type.</exception>
       /// <remarks>
       /// Note that the returned pool will not clean up connections automatically.
-      /// The <see cref="ConnectionPoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, System.Threading.CancellationToken)"/> method must be invoked explicitly by the user of connection pool.
+      /// The <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}.CleanUpAsync(TCleanUpParameter, System.Threading.CancellationToken)"/> method must be invoked explicitly by the user of connection pool.
       /// </remarks>
-      ConnectionPoolObservable<TConnection, TimeSpan> CreateTimeoutingConnectionPool( Object creationParameters );
+      AsyncResourcePoolObservable<TConnection, TimeSpan> CreateTimeoutingConnectionPool( Object creationParameters );
 
       /// <summary>
       /// Gets the default type of parameter for <see cref="CreateOneTimeUseConnectionPool(object)"/> and <see cref="CreateTimeoutingConnectionPool(object)"/> methods.

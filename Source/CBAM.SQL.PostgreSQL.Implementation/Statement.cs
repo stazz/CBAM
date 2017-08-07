@@ -27,12 +27,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
    {
 
       public PgSQLStatementBuilder(
-         String sql,
-         Int32[] parameterIndices
+         PgSQLStatementBuilderInformation information,
+         StatementParameter[] currentParameters,
+         List<StatementParameter[]> batchParams
          )
-         : base( sql, parameterIndices?.Length ?? 0 )
+         : base( information, currentParameters, batchParams )
       {
-         this.ParameterIndices = parameterIndices;
       }
 
       protected override StatementParameter CreateStatementParameter( Int32 parameterIndex, Object value, Type clrType )
@@ -47,9 +47,23 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          return null;
       }
+   }
+
+   internal sealed class PgSQLStatementBuilderInformation : StatementBuilderInformationImpl<StatementParameter, List<StatementParameter[]>>
+   {
+      public PgSQLStatementBuilderInformation(
+         String sql,
+         StatementParameter[] currentParameters,
+         List<StatementParameter[]> batchParams,
+         Int32[] parameterIndices
+         ) : base( sql, parameterIndices?.Length ?? 0, currentParameters, batchParams )
+      {
+         this.ParameterIndices = parameterIndices;
+      }
 
       internal Int32[] ParameterIndices { get; }
    }
+
 
    //internal sealed class PgSQLStatementParameterImpl : StatementParameterImpl, PgStatementParameter
    //{

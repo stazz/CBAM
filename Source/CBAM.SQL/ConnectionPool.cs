@@ -23,16 +23,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 using CBAM.Abstractions;
+using UtilPack.ResourcePooling;
 
 namespace CBAM.SQL
 {
-   public interface SQLConnectionPool<out TConnection> : ConnectionPoolObservable<TConnection>
+   public interface SQLConnectionPool<out TConnection> : AsyncResourcePoolObservable<TConnection>
       where TConnection : class, SQLConnection
    {
 
    }
 
-   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : ConnectionPoolObservable<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
+   public interface SQLConnectionPool<out TConnection, in TCleanUpParameter> : AsyncResourcePoolObservable<TConnection, TCleanUpParameter>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
    {
    }

@@ -8,16 +8,16 @@ using CBAM.Abstractions.Implementation;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   internal sealed class PgSQLConnectionAcquireInfo : ConnectionAcquireInfoImpl<PgSQLConnection, PostgreSQLProtocol, StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult, System.IO.Stream>
+   internal sealed class PgSQLConnectionAcquireInfo : ConnectionAcquireInfoImpl<PgSQLConnectionImpl, PostgreSQLProtocol, StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, PgSQLConnectionVendorFunctionality, System.IO.Stream>
    {
-      public PgSQLConnectionAcquireInfo( PgSQLConnection connection, PostgreSQLProtocol connectionFunctionality, Stream associatedStream )
-         : base( connection, connectionFunctionality, associatedStream )
+      public PgSQLConnectionAcquireInfo( PgSQLConnectionImpl connection, Stream associatedStream )
+         : base( connection, associatedStream )
       {
       }
 
-      protected override async Task DisposeBeforeClosingStream( CancellationToken token )
+      protected override async Task DisposeBeforeClosingStream( CancellationToken token, PostgreSQLProtocol connectionFunctionality )
       {
-         await this.ConnectionFunctionality.PerformClose( token );
+         await connectionFunctionality.PerformClose( token );
       }
    }
 }

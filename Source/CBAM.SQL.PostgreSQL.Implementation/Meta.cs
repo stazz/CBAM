@@ -27,10 +27,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
    internal sealed class PgSQLDatabaseMetaData : SQLCachingDatabaseMetadataImpl
    {
       public PgSQLDatabaseMetaData(
-         PgSQLConnectionVendorFunctionality vendorFunctionality,
          PostgreSQLProtocol connectionFunctionality
          ) : base(
-            vendorFunctionality,
             connectionFunctionality,
             SchemaSearchSQLFactory,
             TableSearchSQLFactory,

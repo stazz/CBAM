@@ -26,15 +26,19 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
+   using UtilPack.AsyncEnumeration;
    using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
-   public abstract class SQLConnectionFunctionalitySU : ConnectionFunctionalitySU<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
+   public abstract class SQLConnectionFunctionalitySU<TVendor> : ConnectionFunctionalitySU<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
+      where TVendor : SQLConnectionVendorFunctionality
    {
-      public SQLConnectionFunctionalitySU()
+
+      public SQLConnectionFunctionalitySU( TVendor vendor )
+         : base( vendor )
       {
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservationObject )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservationObject )
       {
          Task<TStatementExecutionSimpleTaskParameter> retValTask;
          if ( stmt.HasBatchParameters() )
@@ -57,29 +61,22 @@ namespace CBAM.SQL.Implementation
          return statement?.StatementBuilderInformation;
       }
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( CancellationToken token, StatementBuilder stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
+
+      SQLConnectionVendorFunctionality Connection<StatementBuilder, StatementBuilderInformation, string, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
 
    }
 
-   public abstract class SQLConnectionVendorFunctionalitySU<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, TConnectionCreationParameters, TConnectionFunctionality>
-      where TConnection : class, SQLConnection
-      where TConnectionFunctionality : SQLConnectionFunctionalitySU
+   public abstract class SQLConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality, String, StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
+      where TConnection : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+      where TVendor : SQLConnectionVendorFunctionality
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
    {
 
-      protected override Task OnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error )
-      {
-         this.ExtractStreamOnConnectionAcquirementError( functionality, connection, token, error ).DisposeSafely();
-         return TaskUtils.CompletedTask;
-      }
-
-      protected abstract IDisposable ExtractStreamOnConnectionAcquirementError( TConnectionFunctionality functionality, TConnection connection, CancellationToken token, Exception error );
    }
-
-
-
 
 }

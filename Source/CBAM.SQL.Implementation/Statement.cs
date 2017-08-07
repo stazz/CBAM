@@ -71,40 +71,14 @@ namespace CBAM.SQL.Implementation
    public abstract class StatementBuilderImpl<TParameter> : StatementBuilderInformationImpl<TParameter, List<TParameter[]>>, StatementBuilder
       where TParameter : StatementParameter
    {
-      private struct ConstructorParams
-      {
-         public ConstructorParams( String sql, Int32 parameterCount )
-         {
-            this.SQL = sql;
-            this.ParameterCount = parameterCount;
-            this.CurrentParams = parameterCount > 0 ? new TParameter[parameterCount] : Empty<TParameter>.Array;
-            this.BatchParams = new List<TParameter[]>();
-         }
-
-         public String SQL { get; }
-         public Int32 ParameterCount { get; }
-         public TParameter[] CurrentParams { get; }
-         public List<TParameter[]> BatchParams { get; }
-      }
 
       public StatementBuilderImpl(
-         String sql,
-         Int32 parameterCount
-         ) : this( new ConstructorParams( sql, parameterCount ) )
+         StatementBuilderInformation information,
+         TParameter[] currentParams,
+         List<TParameter[]> batchParams
+         ) : base( ArgumentValidator.ValidateNotNull( nameof( information ), information ).SQL, information.SQLParameterCount, currentParams, batchParams )
       {
-      }
-
-      private StatementBuilderImpl(
-         ConstructorParams cParams
-         ) : base( cParams.SQL, cParams.ParameterCount, cParams.CurrentParams, cParams.BatchParams )
-      {
-         this.StatementBuilderInformation = new StatementBuilderInformationImpl<TParameter,
-#if NET40
-            List<TParameter[]>
-#else
-            IReadOnlyList<TParameter[]>
-#endif
-            >( cParams.SQL, cParams.ParameterCount, cParams.CurrentParams, cParams.BatchParams );
+         this.StatementBuilderInformation = information;
       }
 
       public StatementBuilderInformation StatementBuilderInformation { get; }

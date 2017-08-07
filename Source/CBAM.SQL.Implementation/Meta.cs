@@ -31,15 +31,13 @@ namespace CBAM.SQL.Implementation
    public abstract class DatabaseMetadataImpl : DatabaseMetadata
    {
       public DatabaseMetadataImpl(
-         SQLConnectionVendorFunctionality vendorFunctionality,
          SQLConnectionFunctionality connectionFunctionality
          )
       {
-         this.VendorFunctionality = ArgumentValidator.ValidateNotNull( nameof( vendorFunctionality ), vendorFunctionality );
          this.ConnectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
       }
 
-      protected SQLConnectionVendorFunctionality VendorFunctionality { get; }
+      protected SQLConnectionVendorFunctionality VendorFunctionality => this.ConnectionFunctionality.VendorFunctionality;
 
       protected SQLConnectionFunctionality ConnectionFunctionality { get; }
 
@@ -98,7 +96,7 @@ namespace CBAM.SQL.Implementation
       {
          var builder = this.VendorFunctionality.CreateStatementBuilder( sql );
          prepareStatement?.Invoke( builder );
-         return this.ConnectionFunctionality.CreateIterationArguments( builder );
+         return this.ConnectionFunctionality.PrepareStatementForExecution( builder );
       }
 
       protected static void SetSubsequentNonNullStrings( StatementBuilder stmt, params String[] values )
@@ -203,14 +201,13 @@ namespace CBAM.SQL.Implementation
       private readonly SQLCacheByParameterCount _foreignKeySearchCache;
 
       public SQLCachingDatabaseMetadataImpl(
-         SQLConnectionVendorFunctionality vendorFunctionality,
          SQLConnectionFunctionality connectionFunctionality,
          Func<Int32, String> schemaSearchSQLFactory, // 0 - (schemaNamePattern Missing), 1 - (schemaNamePattern Present)
          Func<Int32, TableType[], String> tableSearchSQLFactory, // 0 - (schemaNamePattern M, tableNamePattern M, tableTypes M), 1 - (schemaNamePattern M, tableNamePattern M, tableTypes P), 2 - (schemaNamePattern M, tableNamePattern P, tableTypes M), 3 - (schemaNamePattern M, tableNamePattern P, tableTypes P)
          Func<Int32, String> columnSearchSQLFactory,
          Func<Int32, String> primaryKeySearchSQLFactory,
          Func<Int32, String> foreignKeySearchSQLFactory
-         ) : base( vendorFunctionality, connectionFunctionality )
+         ) : base( connectionFunctionality )
       {
          this._schemaSearchCache = new SQLCacheByParameterCount( 1 << 1, schemaSearchSQLFactory );
          this._tableSearchCache = new SQLCacheByParameterCount<TableType[]>( 1 << 3, tableSearchSQLFactory );

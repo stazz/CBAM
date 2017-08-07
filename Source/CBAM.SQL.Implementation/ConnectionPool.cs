@@ -20,34 +20,35 @@ using System.Collections.Generic;
 using System.Text;
 using CBAM.Abstractions.Implementation;
 using UtilPack;
+using UtilPack.ResourcePooling;
 
 namespace CBAM.SQL.Implementation
 {
-   public class OneTimeUseSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
+   public class OneTimeUseSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : OneTimeUseAsyncResourcePool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
       where TConnectionCreationParams : class
    {
       public OneTimeUseSQLConnectionPool(
-         ConnectionFactory<TConnection, TConnectionCreationParams> factory,
+         ResourceFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
-         Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
-         Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
+         Func<TConnectionInstance, ResourceAcquireInfo<TConnection>> connectionExtractor,
+         Func<ResourceAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
          ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
       {
       }
    }
 
-   public class CachingSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : CachingConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
+   public class CachingSQLConnectionPool<TConnection, TConnectionInstance, TConnectionCreationParams> : CachingAsyncResourcePool<TConnection, TConnectionInstance, TConnectionCreationParams>, SQLConnectionPool<TConnection>
       where TConnection : class, SQLConnection
       where TConnectionInstance : class, InstanceWithNextInfo<TConnectionInstance>
       where TConnectionCreationParams : class
    {
 
       public CachingSQLConnectionPool(
-         ConnectionFactory<TConnection, TConnectionCreationParams> factory,
+         ResourceFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters,
-         Func<TConnectionInstance, ConnectionAcquireInfo<TConnection>> connectionExtractor,
-         Func<ConnectionAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
+         Func<TConnectionInstance, ResourceAcquireInfo<TConnection>> connectionExtractor,
+         Func<ResourceAcquireInfo<TConnection>, TConnectionInstance> instanceCreator
          ) : base( factory, factoryParameters, connectionExtractor, instanceCreator )
       {
 
@@ -55,17 +56,25 @@ namespace CBAM.SQL.Implementation
 
    }
 
-   public class CachingSQLConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingConnectionPoolWithTimeout<TConnection, TConnectionCreationParams>, SQLConnectionPool<TConnection, TimeSpan>
+   public class CachingSQLConnectionPoolWithTimeout<TConnection, TConnectionCreationParams> : CachingAsyncResourcePoolWithTimeout<TConnection, TConnectionCreationParams>, SQLConnectionPool<TConnection, TimeSpan>
       where TConnection : class, SQLConnection
       where TConnectionCreationParams : class
    {
 
       public CachingSQLConnectionPoolWithTimeout(
-         ConnectionFactory<TConnection, TConnectionCreationParams> factory,
+         ResourceFactory<TConnection, TConnectionCreationParams> factory,
          TConnectionCreationParams factoryParameters
          )
          : base( factory, factoryParameters )
       {
       }
+   }
+
+   public abstract class SQLConnectionFactory<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionFactory<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality, String, StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
+      where TConnection : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+      where TVendor : SQLConnectionVendorFunctionality
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
+   {
+
    }
 }

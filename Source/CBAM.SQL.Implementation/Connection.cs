@@ -30,17 +30,17 @@ using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.Implementation
 {
-   public abstract class SQLConnectionImpl<TConnectionFunctionality> : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
+   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
+      where TVendor : SQLConnectionVendorFunctionality
    {
       private Object _isReadOnly;
       private Object _isolationLevel;
 
       public SQLConnectionImpl(
-         SQLConnectionVendorFunctionality vendorFunctionality,
          TConnectionFunctionality connectionFunctionality,
          DatabaseMetadata metaData
-         ) : base( vendorFunctionality, connectionFunctionality )
+         ) : base( connectionFunctionality )
       {
          this.DatabaseMetadata = ArgumentValidator.ValidateNotNull( nameof( metaData ), metaData );
       }
@@ -102,6 +102,8 @@ namespace CBAM.SQL.Implementation
          }
       }
 
+      SQLConnectionVendorFunctionality Connection<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
+
       protected abstract String GetSQLForGettingTransactionIsolationLevel();
 
       protected abstract String GetSQLForSettingTransactionIsolationLevel( TransactionIsolationLevel level );
@@ -115,14 +117,12 @@ namespace CBAM.SQL.Implementation
       protected abstract ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row );
    }
 
-   public abstract class DefaultConnectionVendorFunctionality<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionVendorFunctionality<TConnection, StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TConnectionCreationParameters, TConnectionFunctionality>, SQLConnectionVendorFunctionality
-      where TConnection : class, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>, SQLConnectionFunctionality
+   public abstract class DefaultConnectionVendorFunctionality : SQLConnectionVendorFunctionality
    {
 
       public abstract void AppendEscapedLiteral( StringBuilder builder, String literal );
 
-      public override StatementBuilder CreateStatementBuilder( String sql )
+      public StatementBuilder CreateStatementBuilder( String sql )
       {
          sql = sql?.Trim();
          return !String.IsNullOrEmpty( sql ) && this.TryParseStatementSQL( sql, out var parameterIndices ) ?
@@ -148,8 +148,11 @@ namespace CBAM.SQL.Implementation
 
    }
 
-   public interface SQLConnectionFunctionality : ConnectionFunctionality<StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
+
+
+   public interface SQLConnectionFunctionality : Connection<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
    {
+
    }
 
    public abstract class AbstractCommandExecutionResult
@@ -215,7 +218,7 @@ public static partial class E_CBAM
       ArgumentValidator.ValidateNotNull( nameof( statementBuilder ), statementBuilder );
       ArgumentValidator.ValidateNotNull( nameof( executer ), executer );
 
-      await executer( connection.CreateIterationArguments( statementBuilder ) );
+      await executer( connection.PrepareStatementForExecution( statementBuilder ) );
    }
 
    public static async Task<TResult> ExecuteStatementAsync<TResult>( this SQLConnectionFunctionality connection, StatementBuilder statementBuilder, Func<AsyncEnumerator<SQLStatementExecutionResult>, Task<TResult>> executer )
@@ -224,7 +227,7 @@ public static partial class E_CBAM
       ArgumentValidator.ValidateNotNull( nameof( statementBuilder ), statementBuilder );
       ArgumentValidator.ValidateNotNull( nameof( executer ), executer );
 
-      return await executer( connection.CreateIterationArguments( statementBuilder ) );
+      return await executer( connection.PrepareStatementForExecution( statementBuilder ) );
    }
 
 

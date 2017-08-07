@@ -23,20 +23,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using UtilPack.ResourcePooling;
 
 public static partial class E_CBAM
 {
-   public static void EnableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
+   public static void EnableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent += Pool_AfterConnectionCreationEvent;
    }
 
-   public static void DisableJSONSupport( this ConnectionPoolObservable<PgSQLConnection> pool )
+   public static void DisableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
    {
       pool.AfterConnectionCreationEvent -= Pool_AfterConnectionCreationEvent;
    }
 
-   private static void Pool_AfterConnectionCreationEvent( AfterConnectionCreationEventArgs<PgSQLConnection> e )
+   private static void Pool_AfterConnectionCreationEvent( AfterAsyncResourceCreationEventArgs<PgSQLConnection> e )
    {
       e.AddAwaitable( e.Connection.AddJSONSupportAsync() );
    }

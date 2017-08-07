@@ -98,8 +98,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
          disabled.Initialization.Protocol.DisableBinaryProtocolReceive = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
             );
       }
 
@@ -115,8 +115,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
          disabled.Initialization.Protocol.DisableBinaryProtocolSend = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseConnectionAsync( performTest ),
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseConnectionAsync( performTest )
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
+            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
             );
       }
 
