@@ -8,45 +8,39 @@ using UtilPack;
 using System.Threading.Tasks;
 using CBAM.SQL.Implementation;
 using CBAM.Abstractions.Implementation;
-using CBAM.Tabular;
-using CBAM.Tabular.Implementation;
+using UtilPack.TabularData;
+using CBAM.Abstractions.Implementation.Tabular;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   internal sealed class PgSQLDataRowStream : DataRowColumnSUKSWithConnectionFunctionality<PostgreSQLProtocol, StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, PgSQLConnectionVendorFunctionality>
+   internal sealed class PgSQLDataRowColumn : DataColumnSUKSWithConnectionFunctionality<PostgreSQLProtocol, StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, PgSQLConnectionVendorFunctionality>
    {
       private readonly DataFormat _dataFormat;
       private DataRowObject _backendMessage;
 
-      public PgSQLDataRowStream(
+      public PgSQLDataRowColumn(
          PgSQLDataColumnMetaDataImpl metadata,
          Int32 thisStreamIndex,
-         PgSQLDataRowStream[] allDataRowStreams,
+         PgSQLDataRowColumn previousColumn,
          PostgreSQLProtocol protocol,
          ReservedForStatement reservedForStatement,
-         RowDescription rowDescription
-         ) : base( metadata, thisStreamIndex, protocol.Buffer, allDataRowStreams, protocol, reservedForStatement )
+         RowDescription.FieldData fieldData
+         ) : base( metadata, thisStreamIndex, previousColumn, protocol, reservedForStatement )
       {
-         var fieldInfo = rowDescription.Fields[thisStreamIndex];
-         this._dataFormat = fieldInfo.DataFormat;
+         this._dataFormat = ArgumentValidator.ValidateNotNull( nameof( fieldData ), fieldData ).DataFormat;
       }
 
-      public override async Task<Object> ConvertFromBytesAsync( Stream stream, Int32 byteCount )
+      protected override async ValueTask<Object> ReadValueAsync( Int32 byteCount )
       {
-         return await this.ConnectionFunctionality.ConvertFromBytes( ( (PgSQLDataColumnMetaDataImpl) this.MetaData ).SQLTypeID, this._dataFormat, stream, byteCount );
+         return await this.ConnectionFunctionality.ConvertFromBytes( ( (PgSQLDataColumnMetaDataImpl) this.MetaData ).SQLTypeID, this._dataFormat, null, byteCount );
       }
 
-      protected override async Task<Object> ReadValueAsync( Int32 byteCount )
+      protected override async ValueTask<Int32> ReadByteCountAsync()
       {
-         return await this.ConnectionFunctionality.ConvertFromBytes( ( (PgSQLDataColumnMetaDataImpl) this.MetaData ).SQLTypeID, this._dataFormat, this.ConnectionFunctionality.Stream, byteCount );
+         return await this._backendMessage.ReadColumnByteCount( this.ConnectionFunctionality.MessageIOArgs, this.ConnectionFunctionality.Stream, this.ConnectionFunctionality.CurrentCancellationToken, this.ColumnIndex, this.ConnectionFunctionality.Buffer );
       }
 
-      protected override async Task<Int32> ReadByteCountAsync()
-      {
-         return await this._backendMessage.ReadColumnByteCount( this.ConnectionFunctionality.MessageIOArgs, this.ConnectionFunctionality.Stream, this.ConnectionFunctionality.CurrentCancellationToken, this.ColumnIndex, this.ByteArray );
-      }
-
-      protected override async Task<Int32> PerformReadFromStreamAsync( Byte[] array, Int32 offset, Int32 count )
+      protected override async ValueTask<Int32> ReadFromStreamWhileReservedAsync( Byte[] array, Int32 offset, Int32 count )
       {
          return await this.ConnectionFunctionality.Stream.ReadAsync( array, offset, count, this.ConnectionFunctionality.CurrentCancellationToken );
       }
@@ -58,7 +52,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
    }
 
-   internal sealed class PgSQLDataRowMetaDataImpl : DataRowMetaDataImpl //, PgSQLDataRowMetaData
+   internal sealed class PgSQLDataRowMetaDataImpl : DataRowMetaDataImpl<AsyncDataColumnMetaData> //, PgSQLDataRowMetaData
    {
 
       public PgSQLDataRowMetaDataImpl(
@@ -69,15 +63,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
    }
 
-   internal sealed class PgSQLDataColumnMetaDataImpl : AbstractDataColumnMetaData, PgSQLDataColumnMetaData
+   internal sealed class PgSQLDataColumnMetaDataImpl : AbstractAsyncDataColumnMetaData, PgSQLDataColumnMetaData
    {
 
+      private readonly PostgreSQLProtocol _connectionFunctionality;
+      private readonly DataFormat _dataFormat;
+
       public PgSQLDataColumnMetaDataImpl(
+         PostgreSQLProtocol connectionFunctionality,
+         DataFormat dataFormat,
          Int32 typeID,
          (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo,
          String label
-         ) : base( typeInfo.UnboundInfo?.CLRType, label )
+         ) : base( typeInfo.UnboundInfo?.CLRType ?? typeof( String ), label )
       {
+         this._connectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
+         this._dataFormat = dataFormat;
          this.SQLTypeID = typeID;
          this.TypeInfo = typeInfo;
       }
@@ -86,6 +87,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          var typeInfo = this.TypeInfo;
          return typeInfo.UnboundInfo.ChangeTypePgSQLToFramework( typeInfo.BoundData, value, targetType );
+      }
+
+      public override ValueTask<Object> ConvertFromBytesAsync( Stream stream, Int32 byteCount )
+      {
+         return this._connectionFunctionality.ConvertFromBytes( this.SQLTypeID, this._dataFormat, stream, byteCount );
       }
 
       public Int32 SQLTypeID { get; }

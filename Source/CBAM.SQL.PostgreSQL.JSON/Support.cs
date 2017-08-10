@@ -29,17 +29,17 @@ public static partial class E_CBAM
 {
    public static void EnableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
    {
-      pool.AfterConnectionCreationEvent += Pool_AfterConnectionCreationEvent;
+      pool.AfterResourceCreationEvent += Pool_AfterConnectionCreationEvent;
    }
 
    public static void DisableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
    {
-      pool.AfterConnectionCreationEvent -= Pool_AfterConnectionCreationEvent;
+      pool.AfterResourceCreationEvent -= Pool_AfterConnectionCreationEvent;
    }
 
    private static void Pool_AfterConnectionCreationEvent( AfterAsyncResourceCreationEventArgs<PgSQLConnection> e )
    {
-      e.AddAwaitable( e.Connection.AddJSONSupportAsync() );
+      e.AddAwaitable( e.Resource.AddJSONSupportAsync() );
    }
 
    public static async Task AddJSONSupportAsync( this PgSQLConnection connection )

@@ -18,8 +18,6 @@
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
-    <ProjectReference Include="..\CBAM.Tabular.Implementation\CBAM.Tabular.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Tabular\CBAM.Tabular.csproj" />
   </ItemGroup>
   
   <PropertyGroup>

@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
     <PackageReference Include="UtilPack.JSON" Version="1.0.0" />
+    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC1" />
   </ItemGroup>
 
   <ItemGroup>

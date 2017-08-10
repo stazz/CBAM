@@ -23,8 +23,8 @@ using CBAM.SQL;
 using System.Threading.Tasks;
 using System.Threading;
 using CBAM.Abstractions;
-using CBAM.Tabular;
 using UtilPack.AsyncEnumeration;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL
 {
@@ -36,11 +36,11 @@ namespace CBAM.SQL
       AsyncEnumerator<SQLStatementExecutionResult> PreparePrimaryKeySearch( String schemaNamePattern, String tableNamePattern );
       AsyncEnumerator<SQLStatementExecutionResult> PrepareForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName );
 
-      Task<SchemaMetadata> ExtractSchemaAsync( DataRow row );
-      Task<TableMetadata> ExtractTableAsync( DataRow row );
-      Task<ColumnMetadata> ExtractColumnAsync( DataRow row );
-      Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( DataRow row );
-      Task<ForeignKeyMetadata> ExtractForeignKeyAsync( DataRow row );
+      Task<SchemaMetadata> ExtractSchemaAsync( AsyncDataRow row );
+      Task<TableMetadata> ExtractTableAsync( AsyncDataRow row );
+      Task<ColumnMetadata> ExtractColumnAsync( AsyncDataRow row );
+      Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( AsyncDataRow row );
+      Task<ForeignKeyMetadata> ExtractForeignKeyAsync( AsyncDataRow row );
    }
 
    public interface DatabaseElementWithSchemaName

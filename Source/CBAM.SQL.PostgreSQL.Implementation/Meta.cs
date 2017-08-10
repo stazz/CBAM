@@ -20,7 +20,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using CBAM.SQL.Implementation;
-using CBAM.Tabular;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
@@ -39,27 +39,27 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
       }
 
-      public override Task<SchemaMetadata> ExtractSchemaAsync( DataRow row )
+      public override Task<SchemaMetadata> ExtractSchemaAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<TableMetadata> ExtractTableAsync( DataRow row )
+      public override Task<TableMetadata> ExtractTableAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<ColumnMetadata> ExtractColumnAsync( DataRow row )
+      public override Task<ColumnMetadata> ExtractColumnAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( DataRow row )
+      public override Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<ForeignKeyMetadata> ExtractForeignKeyAsync( DataRow row )
+      public override Task<ForeignKeyMetadata> ExtractForeignKeyAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }

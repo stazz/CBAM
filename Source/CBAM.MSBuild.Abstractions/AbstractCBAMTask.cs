@@ -111,7 +111,7 @@ namespace CBAM.MSBuild.Abstractions
       protected abstract Boolean CheckTaskParametersBeforeConnectionPoolUsage();
 
       protected virtual ValueTask<Object> ProvideConnectionCreationParameters(
-         ConnectionPoolProvider<TConnection> poolProvider
+         ResourcePoolProvider<TConnection> poolProvider
          )
       {
          var path = this.ConnectionConfigurationFilePath;
@@ -127,19 +127,19 @@ namespace CBAM.MSBuild.Abstractions
       }
 
       protected virtual ValueTask<AsyncResourcePool<TConnection>> AcquireConnectionPool(
-         ConnectionPoolProvider<TConnection> provider,
+         ResourcePoolProvider<TConnection> provider,
          Object poolCreationArgs
          )
       {
-         return new ValueTask<AsyncResourcePool<TConnection>>( provider.CreateOneTimeUseConnectionPool( poolCreationArgs ) );
+         return new ValueTask<AsyncResourcePool<TConnection>>( provider.CreateOneTimeUseResourcePool( poolCreationArgs ) );
       }
 
       protected abstract Task UseConnection( TConnection connection );
 
-      protected async ValueTask<ConnectionPoolProvider<TConnection>> AcquireConnectionPoolProvider()
+      protected async ValueTask<ResourcePoolProvider<TConnection>> AcquireConnectionPoolProvider()
       {
          var resolver = this._nugetPackageResolver;
-         ConnectionPoolProvider<TConnection> retVal = null;
+         ResourcePoolProvider<TConnection> retVal = null;
          if ( resolver != null )
          {
             var assembly = await this._nugetPackageResolver(
@@ -151,7 +151,7 @@ namespace CBAM.MSBuild.Abstractions
             {
                // Now search for the type
                var typeName = this.ConnectionPoolProviderTypeName;
-               var parentType = typeof( ConnectionPoolProvider<TConnection> ).GetTypeInfo();
+               var parentType = typeof( ResourcePoolProvider<TConnection> ).GetTypeInfo();
                var checkParentType = !String.IsNullOrEmpty( typeName );
                Type providerType;
                if ( checkParentType )
@@ -170,7 +170,7 @@ namespace CBAM.MSBuild.Abstractions
                   if ( !checkParentType || parentType.IsAssignableFrom( providerType.GetTypeInfo() ) )
                   {
                      // All checks passed, instantiate the pool provider
-                     retVal = (ConnectionPoolProvider<TConnection>) Activator.CreateInstance( providerType );
+                     retVal = (ResourcePoolProvider<TConnection>) Activator.CreateInstance( providerType );
                   }
                   else
                   {

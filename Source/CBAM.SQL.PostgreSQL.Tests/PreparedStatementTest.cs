@@ -36,7 +36,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
          const Int32 THIRD = 3;
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseResourceAsync( async conn =>
          {
@@ -77,7 +77,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseResourceAsync( async conn =>
          {
@@ -170,7 +170,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          String connectionConfigFileLocation
          )
       {
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseConnectionPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var bytez = new Byte[256];
          UtilPack.Cryptography.Digest.DigestBasedRandomGenerator.CreateAndSeedWithDefaultLogic( new UtilPack.Cryptography.Digest.SHA512() ).NextBytes( bytez );

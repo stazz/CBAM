@@ -24,8 +24,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 using CBAM.Abstractions;
-using CBAM.Tabular;
+
 using UtilPack.AsyncEnumeration;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL
 {
@@ -82,7 +83,7 @@ namespace CBAM.SQL
       String CommandTag { get; }
    }
 
-   public interface SQLDataRow : DataRow, SQLStatementExecutionResult
+   public interface SQLDataRow : AsyncDataRow, SQLStatementExecutionResult
    {
 
    }
@@ -116,7 +117,7 @@ public static partial class E_CBAM
       while ( await iArgs.MoveNextAsync() ) ;
    }
 
-   public static async Task ExecuteQueryAsync( this SQLConnection connection, StatementBuilder stmt, Action<DataRow> action )
+   public static async Task ExecuteQueryAsync( this SQLConnection connection, StatementBuilder stmt, Action<AsyncDataRow> action )
    {
       var iArgs = connection.PrepareStatementForExecution( stmt );
       while ( await iArgs.MoveNextAsync() )
@@ -158,7 +159,7 @@ public static partial class E_CBAM
       await connection.ExecuteNonQueryAsync( connection.CreateStatementBuilder( sql ), action );
    }
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Func<DataRow, ValueTask<T>> extractor )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Func<AsyncDataRow, ValueTask<T>> extractor )
    {
       ArgumentValidator.ValidateNotNull( nameof( extractor ), extractor );
       return await connection.ExecuteStatementAsync( stmt, async args =>
@@ -174,13 +175,13 @@ public static partial class E_CBAM
       } );
    }
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Func<DataRow, ValueTask<T>> extractor )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Func<AsyncDataRow, ValueTask<T>> extractor )
    {
       return await connection.GetFirstOrDefaultAsync( connection.VendorFunctionality.CreateStatementBuilder( sql ), extractor );
    }
 
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Int32 parameterIndex = 0, Func<DataColumn, ValueTask<T>> extractor = null )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, StatementBuilder stmt, Int32 parameterIndex = 0, Func<AsyncDataColumn, ValueTask<T>> extractor = null )
    {
       return await connection.ExecuteStatementAsync( stmt, async args =>
       {
@@ -195,7 +196,7 @@ public static partial class E_CBAM
       } );
    }
 
-   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Int32 parameterIndex = 0, Func<DataColumn, ValueTask<T>> extractor = null )
+   public static async Task<T> GetFirstOrDefaultAsync<T>( this SQLConnection connection, String sql, Int32 parameterIndex = 0, Func<AsyncDataColumn, ValueTask<T>> extractor = null )
    {
       return await connection.GetFirstOrDefaultAsync( connection.VendorFunctionality.CreateStatementBuilder( sql ), parameterIndex, extractor );
    }

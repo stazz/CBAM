@@ -40,7 +40,7 @@ PgSQLConnectionCreationInfoData
 
 namespace CBAM.SQL.PostgreSQL
 {
-   public sealed class PgSQLConnectionPoolProvider : ConnectionPoolProvider<PgSQLConnection>
+   public sealed class PgSQLConnectionPoolProvider : ResourcePoolProvider<PgSQLConnection>
    {
 #if !NETSTANDARD1_0
       private static readonly PgSQLConnectionFactory _Factory;
@@ -73,21 +73,21 @@ namespace CBAM.SQL.PostgreSQL
 
       public Type DefaultTypeForCreationParameter => typeof( TDefaultConfigurationData );
 
-      AsyncResourcePoolObservable<PgSQLConnection> ConnectionPoolProvider<PgSQLConnection>.CreateOneTimeUseConnectionPool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection> ResourcePoolProvider<PgSQLConnection>.CreateOneTimeUseResourcePool( Object creationParameters )
       {
-         return this.CreateOneTimeUseConnectionPool( CheckCreationParameters( creationParameters ) );
+         return this.CreateOneTimeUseResourcePool( CheckCreationParameters( creationParameters ) );
       }
 
-      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> ConnectionPoolProvider<PgSQLConnection>.CreateTimeoutingConnectionPool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> ResourcePoolProvider<PgSQLConnection>.CreateTimeoutingResourcePool( Object creationParameters )
       {
-         return this.CreateTimeoutingConnectionPool( CheckCreationParameters( creationParameters ) );
+         return this.CreateTimeoutingResourcePool( CheckCreationParameters( creationParameters ) );
       }
 #if !NETSTANDARD1_0
-      public SQLConnectionPool<PgSQLConnection> CreateOneTimeUseConnectionPool(
+      public AsyncResourcePoolObservable<PgSQLConnection> CreateOneTimeUseResourcePool(
          PgSQLConnectionCreationInfo connectionConfig
          )
       {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
+         return new OneTimeUseAsyncResourcePool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
             _Factory,
             connectionConfig,
             acquire => acquire,
@@ -95,22 +95,22 @@ namespace CBAM.SQL.PostgreSQL
             );
       }
 
-      public SQLConnectionPool<PgSQLConnection, TimeSpan> CreateTimeoutingConnectionPool(
+      public AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> CreateTimeoutingResourcePool(
          PgSQLConnectionCreationInfo connectionConfig
          )
       {
-         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfo>(
+         return new CachingAsyncResourcePoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfo>(
             _Factory,
             connectionConfig
             );
       }
 #endif
 
-      public SQLConnectionPool<PgSQLConnection> CreateOneTimeUseConnectionPool(
+      public AsyncResourcePoolObservable<PgSQLConnection> CreateOneTimeUseResourcePool(
          PgSQLConnectionCreationInfoForReadyMadeStreams connectionConfig
          )
       {
-         return new OneTimeUseSQLConnectionPool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfoForReadyMadeStreams>(
+         return new OneTimeUseAsyncResourcePool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfoForReadyMadeStreams>(
             _FactoryForReadyMadeStreams,
             connectionConfig,
             acquire => acquire,
@@ -118,11 +118,11 @@ namespace CBAM.SQL.PostgreSQL
             );
       }
 
-      public SQLConnectionPool<PgSQLConnection, TimeSpan> CreateTimeoutingConnectionPool(
+      public AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> CreateTimeoutingResourcePool(
          PgSQLConnectionCreationInfoForReadyMadeStreams connectionConfig
          )
       {
-         return new CachingSQLConnectionPoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfoForReadyMadeStreams>(
+         return new CachingAsyncResourcePoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfoForReadyMadeStreams>(
             _FactoryForReadyMadeStreams,
             connectionConfig
             );

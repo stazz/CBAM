@@ -16,7 +16,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
-    <ProjectReference Include="..\CBAM.Tabular\CBAM.Tabular.csproj" />
+    <PackageReference Include="UtilPack.TabularData" Version="1.0.0-RC1" />
   </ItemGroup>
   
   <PropertyGroup>

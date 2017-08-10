@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.Tabular;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.PostgreSQL
 {
@@ -27,7 +27,7 @@ namespace CBAM.SQL.PostgreSQL
 
    //}
 
-   public interface PgSQLDataColumnMetaData : DataColumnMetaData
+   public interface PgSQLDataColumnMetaData : AsyncDataColumnMetaData
    {
       Int32 SQLTypeID { get; }
    }

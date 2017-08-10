@@ -32,7 +32,6 @@ using CBAM.Abstractions;
 
 using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
 using CBAM.Abstractions.Implementation;
-using CBAM.Tabular.Implementation;
 using UtilPack.AsyncEnumeration;
 
 #if !NETSTANDARD1_0
@@ -392,13 +391,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   msg = null;
                   break;
                case DataRowObject dr:
-                  var streamArray = new PgSQLDataRowStream[seenRD.Fields.Length];
+                  var streamArray = new PgSQLDataRowColumn[seenRD.Fields.Length];
                   var mdArray = new PgSQLDataColumnMetaDataImpl[streamArray.Length];
+                  PgSQLDataRowColumn prevCol = null;
                   for ( var i = 0; i < streamArray.Length; ++i )
                   {
                      var curField = seenRD.Fields[i];
-                     var curMD = new PgSQLDataColumnMetaDataImpl( curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
-                     var curStream = new PgSQLDataRowStream( curMD, i, streamArray, this, reservedState, seenRD );
+                     var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
+                     var curStream = new PgSQLDataRowColumn( curMD, i, prevCol, this, reservedState, curField );
+                     prevCol = curStream;
                      streamArray[i] = curStream;
                      curStream.Reset( dr );
                      mdArray[i] = curMD;
@@ -495,13 +496,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         break;
                      case DataRowObject dr:
                         // First DataRowObject
-                        var streamArray = new PgSQLDataRowStream[seenRD.Fields.Length];
+                        var streamArray = new PgSQLDataRowColumn[seenRD.Fields.Length];
                         var mdArray = new PgSQLDataColumnMetaDataImpl[streamArray.Length];
+                        PgSQLDataRowColumn prevCol = null;
                         for ( var i = 0; i < streamArray.Length; ++i )
                         {
                            var curField = seenRD.Fields[i];
-                           var curMD = new PgSQLDataColumnMetaDataImpl( curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
-                           var curStream = new PgSQLDataRowStream( curMD, i, streamArray, this, reservedState, seenRD );
+                           var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
+                           var curStream = new PgSQLDataRowColumn( curMD, i, prevCol, this, reservedState, curField );
+                           prevCol = curStream;
                            streamArray[i] = curStream;
                            curStream.Reset( dr );
                            mdArray[i] = curMD;
@@ -541,7 +544,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       private async Task<(Boolean Success, SQLStatementExecutionResult)> MoveNextAsync(
          ReservedForStatement reservationObject,
-         PgSQLDataRowStream[] streams,
+         PgSQLDataRowColumn[] streams,
          List<PgSQLError> notices,
          SQLDataRowImpl dataRow,
          ReadOnlyResettableLazy<SQLException[]> warningsLazy
@@ -552,7 +555,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Force read of all columns
             foreach ( var colStream in streams )
             {
-               await colStream.SkipBytesAsync( false );
+               await colStream.SkipBytesAsync( this.Buffer.Array );
             }
 
             notices.Clear();
@@ -647,13 +650,19 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public event EventHandler<NotificationEventArgs> NotifyEvent;
 
-      public async Task<Object> ConvertFromBytes( Int32 typeID, DataFormat dataFormat, Stream stream, Int32 byteCount )
+      public async ValueTask<Object> ConvertFromBytes( Int32 typeID, DataFormat dataFormat, Stream stream, Int32 byteCount )
       {
+         if ( stream == null )
+         {
+            // TODO this.UseStreamWithinStatementAsync(), would require ReservedForStatement object though
+            stream = this.Stream;
+         }
+
          if ( this.TypeRegistry.TryGetTypeInfo( typeID, out (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo ) )
          {
 
             var limitedStream = StreamFactory.CreateLimitedReader(
-                  this.Stream,
+                  stream,
                   byteCount,
                   this.CurrentCancellationToken,
                   this.Buffer
@@ -775,8 +784,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-            // Just do "SELECT 1"; to get any notifications 
-            await this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+         // Just do "SELECT 1"; to get any notifications 
+         await this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else

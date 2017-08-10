@@ -129,9 +129,9 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="func">The asynchronous callback to execute after reserving and before freeing the connection.</param>
       /// <returns>A task which will complete after connection is freed up, returning result of the <paramref name="func"/>.</returns>
       /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      protected async Task<T> UseStreamOutsideStatementAsync<T>( Func<Task<T>> func )
+      protected ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func )
       {
-         return await this.UseStreamOutsideStatementAsync( func, _NoStatement, true );
+         return this.UseStreamOutsideStatementAsync( func, _NoStatement, true );
       }
 
       private async Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly )
@@ -156,7 +156,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      private async Task<T> UseStreamOutsideStatementAsync<T>( Func<Task<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly )
+      private async ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly )
       {
          if ( ReferenceEquals( Interlocked.CompareExchange( ref this._currentlyExecutingStatement, reservedState, NotInUse.Instance ), NotInUse.Instance ) )
          {
@@ -215,7 +215,7 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="func">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
       /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
       /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
-      public async Task<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<Task<T>> func )
+      public async ValueTask<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
          ConnectionStreamUsageState prevState;

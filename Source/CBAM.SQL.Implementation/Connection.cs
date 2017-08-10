@@ -25,8 +25,8 @@ using CBAM.SQL;
 using CBAM.SQL.Implementation;
 using CBAM.Abstractions;
 using CBAM.Abstractions.Implementation;
-using CBAM.Tabular;
 using UtilPack.AsyncEnumeration;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
@@ -112,9 +112,9 @@ namespace CBAM.SQL.Implementation
 
       protected abstract String GetSQLForSettingReadOnly( Boolean isReadOnly );
 
-      protected abstract ValueTask<Boolean> InterpretReadOnly( DataColumn row );
+      protected abstract ValueTask<Boolean> InterpretReadOnly( AsyncDataColumn row );
 
-      protected abstract ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row );
+      protected abstract ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( AsyncDataColumn row );
    }
 
    public abstract class DefaultConnectionVendorFunctionality : SQLConnectionVendorFunctionality

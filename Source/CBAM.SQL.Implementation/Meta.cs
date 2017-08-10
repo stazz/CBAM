@@ -17,7 +17,6 @@
  */
 using CBAM.Abstractions;
 using CBAM.SQL;
-using CBAM.Tabular;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,6 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 using UtilPack.AsyncEnumeration;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
@@ -116,11 +116,11 @@ namespace CBAM.SQL.Implementation
          }
       }
 
-      public abstract Task<SchemaMetadata> ExtractSchemaAsync( DataRow row );
-      public abstract Task<TableMetadata> ExtractTableAsync( DataRow row );
-      public abstract Task<ColumnMetadata> ExtractColumnAsync( DataRow row );
-      public abstract Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( DataRow row );
-      public abstract Task<ForeignKeyMetadata> ExtractForeignKeyAsync( DataRow row );
+      public abstract Task<SchemaMetadata> ExtractSchemaAsync( AsyncDataRow row );
+      public abstract Task<TableMetadata> ExtractTableAsync( AsyncDataRow row );
+      public abstract Task<ColumnMetadata> ExtractColumnAsync( AsyncDataRow row );
+      public abstract Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( AsyncDataRow row );
+      public abstract Task<ForeignKeyMetadata> ExtractForeignKeyAsync( AsyncDataRow row );
 
       protected abstract String CreateSQLForSchemaSearch( String schemaNamePattern );
       protected abstract String CreateSQLForTableSearch( String schemaNamePattern, String tableNamePattern, TableType[] tableTypes );

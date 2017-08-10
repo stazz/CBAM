@@ -13,6 +13,10 @@
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC1" />
+  </ItemGroup>
   
   <PropertyGroup>
     <VersionPrefix>0.2.0</VersionPrefix>

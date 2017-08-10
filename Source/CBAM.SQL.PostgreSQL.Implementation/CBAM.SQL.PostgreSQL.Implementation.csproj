@@ -15,13 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CBAM.Abstractions.Implementation.Tabular\CBAM.Abstractions.Implementation.Tabular.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
     <ProjectReference Include="..\CBAM.SQL.Implementation\CBAM.SQL.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
-    <ProjectReference Include="..\CBAM.Tabular.Implementation\CBAM.Tabular.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Tabular\CBAM.Tabular.csproj" />
   </ItemGroup>
   
   <PropertyGroup>

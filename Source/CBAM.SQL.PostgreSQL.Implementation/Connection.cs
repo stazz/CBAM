@@ -24,8 +24,8 @@ using System.IO;
 using System.Threading;
 using UtilPack;
 using CBAM.Abstractions.Implementation;
-using CBAM.Tabular;
 using UtilPack.ResourcePooling;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
@@ -119,12 +119,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return levelString;
       }
 
-      protected override async ValueTask<Boolean> InterpretReadOnly( DataColumn row )
+      protected override async ValueTask<Boolean> InterpretReadOnly( AsyncDataColumn row )
       {
          return String.Equals( (String) ( await row.TryGetValueAsync() ).Result, "on", StringComparison.OrdinalIgnoreCase );
       }
 
-      protected override async ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( DataColumn row )
+      protected override async ValueTask<TransactionIsolationLevel> InterpretTransactionIsolationLevel( AsyncDataColumn row )
       {
          TransactionIsolationLevel retVal;
          String levelString;

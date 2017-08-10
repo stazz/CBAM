@@ -15,22 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.Tabular.Implementation;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
-using CBAM.Tabular;
 using UtilPack;
+using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
-   public class SQLDataRowImpl : DataRowImpl, SQLDataRow
+   public class SQLDataRowImpl : AsyncDataRowImpl, SQLDataRow
    {
       private readonly ReadOnlyResettableLazy<SQLException[]> _warnings;
 
       public SQLDataRowImpl(
-         DataRowMetaData rowMetadata,
-         DataColumn[] valueStreams,
+         DataRowMetaData<AsyncDataColumnMetaData> rowMetadata,
+         AsyncDataColumn[] valueStreams,
          ReadOnlyResettableLazy<SQLException[]> warnings
          ) : base( rowMetadata, valueStreams )
       {
