@@ -75,6 +75,7 @@ namespace CBAM.SQL
 
    /// <summary>
    /// This interface extends read-only <see cref="SQLStatementBuilderInformation"/> with modifiable API.
+   /// Not that just like in JDBC, the parameters for prepared statement should be question marks in statement SQL given to <see cref="CBAM.Abstractions.ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> method.
    /// </summary>
    public interface SQLStatementBuilder : SQLStatementBuilderInformation
    {

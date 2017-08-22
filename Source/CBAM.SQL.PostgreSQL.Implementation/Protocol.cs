@@ -174,7 +174,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return (this.MessageIOArgs, this.Stream, tokenToUse ?? this.CurrentCancellationToken, bufferToUse ?? this.Buffer);
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
+      protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
          CancellationToken token,
          SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
@@ -336,7 +336,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
+      protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
          CancellationToken token,
          SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
@@ -434,7 +434,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return (current, moveNext);
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
+      protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
          CancellationToken token,
          SQLStatementBuilderInformation stmt,
          ReservedForStatement reservedState

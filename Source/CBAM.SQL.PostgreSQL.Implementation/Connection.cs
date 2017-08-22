@@ -325,7 +325,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal abstract class PgSQLConnectionFactory<TConnectionCreationParameters> : SQLConnectionFactorySU<PgSQLConnectionImpl, PgSQLConnectionVendorFunctionality, TConnectionCreationParameters, PostgreSQLProtocol>
+   internal abstract class PgSQLConnectionFactory<TConnectionCreationParameters> : ConnectionFactorySU<PgSQLConnectionImpl, PgSQLConnectionVendorFunctionality, TConnectionCreationParameters, PostgreSQLProtocol, String, SQLStatementBuilder, SQLStatementBuilderInformation, SQLStatementExecutionResult>
    {
       protected override ValueTask<PgSQLConnectionImpl> CreateConnection( PostgreSQLProtocol functionality )
       {

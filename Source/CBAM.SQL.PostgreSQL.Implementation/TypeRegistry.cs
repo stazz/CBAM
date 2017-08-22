@@ -11,6 +11,8 @@ using CBAM.SQL.Implementation;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
+   using SQLConnectionFunctionality = Abstractions.Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>;
+
    internal class TypeRegistryImpl : TypeRegistry
    {
       private const Char ARRAY_PREFIX = '_';
@@ -80,8 +82,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          IEnumerable<String> typeNames
          )
       {
-         return await this._connectionFunctionality.ExecuteStatementAsync(
-            this._vendorFunctionality.CreateStatementBuilder(
+         var types = new Dictionary<String, PgSQLTypeDatabaseData>();
+         await this._connectionFunctionality.PrepareStatementForExecution(
                "SELECT typname, oid, typdelim, typelem\n" +
                "FROM pg_type\n" +
                "WHERE typname IN (" + String.Join( ", ", typeNames.Select( typename =>
@@ -89,24 +91,16 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   typename = this._vendorFunctionality.EscapeLiteral( typename );
                   return "'" + typename + "', '" + ARRAY_PREFIX + typename + "'";
                } ) ) + ")\n"
-            //"ORDER BY typname DESC"
-            ),
-            async iArgs =>
-            {
-               var types = new Dictionary<String, PgSQLTypeDatabaseData>();
-               await iArgs.EnumerateSQLRowsAsync( async row =>
-               {
-                  // We need to get all values as strings, since we might not have type mapping yet (we might be building it right here)
-                  var typeName = await row.GetValueAsync<String>( 0 );
-                  var typeID = Int32.Parse( await row.GetValueAsync<String>( 1 ) );
-                  var delimiter = ( await row.GetValueAsync<String>( 2 ) );
-                  var elementTypeID = Int32.Parse( await row.GetValueAsync<String>( 3 ) );
-                  types.Add( typeName, new PgSQLTypeDatabaseData( typeName, typeID, delimiter, elementTypeID ) );
-               } );
-
-               return types;
-            }
-         );
+            ).EnumerateSQLRowsAsync( async row =>
+              {
+                 // We need to get all values as strings, since we might not have type mapping yet (we might be building it right here)
+                 var typeName = await row.GetValueAsync<String>( 0 );
+                 var typeID = Int32.Parse( await row.GetValueAsync<String>( 1 ) );
+                 var delimiter = ( await row.GetValueAsync<String>( 2 ) );
+                 var elementTypeID = Int32.Parse( await row.GetValueAsync<String>( 3 ) );
+                 types.Add( typeName, new PgSQLTypeDatabaseData( typeName, typeID, delimiter, elementTypeID ) );
+              } );
+         return types;
       }
 
       public void AssignTypeData(

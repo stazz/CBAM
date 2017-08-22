@@ -34,12 +34,12 @@ namespace CBAM.SQL
    /// <remarks>
    /// While the API exposed directly by this interface can be used, in most scenarios, the actual usage happens through extension methods:
    /// <list type="bullet">
-   /// <item><description><see cref="E_CBAM.GetSchemaMetadataAsync(DatabaseMetadata, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetTableMetadataAsync(DatabaseMetadata, string, string, TableType[])"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetColumnMetadataAsync(DatabaseMetadata, string, string, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetPrimaryKeyMetadataAsync(DatabaseMetadata, string, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetExportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>, and</description></item>
-   /// <item><description><see cref="E_CBAM.GetImportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>.</description></item>
+   /// <item><description><see cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>,</description></item>
+   /// <item><description><see cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>,</description></item>
+   /// <item><description><see cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>,</description></item>
+   /// <item><description><see cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>,</description></item>
+   /// <item><description><see cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>, and</description></item>
+   /// <item><description><see cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>.</description></item>
    /// </list>
    /// </remarks>
    /// <seealso cref="SQLConnection.DatabaseMetadata"/>
@@ -52,121 +52,122 @@ namespace CBAM.SQL
       String Name { get; }
 
       /// <summary>
-      /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute schema search with given schema name pattern.
+      /// Creates a new <see cref="SQLStatementBuilder"/> which contains information for executing schema search with given schema name pattern.
       /// </summary>
-      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-      /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the schema information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(DatabaseMetadata, string)"/>
+      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+      /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the schema information from the database.</returns>
+      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
       /// <seealso cref="ExtractSchemaMetadataAsync(AsyncDataRow)"/>
-      AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareSchemaSearch( String schemaNamePattern = null );
+      SQLStatementBuilder CreateSchemaSearch( String schemaNamePattern = null );
 
       /// <summary>
-      /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table search with given search parameters.
+      /// Creates a new <see cref="SQLStatementBuilder"/> which contains information for executing table search with given search parameters.
       /// </summary>
-      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
+      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <param name="tableTypes">The table types. If not <c>null</c> and not empty, can be used to further narrow down search results based on table type.</param>
-      /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetTableMetadataAsync(DatabaseMetadata, string, string, TableType[])"/>
+      /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table information from the database.</returns>
+      /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
       /// <seealso cref="ExtractTableMetadataAsync(AsyncDataRow)"/>
       /// <seealso cref="TableType"/>
-      AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareTableSearch( String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes );
+      SQLStatementBuilder CreateTableSearch( String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes );
 
       /// <summary>
-      /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table column search with given search parameters.
+      /// Creates a new <see cref="SQLStatementBuilder"/> which contains information for executing table column search with given search parameters.
       /// </summary>
-      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
-      /// <param name="columnNamePattern">The column name pattern. If not <c>null</c> or empty, will narrow down search results based on table column name.</param>
-      /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table column information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(DatabaseMetadata, string, string, string)"/>
+      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+      /// <param name="columnNamePattern">The column name pattern. If not <c>null</c>, will narrow down search results based on table column name.</param>
+      /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table column information from the database.</returns>
+      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
       /// <seealso cref="ExtractColumnMetadataAsync(AsyncDataRow)"/>
-      AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareColumnSearch( String schemaNamePattern, String tableNamePattern, String columnNamePattern = null );
+      SQLStatementBuilder CreateColumnSearch( String schemaNamePattern, String tableNamePattern, String columnNamePattern = null );
 
       /// <summary>
-      /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table primary key search with given search parameters.
+      /// Creates a new <see cref="SQLStatementBuilder"/> which contains information for executing table primary key search with given search parameters.
       /// </summary>
-      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
-      /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table primary key information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(DatabaseMetadata, string, string)"/>
+      /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+      /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+      /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table primary key information from the database.</returns>
+      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
       /// <seealso cref="ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
-      AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PreparePrimaryKeySearch( String schemaNamePattern, String tableNamePattern );
+      SQLStatementBuilder CreatePrimaryKeySearch( String schemaNamePattern, String tableNamePattern );
 
       /// <summary>
-      /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table primary key search with given search parameters.
+      /// Creates a new <see cref="SQLStatementBuilder"/> which contains information for executing table foreign key search with given search parameters.
       /// </summary>
-      /// <param name="primarySchemaName">The schema name of the table containing primary key. If not <c>null</c> or empty, will narrow down search results based on primary key table schema name.</param>
-      /// <param name="primaryTableName">The name of the table containing primary key. If not <c>null</c> or empty, will narrow down search results based on primary key table name.</param>
-      /// <param name="foreignSchemaName">The schema name of the table containing foreign key. If not <c>null</c> or empty, will narrow down search results based on foreign key table schema name.</param>
-      /// <param name="foreignTableName">The name of the table containing foreign key. If not <c>null</c> or empty, will narrow down search results based on foreign key table name.</param>
-      /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table foreign key information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(DatabaseMetadata, string, string, string, string)"/>
+      /// <param name="primarySchemaName">The schema name of the table containing primary key. If not <c>null</c>, will narrow down search results based on primary key table schema name.</param>
+      /// <param name="primaryTableName">The name of the table containing primary key. If not <c>null</c>, will narrow down search results based on primary key table name.</param>
+      /// <param name="foreignSchemaName">The schema name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table schema name.</param>
+      /// <param name="foreignTableName">The name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table name.</param>
+      /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table foreign key information from the database.</returns>
+      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
       /// <seealso cref="ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
-      AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName );
+      SQLStatementBuilder CreateForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName );
 
       /// <summary>
-      /// This method will create a new <see cref="SchemaMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="PrepareSchemaSearch(string)"/>.
+      /// This method will create a new <see cref="SchemaMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="CreateSchemaSearch(string)"/>.
       /// </summary>
-      /// <param name="row">The data row encountered during processing query produced by <see cref="PrepareSchemaSearch(string)"/>.</param>
+      /// <param name="row">The data row encountered during processing query produced by <see cref="CreateSchemaSearch(string)"/>.</param>
       /// <returns>A task which will on completion result in <see cref="SchemaMetadata"/> object.</returns>
       /// <remarks>
-      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="PrepareSchemaSearch(string)"/> will most likely result in errors.
+      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateSchemaSearch(string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(DatabaseMetadata, string)"/>
-      /// <seealso cref="PrepareSchemaSearch(string)"/>
+      /// <exception cref="ArgumentNullException">If <paramref name="row"/> is <c>null</c>.</exception>
+      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+      /// <seealso cref="CreateSchemaSearch(string)"/>
       ValueTask<SchemaMetadata> ExtractSchemaMetadataAsync( AsyncDataRow row );
 
       /// <summary>
-      /// This method will create a new <see cref="TableMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="PrepareTableSearch(string, string, TableType[])"/>.
+      /// This method will create a new <see cref="TableMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="CreateTableSearch(string, string, TableType[])"/>.
       /// </summary>
-      /// <param name="row">The data row encountered during processing query produced by <see cref="PrepareTableSearch(string, string, TableType[])"/>.</param>
+      /// <param name="row">The data row encountered during processing query produced by <see cref="CreateTableSearch(string, string, TableType[])"/>.</param>
       /// <returns>A task which will on completion result in <see cref="TableMetadata"/> object.</returns>
       /// <remarks>
-      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="PrepareTableSearch(string, string, TableType[])"/> will most likely result in errors.
+      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateTableSearch(string, string, TableType[])"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetTableMetadataAsync(DatabaseMetadata, string, string, TableType[])"/>
-      /// <seealso cref="PrepareTableSearch(string, string, TableType[])"/>
+      /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+      /// <seealso cref="CreateTableSearch(string, string, TableType[])"/>
       ValueTask<TableMetadata> ExtractTableMetadataAsync( AsyncDataRow row );
 
       /// <summary>
-      /// This method will create a new <see cref="ColumnMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="PrepareColumnSearch(string, string, string)"/>.
+      /// This method will create a new <see cref="ColumnMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="CreateColumnSearch(string, string, string)"/>.
       /// </summary>
-      /// <param name="row">The data row encountered during processing query produced by <see cref="PrepareColumnSearch(string, string, string)"/>.</param>
+      /// <param name="row">The data row encountered during processing query produced by <see cref="CreateColumnSearch(string, string, string)"/>.</param>
       /// <returns>A task which will on completion result in <see cref="ColumnMetadata"/> object.</returns>
       /// <remarks>
-      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="PrepareColumnSearch(string, string, string)"/> will most likely result in errors.
+      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateColumnSearch(string, string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(DatabaseMetadata, string, string, string)"/>
-      /// <seealso cref="PrepareColumnSearch(string, string, string)"/>
+      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+      /// <seealso cref="CreateColumnSearch(string, string, string)"/>
       ValueTask<ColumnMetadata> ExtractColumnMetadataAsync( AsyncDataRow row );
 
       /// <summary>
-      /// This method will create a new <see cref="PrimaryKeyMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="PreparePrimaryKeySearch(string, string)"/>.
+      /// This method will create a new <see cref="PrimaryKeyMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="CreatePrimaryKeySearch(string, string)"/>.
       /// </summary>
-      /// <param name="row">The data row encountered during processing query produced by <see cref="PreparePrimaryKeySearch(string, string)"/>.</param>
+      /// <param name="row">The data row encountered during processing query produced by <see cref="CreatePrimaryKeySearch(string, string)"/>.</param>
       /// <returns>A task which will on completion result in <see cref="PrimaryKeyMetadata"/> object.</returns>
       /// <remarks>
-      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="PreparePrimaryKeySearch(string, string)"/> will most likely result in errors.
+      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreatePrimaryKeySearch(string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-      /// <seealso cref="PreparePrimaryKeySearch(string, string)"/>
+      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CreatePrimaryKeySearch(string, string)"/>
       ValueTask<PrimaryKeyMetadata> ExtractPrimaryKeyMetadataAsync( AsyncDataRow row );
 
       /// <summary>
-      /// This method will create a new <see cref="ForeignKeyMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="PrepareForeignKeySearch(string, string, string, string)"/>.
+      /// This method will create a new <see cref="ForeignKeyMetadata"/> based on <see cref="AsyncDataRow"/> resulted from executing query produced by <see cref="CreateForeignKeySearch(string, string, string, string)"/>.
       /// </summary>
-      /// <param name="row">The data row encountered during processing query produced by <see cref="PrepareForeignKeySearch(string, string, string, string)"/>.</param>
+      /// <param name="row">The data row encountered during processing query produced by <see cref="CreateForeignKeySearch(string, string, string, string)"/>.</param>
       /// <returns>A task which will on completion result in <see cref="ForeignKeyMetadata"/> object.</returns>
       /// <remarks>
-      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="PrepareForeignKeySearch(string, string, string, string)"/> will most likely result in errors.
+      /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateForeignKeySearch(string, string, string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(DatabaseMetadata, string, string, string, string)"/>
-      /// <seealso cref="PrepareForeignKeySearch(string, string, string, string)"/>
+      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+      /// <seealso cref="CreateForeignKeySearch(string, string, string, string)"/>
       ValueTask<ForeignKeyMetadata> ExtractForeignKeyMetadataAsync( AsyncDataRow row );
    }
 
@@ -190,7 +191,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface represents information about a single schema in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(DatabaseMetadata, string)"/>
+   /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
    public interface SchemaMetadata : DatabaseElementWithSchemaName, DatabaseElementWithComment
    {
@@ -244,7 +245,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetTableMetadataAsync(DatabaseMetadata, string, string, TableType[])"/>
+   /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
    /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
    public interface TableMetadata : DatabaseElementWithTableName, DatabaseElementWithComment, DatabaseElementWithTypeName
    {
@@ -284,7 +285,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetColumnMetadataAsync(DatabaseMetadata, string, string, string)"/>
+   /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
    public interface ColumnMetadata : DatabaseElementWithColumnName, DatabaseElementWithComment, DatabaseElementWithTypeName, DatabaseElementWithOrdinalPosition
    {
@@ -352,7 +353,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single primary key column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(DatabaseMetadata, string, string)"/>
+   /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
    public interface PrimaryKeyMetadata : KeyMetadata
    {
@@ -361,9 +362,9 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single foreign key column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-   /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(DatabaseMetadata, string, string)"/>
-   /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(DatabaseMetadata, string, string, string, string)"/>
+   /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
    public interface ForeignKeyMetadata : KeyMetadata
    {
@@ -440,7 +441,7 @@ namespace CBAM.SQL
    }
 
    /// <summary>
-   /// This enumeration specifies for possible table types in table search of <see cref="E_CBAM.GetTableMetadataAsync(DatabaseMetadata, string, string, TableType[])"/> and <see cref="DatabaseMetadata.PrepareTableSearch(string, string, TableType[])"/> methods.
+   /// This enumeration specifies for possible table types in table search of <see cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/> and <see cref="DatabaseMetadata.CreateTableSearch(string, string, TableType[])"/> methods.
    /// </summary>
    public enum TableType
    {
@@ -484,143 +485,227 @@ namespace CBAM.SQL
 public static partial class E_CBAM
 {
    /// <summary>
+   /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute schema search with given schema name pattern.
+   /// </summary>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the schema information from the database.</returns>
+   /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+   /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
+   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareSchemaSearch( this SQLConnection connection, String schemaNamePattern = null )
+   {
+      return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateSchemaSearch( schemaNamePattern ) );
+   }
+
+   /// <summary>
+   /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table search with given search parameters.
+   /// </summary>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+   /// <param name="tableTypes">The table types. If not <c>null</c> and not empty, can be used to further narrow down search results based on table type.</param>
+   /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table information from the database.</returns>
+   /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+   /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
+   /// <seealso cref="TableType"/>
+   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareTableSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
+   {
+      return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateTableSearch( schemaNamePattern, tableNamePattern, tableTypes ) );
+   }
+
+   /// <summary>
+   /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table column search with given search parameters.
+   /// </summary>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+   /// <param name="columnNamePattern">The column name pattern. If not <c>null</c>, will narrow down search results based on table column name.</param>
+   /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table column information from the database.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+   /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
+   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareColumnSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
+   {
+      return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ) );
+   }
+
+   /// <summary>
+   /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table primary key search with given search parameters.
+   /// </summary>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+   /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table primary key information from the database.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
+   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PreparePrimaryKeySearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
+   {
+      return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreatePrimaryKeySearch( schemaNamePattern, tableNamePattern ) );
+   }
+
+   /// <summary>
+   /// Creates a new <see cref="AsyncEnumerator{T}"/> which can be used to execute table foreign key search with given search parameters.
+   /// </summary>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="primarySchemaName">The schema name of the table containing primary key. If not <c>null</c>, will narrow down search results based on primary key table schema name.</param>
+   /// <param name="primaryTableName">The name of the table containing primary key. If not <c>null</c>, will narrow down search results based on primary key table name.</param>
+   /// <param name="foreignSchemaName">The schema name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table schema name.</param>
+   /// <param name="foreignTableName">The name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table name.</param>
+   /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table foreign key information from the database.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+   /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
+   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareForeignKeySearch( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
+   {
+      return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ) );
+   }
+
+   /// <summary>
    /// This is shortcut method to enumerate all foreign key columns of given table, and return the column information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
    /// <param name="schemaName">The schema name of the table to get foreign keys from.</param>
    /// <param name="tableName">The table name of the table to get foreign keys from.</param>
    /// <returns>Asynchronously returns list of <see cref="ForeignKeyMetadata"/> objects that have information about foreign key columns of the given table.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="GetCrossReferenceMetadataAsync(DatabaseMetadata, string, string, string, string)"/>
-   /// <seealso cref="DatabaseMetadata.PrepareForeignKeySearch(string, string, string, string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+   /// <seealso cref="DatabaseMetadata.CreateForeignKeySearch(string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static ValueTask<List<ForeignKeyMetadata>> GetExportedForeignKeyMetadataAsync( this DatabaseMetadata md, String schemaName, String tableName )
+   public static ValueTask<List<ForeignKeyMetadata>> GetExportedForeignKeyMetadataAsync( this SQLConnection connection, String schemaName, String tableName )
    {
-      return md.GetCrossReferenceMetadataAsync( schemaName, tableName, null, null );
+      return connection.GetCrossReferenceMetadataAsync( schemaName, tableName, null, null );
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all foreign key columns of other tables that reference primary key of given table, and return the column information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
    /// <param name="schemaName">The schema name of the table that other foreign keys reference.</param>
    /// <param name="tableName">The table name of the table that other foreign keys reference.</param>
    /// <returns>Asynchronously returns list of <see cref="ForeignKeyMetadata"/> objects that have information about foreign key columns of other tables that reference given table.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="GetCrossReferenceMetadataAsync(DatabaseMetadata, string, string, string, string)"/>
-   /// <seealso cref="DatabaseMetadata.PrepareForeignKeySearch(string, string, string, string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+   /// <seealso cref="DatabaseMetadata.CreateForeignKeySearch(string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static ValueTask<List<ForeignKeyMetadata>> GetImportedForeignKeyMetadataAsync( this DatabaseMetadata md, String schemaName, String tableName )
+   public static ValueTask<List<ForeignKeyMetadata>> GetImportedForeignKeyMetadataAsync( this SQLConnection connection, String schemaName, String tableName )
    {
-      return md.GetCrossReferenceMetadataAsync( null, null, schemaName, tableName );
+      return connection.GetCrossReferenceMetadataAsync( null, null, schemaName, tableName );
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all schemas, with given optional schema name filter, in the database, and return the schema information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
-   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
    /// <returns>Asynchronously returns list of <see cref="SchemaMetadata"/> objects that have information about schema in the database.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="DatabaseMetadata.PrepareSchemaSearch(string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="DatabaseMetadata.CreateSchemaSearch(string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static async ValueTask<List<SchemaMetadata>> GetSchemaMetadataAsync( this DatabaseMetadata md, String schemaNamePattern = null )
+   public static async ValueTask<List<SchemaMetadata>> GetSchemaMetadataAsync( this SQLConnection connection, String schemaNamePattern = null )
    {
+      var md = connection.DatabaseMetadata;
       var list = new List<SchemaMetadata>();
-      await md.PrepareSchemaSearch( schemaNamePattern ).EnumerateAsync( async schema => list.Add( await md.ExtractSchemaMetadataAsync( (SQLDataRow) schema ) ) );
+      await connection.PrepareSchemaSearch( schemaNamePattern ).EnumerateAsync( async schema => list.Add( await md.ExtractSchemaMetadataAsync( (SQLDataRow) schema ) ) );
       return list;
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all tables, with given optional schema name, table name, and table type filters, in the database, and return the table information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
-   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
    /// <param name="tableTypes">The table types. If not <c>null</c> and not empty, can be used to further narrow down search results based on table type.</param>
    /// <returns>Asynchronously returns list of <see cref="TableMetadata"/> objects that have information about table in the database.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="DatabaseMetadata.PrepareTableSearch(string, string, TableType[])"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="DatabaseMetadata.CreateTableSearch(string, string, TableType[])"/>
    /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static async ValueTask<List<TableMetadata>> GetTableMetadataAsync( this DatabaseMetadata md, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
+   public static async ValueTask<List<TableMetadata>> GetTableMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
    {
+      var md = connection.DatabaseMetadata;
       var list = new List<TableMetadata>();
-      await md.PrepareTableSearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async table => list.Add( await md.ExtractTableMetadataAsync( (SQLDataRow) table ) ) );
+      await connection.PrepareTableSearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async table => list.Add( await md.ExtractTableMetadataAsync( (SQLDataRow) table ) ) );
       return list;
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all columns, with given optional schema, table, and column name filters, in the database, and return the column information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
-   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
-   /// <param name="columnNamePattern">The column name pattern. If not <c>null</c> or empty, will narrow down search results based on column name.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
+   /// <param name="columnNamePattern">The column name pattern. If not <c>null</c>, will narrow down search results based on column name.</param>
    /// <returns>Asynchronously returns list of <see cref="ColumnMetadata"/> objects that have information about column in the database.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="DatabaseMetadata.PrepareColumnSearch(string, string, string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="DatabaseMetadata.CreateColumnSearch(string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static async ValueTask<List<ColumnMetadata>> GetColumnMetadataAsync( this DatabaseMetadata md, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
+   public static async ValueTask<List<ColumnMetadata>> GetColumnMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
    {
+      var md = connection.DatabaseMetadata;
       var list = new List<ColumnMetadata>();
-      await md.PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ).EnumerateAsync( async column => list.Add( await md.ExtractColumnMetadataAsync( (SQLDataRow) column ) ) );
+      await connection.PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ).EnumerateAsync( async column => list.Add( await md.ExtractColumnMetadataAsync( (SQLDataRow) column ) ) );
       return list;
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all primary key columns, with given optional schema and table name filters, in the database, and return the primary key column information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
-   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c> or empty, will narrow down search results based on schema name.</param>
-   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c> or empty, will narrow down search results based on table name.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
+   /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
    /// <returns>Asynchronously returns list of <see cref="PrimaryKeyMetadata"/> objects that have information about primary key column in the database.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="DatabaseMetadata.PreparePrimaryKeySearch(string, string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="DatabaseMetadata.CreatePrimaryKeySearch(string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static async ValueTask<List<PrimaryKeyMetadata>> GetPrimaryKeyMetadataAsync( this DatabaseMetadata md, String schemaNamePattern, String tableNamePattern )
+   public static async ValueTask<List<PrimaryKeyMetadata>> GetPrimaryKeyMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
    {
+      var md = connection.DatabaseMetadata;
       var list = new List<PrimaryKeyMetadata>();
-      await md.PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async pk => list.Add( await md.ExtractPrimaryKeyMetadataAsync( (SQLDataRow) pk ) ) );
+      await connection.PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async pk => list.Add( await md.ExtractPrimaryKeyMetadataAsync( (SQLDataRow) pk ) ) );
       return list;
    }
 
    /// <summary>
    /// This is shortcut method to enumerate all foreign key columns, with given primary and foreign table schema name and table name filters, in the database, and return the foreign key column information in a list.
    /// </summary>
-   /// <param name="md">This <see cref="DatabaseMetadata"/>.</param>
-   /// <param name="primarySchemaName">The primary table schema name. If not <c>null</c> or empty, will narrow down search results based on primary table's schema name.</param>
-   /// <param name="primaryTableName">The primary table table name. If not <c>null</c> or empty, will narrow down search results based on primary table's table name.</param>
-   /// <param name="foreignSchemaName">The foreign table schema name. If not <c>null</c> or empty, will narrow down search results based on foreign table's schema name.</param>
-   /// <param name="foreignTableName">The foreign table table name. If not <c>null</c> or empty, will narrow down search results based on foreign table's table name.</param>
+   /// <param name="connection">This <see cref="SQLConnection"/>.</param>
+   /// <param name="primarySchemaName">The primary table schema name. If not <c>null</c>, will narrow down search results based on primary table's schema name.</param>
+   /// <param name="primaryTableName">The primary table table name. If not <c>null</c>, will narrow down search results based on primary table's table name.</param>
+   /// <param name="foreignSchemaName">The foreign table schema name. If not <c>null</c>, will narrow down search results based on foreign table's schema name.</param>
+   /// <param name="foreignTableName">The foreign table table name. If not <c>null</c>, will narrow down search results based on foreign table's table name.</param>
    /// <returns>Asynchronously returns list of <see cref="ForeignKeyMetadata"/> objects that have information about foreign key column in the database.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="DatabaseMetadata"/> is <c>null</c>.</exception>
-   /// <seealso cref="DatabaseMetadata.PrepareForeignKeySearch(string, string, string, string)"/>
+   /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
+   /// <seealso cref="DatabaseMetadata.CreateForeignKeySearch(string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
    /// <remarks>
    /// Since this method stores all results in a single <see cref="List{T}"/>, use this when it is not expected to return a very large sets of data.
    /// </remarks>
-   public static async ValueTask<List<ForeignKeyMetadata>> GetCrossReferenceMetadataAsync( this DatabaseMetadata md, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
+   public static async ValueTask<List<ForeignKeyMetadata>> GetCrossReferenceMetadataAsync( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
    {
+      var md = connection.DatabaseMetadata;
       var list = new List<ForeignKeyMetadata>();
-      await md.PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ).EnumerateAsync( async fk => list.Add( await md.ExtractForeignKeyMetadataAsync( (SQLDataRow) fk ) ) );
+      await connection.PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ).EnumerateAsync( async fk => list.Add( await md.ExtractForeignKeyMetadataAsync( (SQLDataRow) fk ) ) );
       return list;
    }
 

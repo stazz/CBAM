@@ -28,7 +28,7 @@ namespace CBAM.Abstractions.Implementation
 {
    /// <summary>
    /// This class provides facade implementation of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface.
-   /// It does having a reference to another <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> object, which it receives as argument to constructor.
+   /// It does so by having a reference to another <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> object, which it receives as argument to constructor.
    /// This way, any components of this connection may use connection-related services (e.g. creating <see cref="AsyncEnumerator{T}"/>) without lifecycle problems (e.g. calling virtual method in constructor).
    /// </summary>
    /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
@@ -46,6 +46,7 @@ namespace CBAM.Abstractions.Implementation
       /// Creats a new instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> with given parameters.
       /// </summary>
       /// <param name="functionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> implementation.</param>
+      /// <exception cref="ArgumentNullException">If <paramref name="functionality"/> is <c>null</c>.</exception>
       public ConnectionImpl(
          TConnectionFunctionality functionality
          )
@@ -210,7 +211,7 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Forwards the method call to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatement)"/> method of this <see cref="ConnectionFunctionality"/>.
+      /// Forwards the method call to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> method of this <see cref="ConnectionFunctionality"/>.
       /// </summary>
       /// <param name="statementBuilder">The statement builder, created by <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> of this <see cref="VendorFunctionality"/>.</param>
       /// <returns>A new instance of <see cref="AsyncEnumeratorObservable{T, TMetadata}"/>.</returns>

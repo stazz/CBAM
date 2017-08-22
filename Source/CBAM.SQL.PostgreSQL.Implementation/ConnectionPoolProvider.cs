@@ -49,7 +49,6 @@ namespace CBAM.SQL.PostgreSQL
 
       static PgSQLConnectionPoolProvider()
       {
-         //VendorFunctionality = new PgSQLConnectionVendorFunctionalityImpl();
 #if !NETSTANDARD1_0
          _Factory = new PgSQLConnectionFactory();
 #endif
@@ -59,16 +58,6 @@ namespace CBAM.SQL.PostgreSQL
       }
 
       public static PgSQLConnectionPoolProvider Instance { get; }
-      //public static PgSQLConnectionVendorFunctionality VendorFunctionality { get; }
-      //      public static CBAM.Abstractions.Implementation.ConnectionFactory<PgSQLConnection, PgSQLConnectionVendorFunctionality,  FactoryFunctionality =>
-      //#if NETSTANDARD1_0
-      //         _FactoryForReadyMadeStreams
-      //#else
-      //         _FactoryFunctionality
-      //#endif
-      //         ;
-
-      // We leave constructor as public so that this class could be instantiated by dynamic loading (e.g. CBAM.Abstractions.MSBuild project)
 
 
       public Type DefaultTypeForCreationParameter => typeof( TDefaultConfigurationData );

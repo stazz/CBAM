@@ -8,6 +8,7 @@
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' != 'net40' ">
@@ -16,7 +17,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" Aliases="CBAMA"/>
+    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" Aliases="CBAMA" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
   </ItemGroup>
   
@@ -43,7 +44,7 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
     <DebugSymbols>False</DebugSymbols>
-    <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   
   <!-- NuGet package stuff -->
@@ -63,6 +64,7 @@
   <PropertyGroup>
     <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
   </PropertyGroup>
+
   <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" />
 
 </Project>

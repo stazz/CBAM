@@ -56,7 +56,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          StatementParameter[] currentParameters,
          List<StatementParameter[]> batchParams,
          Int32[] parameterIndices
-         ) : base( sql, parameterIndices?.Length ?? 0, currentParameters, batchParams )
+         ) : base( sql, currentParameters, batchParams )
       {
          this.ParameterIndices = parameterIndices;
       }

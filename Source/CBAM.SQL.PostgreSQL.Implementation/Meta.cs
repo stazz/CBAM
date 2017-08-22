@@ -26,16 +26,20 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 {
    internal sealed class PgSQLDatabaseMetaData : SQLCachingDatabaseMetadataImpl
    {
+      private static readonly DatabaseMetadataSQLCache SQLCache = new DefaultDatabaseMetadataSQLCache(
+         SchemaSearchSQLFactory,
+         TableSearchSQLFactory,
+         ColumnSearchSQLFactory,
+         PrimaryKeySearchSQLFactory,
+         ForeignKeySearchSQLFactory
+         );
+
       public PgSQLDatabaseMetaData(
          PostgreSQLProtocol connectionFunctionality
          ) : base(
-            connectionFunctionality,
+            connectionFunctionality.VendorFunctionality,
             connectionFunctionality.ServerParameters[PostgreSQLProtocol.SERVER_PARAMETER_DATABASE],
-            SchemaSearchSQLFactory,
-            TableSearchSQLFactory,
-            ColumnSearchSQLFactory,
-            PrimaryKeySearchSQLFactory,
-            ForeignKeySearchSQLFactory
+            SQLCache
             )
       {
       }
@@ -65,7 +69,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          throw new NotImplementedException();
       }
 
-      protected override String GetStringForTableType( TableType tableType )
+      protected override (Object, Type) GetParameterInfoForTableType( TableType tableType )
       {
          throw new NotImplementedException();
       }
@@ -75,7 +79,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          throw new NotImplementedException();
       }
 
-      private static String TableSearchSQLFactory( Int32 permutationOrderNumber, TableType[] tableTypes )
+      private static String TableSearchSQLFactory( Int32 permutationOrderNumber, TableType? tableType )
       {
          throw new NotImplementedException();
       }

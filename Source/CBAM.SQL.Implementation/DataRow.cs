@@ -24,19 +24,32 @@ using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
+   /// <summary>
+   /// This class provides default and simple implementation for <see cref="SQLDataRow"/>.
+   /// </summary>
    public class SQLDataRowImpl : AsyncDataRowImpl, SQLDataRow
    {
       private readonly ReadOnlyResettableLazy<SQLException[]> _warnings;
 
+      /// <summary>
+      /// Creates a new instance of <see cref="SQLDataRowImpl"/> with given parameters.
+      /// </summary>
+      /// <param name="rowMetadata">The <see cref="DataRowMetaData{TColumnMetaData}"/>.</param>
+      /// <param name="columns">The columns array.</param>
+      /// <param name="warnings">The resettable lazy to get warnings as array of <see cref="SQLException"/>s.</param>
       public SQLDataRowImpl(
          DataRowMetaData<AsyncDataColumnMetaData> rowMetadata,
-         AsyncDataColumn[] valueStreams,
+         AsyncDataColumn[] columns,
          ReadOnlyResettableLazy<SQLException[]> warnings
-         ) : base( rowMetadata, valueStreams )
+         ) : base( rowMetadata, columns )
       {
          this._warnings = ArgumentValidator.ValidateNotNull( nameof( warnings ), warnings );
       }
 
+      /// <summary>
+      /// Implements <see cref="SQLStatementExecutionResult.Warnings"/> and gets current value of warnings as array of <see cref="SQLException"/>s.
+      /// </summary>
+      /// <value>Warnings as array of <see cref="SQLException"/>s.</value>
       public SQLException[] Warnings => this._warnings.Value;
 
 

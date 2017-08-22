@@ -103,7 +103,7 @@ namespace CBAM.Abstractions.Implementation
       /// <remarks>
       /// The connection will be marked as reserved to the statement before this method is called.
       /// </remarks>
-      protected abstract Task<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatementInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatementInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should override this abstract method to create custom <see cref="ReservedForStatement"/> objects.
