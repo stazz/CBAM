@@ -29,6 +29,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private static readonly DatabaseMetadataSQLCache SQLCache = new DefaultDatabaseMetadataSQLCache(
          SchemaSearchSQLFactory,
          TableSearchSQLFactory,
+         TableSearchForMultipleTableTypesSQLFactory,
          ColumnSearchSQLFactory,
          PrimaryKeySearchSQLFactory,
          ForeignKeySearchSQLFactory
@@ -80,6 +81,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       private static String TableSearchSQLFactory( Int32 permutationOrderNumber, TableType? tableType )
+      {
+         throw new NotImplementedException();
+      }
+
+      private static (String, Boolean) TableSearchForMultipleTableTypesSQLFactory( Int32 permutationOrderNumber, TableType[] tableTypes )
       {
          throw new NotImplementedException();
       }

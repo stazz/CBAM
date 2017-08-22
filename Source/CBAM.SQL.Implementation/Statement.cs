@@ -158,7 +158,7 @@ namespace CBAM.SQL.Implementation
       public void AddBatch()
       {
          Int32 idx;
-         if ( ( idx = Array.FindIndex( this._currentParameters, p => p == null ) ) >= 0 )
+         if ( (idx = Array.FindIndex( this._currentParameters, p => p == null )) >= 0 )
          {
             throw new InvalidOperationException( $"The parameter at index {idx} has not been set." );
          }
@@ -319,6 +319,22 @@ namespace CBAM.SQL.Implementation
       {
          list.CheckListIndexOrThrow( index, indexParameterName );
          return list;
+      }
+
+      public static T[] NewArrayOfLength<T>( this Int32 newLength, String msg = null )
+      {
+         if ( newLength < 0 )
+         {
+            throw new ArgumentException( msg ?? "Invalid array length" );
+         }
+         else if ( newLength == 0 )
+         {
+            return Empty<T>.Array;
+         }
+         else
+         {
+            return new T[newLength];
+         }
       }
    }
 }

@@ -78,7 +78,7 @@ namespace CBAM.SQL.Implementation
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsSimple( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsSimple( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should implement this method in order to execute <see cref="SQLStatementBuilderInformation"/> as prepared and non-batched statement.
@@ -87,7 +87,7 @@ namespace CBAM.SQL.Implementation
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should implement this method in order to execute <see cref="SQLStatementBuilderInformation"/> as batched statement, which is either simple or prepared.
@@ -96,7 +96,7 @@ namespace CBAM.SQL.Implementation
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsBatch( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsBatch( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
    }
 

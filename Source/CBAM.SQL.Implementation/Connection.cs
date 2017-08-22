@@ -154,7 +154,7 @@ namespace CBAM.SQL.Implementation
       {
          get
          {
-            return (Boolean?) this._isReadOnly;
+            return (Boolean?)this._isReadOnly;
          }
          set
          {
@@ -170,7 +170,7 @@ namespace CBAM.SQL.Implementation
       {
          get
          {
-            return (TransactionIsolationLevel?) this._isolationLevel;
+            return (TransactionIsolationLevel?)this._isolationLevel;
          }
          set
          {
@@ -322,10 +322,18 @@ namespace CBAM.SQL.Implementation
 
    }
 
-   public abstract class AbstractCommandExecutionResult
+   /// <summary>
+   /// This class provides default implementation for <see cref="SQLStatementExecutionResult"/>.
+   /// </summary>
+   public abstract class AbstractCommandExecutionResult : SQLStatementExecutionResult
    {
       private readonly Lazy<SQLException[]> _warnings;
 
+      /// <summary>
+      /// Initializes a new instance of <see cref="AbstractCommandExecutionResult"/> with given parameters.
+      /// </summary>
+      /// <param name="commandTag">Textual SQL command tag, if any. May be <c>null</c>.</param>
+      /// <param name="warnings">The lazily initialized <see cref="Lazy{T}"/> to get occurred warnings. May be <c>null</c>.</param>
       public AbstractCommandExecutionResult(
          String commandTag,
          Lazy<SQLException[]> warnings
@@ -335,8 +343,16 @@ namespace CBAM.SQL.Implementation
          this._warnings = warnings;
       }
 
+      /// <summary>
+      /// Gets the SQL command tag, if such was supplied.
+      /// </summary>
+      /// <value>The SQL command tag or <c>null</c>.</value>
       public String CommandTag { get; }
 
+      /// <summary>
+      /// Implements <see cref="SQLStatementExecutionResult.Warnings"/> and gets the warnings related to previous SQL command execution, or empty array if none occurred.
+      /// </summary>
+      /// <value>The warnings related to previous SQL command execution, or empty array if none occurred.</value>
       public SQLException[] Warnings
       {
          get
@@ -347,8 +363,17 @@ namespace CBAM.SQL.Implementation
 
    }
 
+   /// <summary>
+   /// This class provides default implementation for <see cref="SingleCommandExecutionResult"/> by extending <see cref="AbstractCommandExecutionResult"/>.
+   /// </summary>
    public sealed class SingleCommandExecutionResultImpl : AbstractCommandExecutionResult, SingleCommandExecutionResult
    {
+      /// <summary>
+      /// Creates a new instance of <see cref="SingleCommandExecutionResultImpl"/> with given parameters.
+      /// </summary>
+      /// <param name="commandTag">Textual SQL command tag, if any. May be <c>null</c>.</param>
+      /// <param name="warnings">The lazily initialized <see cref="Lazy{T}"/> to get occurred warnings. May be <c>null</c>.</param>
+      /// <param name="affectedRows">How many rows were affected by this single command.</param>
       public SingleCommandExecutionResultImpl(
          String commandTag,
          Lazy<SQLException[]> warnings,
@@ -358,11 +383,24 @@ namespace CBAM.SQL.Implementation
          this.AffectedRows = affectedRows;
       }
 
+      /// <summary>
+      /// Implements <see cref="SingleCommandExecutionResult.AffectedRows"/> and gets the amount of rows affected by single command.
+      /// </summary>
+      /// <value>The amount of rows affected by single command.</value>
       public Int32 AffectedRows { get; }
    }
 
+   /// <summary>
+   /// This class provides default implementation for <see cref="BatchCommandExecutionResult"/> by extending <see cref="AbstractCommandExecutionResult"/>.
+   /// </summary>
    public sealed class BatchCommandExecutionResultImpl : AbstractCommandExecutionResult, BatchCommandExecutionResult
    {
+      /// <summary>
+      /// Creates a new instane of <see cref="BatchCommandExecutionResultImpl"/> with given parameters.
+      /// </summary>
+      /// <param name="commandTag">Textual SQL command tag, if any. May be <c>null</c>.</param>
+      /// <param name="warnings">The lazily initialized <see cref="Lazy{T}"/> to get occurred warnings. May be <c>null</c>.</param>
+      /// <param name="affectedRows">The array indicating amount of affected rows for each item in the batch.</param>
       public BatchCommandExecutionResultImpl(
          String commandTag,
          Lazy<SQLException[]> warnings,
@@ -372,6 +410,10 @@ namespace CBAM.SQL.Implementation
          this.AffectedRows = affectedRows;
       }
 
+      /// <summary>
+      /// Implements <see cref="BatchCommandExecutionResult.AffectedRows"/> and gets the amount of rows affected by each executed SQL statement.
+      /// </summary>
+      /// <value>The amount of rows affected by each executed SQL statement.</value>
       public Int32[] AffectedRows { get; }
    }
 
