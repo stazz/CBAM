@@ -94,16 +94,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             async iArgs =>
             {
                var types = new Dictionary<String, PgSQLTypeDatabaseData>();
-               while ( await iArgs.MoveNextAsync() )
+               await iArgs.EnumerateSQLRowsAsync( async row =>
                {
-                  var row = iArgs.GetDataRow();
                   // We need to get all values as strings, since we might not have type mapping yet (we might be building it right here)
                   var typeName = await row.GetValueAsync<String>( 0 );
                   var typeID = Int32.Parse( await row.GetValueAsync<String>( 1 ) );
                   var delimiter = ( await row.GetValueAsync<String>( 2 ) );
                   var elementTypeID = Int32.Parse( await row.GetValueAsync<String>( 3 ) );
                   types.Add( typeName, new PgSQLTypeDatabaseData( typeName, typeID, delimiter, elementTypeID ) );
-               }
+               } );
 
                return types;
             }

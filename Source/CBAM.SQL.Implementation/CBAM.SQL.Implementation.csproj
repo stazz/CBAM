@@ -16,7 +16,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
+    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" Aliases="CBAMA"/>
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
   </ItemGroup>
   

@@ -15,6 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+extern alias CBAMA;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,15 +25,15 @@ using System.Threading.Tasks;
 using UtilPack;
 using CBAM.SQL;
 using CBAM.SQL.Implementation;
-using CBAM.Abstractions;
+using CBAMA::CBAM.Abstractions;
 using CBAM.Abstractions.Implementation;
 using UtilPack.AsyncEnumeration;
 using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
-   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
+   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+      where TConnectionFunctionality : DefaultConnectionFunctionality<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
       where TVendor : SQLConnectionVendorFunctionality
    {
       private Object _isReadOnly;
@@ -47,7 +49,7 @@ namespace CBAM.SQL.Implementation
 
       public DatabaseMetadata DatabaseMetadata { get; }
 
-      public async Task<Boolean> GetReadOnlyAsync()
+      public async ValueTask<Boolean> GetReadOnlyAsync()
       {
          if ( !this.IsReadOnlyProperty.HasValue )
          {
@@ -56,7 +58,7 @@ namespace CBAM.SQL.Implementation
          return this.IsReadOnlyProperty.Value;
       }
 
-      public async Task<TransactionIsolationLevel> GetDefaultTransactionIsolationLevelAsync()
+      public async ValueTask<TransactionIsolationLevel> GetDefaultTransactionIsolationLevelAsync()
       {
          if ( !this.TransactionIsolationLevelProperty.HasValue )
          {
@@ -66,17 +68,31 @@ namespace CBAM.SQL.Implementation
       }
 
 
-      public async Task SetDefaultTransactionIsolationLevelAsync( TransactionIsolationLevel level )
+      public ValueTask<Int64> SetDefaultTransactionIsolationLevelAsync( TransactionIsolationLevel level )
       {
-         await this.ExecuteNonQueryAsync( this.GetSQLForSettingTransactionIsolationLevel( level ), () => this.TransactionIsolationLevelProperty = level );
+         // TODO maybe use ExecuteNonQueryAsync only if TransactionIsolationLevelProperty does not have value or has different value ...?
+         // Would need to return ValueTask<Boolean> or something similar
+         // This class implements Connection interface twice, that's why we need to call extension method manually.
+         return CBAMA::E_CBAM.ExecuteAndIgnoreResults<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>(
+            this,
+            this.GetSQLForSettingTransactionIsolationLevel( level ),
+            () => this.TransactionIsolationLevelProperty = level
+            );
       }
 
-      public async Task SetReadOnlyAsync( Boolean isReadOnly )
+      public ValueTask<Int64> SetReadOnlyAsync( Boolean isReadOnly )
       {
-         await this.ExecuteNonQueryAsync( this.GetSQLForSettingReadOnly( isReadOnly ), () => this.IsReadOnlyProperty = isReadOnly );
+         // TODO maybe use ExecuteNonQueryAsync only if TransactionIsolationLevelProperty does not have value or has different value ...?
+         // Would need to return ValueTask<Boolean> or something similar
+         // This class implements Connection interface twice, that's why we need to call extension method manually.
+         return CBAMA::E_CBAM.ExecuteAndIgnoreResults<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>(
+            this,
+            this.GetSQLForSettingReadOnly( isReadOnly ),
+            () => this.IsReadOnlyProperty = isReadOnly
+            );
       }
 
-      public abstract ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, String sql, SQLStatementExecutionResult executionResult );
+      public abstract ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, SQLStatementBuilderInformation statementInformation, SQLStatementExecutionResult executionResult );
 
       protected Boolean? IsReadOnlyProperty
       {
@@ -102,7 +118,7 @@ namespace CBAM.SQL.Implementation
          }
       }
 
-      SQLConnectionVendorFunctionality Connection<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
+      SQLConnectionVendorFunctionality Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
 
       protected abstract String GetSQLForGettingTransactionIsolationLevel();
 
@@ -120,9 +136,9 @@ namespace CBAM.SQL.Implementation
    public abstract class DefaultConnectionVendorFunctionality : SQLConnectionVendorFunctionality
    {
 
-      public abstract void AppendEscapedLiteral( StringBuilder builder, String literal );
+      public abstract String EscapeLiteral( String str );
 
-      public StatementBuilder CreateStatementBuilder( String sql )
+      public SQLStatementBuilder CreateStatementBuilder( String sql )
       {
          sql = sql?.Trim();
          return !String.IsNullOrEmpty( sql ) && this.TryParseStatementSQL( sql, out var parameterIndices ) ?
@@ -142,7 +158,7 @@ namespace CBAM.SQL.Implementation
 
       protected abstract Boolean TryParseStatementSQL( String sql, out Int32[] parameterIndices );
 
-      protected abstract StatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices );
+      protected abstract SQLStatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices );
 
       public abstract ValueTask<Boolean> TryAdvanceReaderOverSingleStatement( PeekablePotentiallyAsyncReader<Char?> reader );
 
@@ -150,7 +166,7 @@ namespace CBAM.SQL.Implementation
 
 
 
-   public interface SQLConnectionFunctionality : Connection<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
+   public interface SQLConnectionFunctionality : Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
    {
 
    }
@@ -212,7 +228,7 @@ namespace CBAM.SQL.Implementation
 
 public static partial class E_CBAM
 {
-   public static async Task ExecuteStatementAsync( this SQLConnectionFunctionality connection, StatementBuilder statementBuilder, Func<AsyncEnumerator<SQLStatementExecutionResult>, Task> executer )
+   public static async Task ExecuteStatementAsync( this SQLConnectionFunctionality connection, SQLStatementBuilder statementBuilder, Func<AsyncEnumerator<SQLStatementExecutionResult>, Task> executer )
    {
       ArgumentValidator.ValidateNotNullReference( connection );
       ArgumentValidator.ValidateNotNull( nameof( statementBuilder ), statementBuilder );
@@ -221,7 +237,7 @@ public static partial class E_CBAM
       await executer( connection.PrepareStatementForExecution( statementBuilder ) );
    }
 
-   public static async Task<TResult> ExecuteStatementAsync<TResult>( this SQLConnectionFunctionality connection, StatementBuilder statementBuilder, Func<AsyncEnumerator<SQLStatementExecutionResult>, Task<TResult>> executer )
+   public static async Task<TResult> ExecuteStatementAsync<TResult>( this SQLConnectionFunctionality connection, SQLStatementBuilder statementBuilder, Func<AsyncEnumerator<SQLStatementExecutionResult>, Task<TResult>> executer )
    {
       ArgumentValidator.ValidateNotNullReference( connection );
       ArgumentValidator.ValidateNotNull( nameof( statementBuilder ), statementBuilder );

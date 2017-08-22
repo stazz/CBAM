@@ -1,8 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- This file exists separately in order not to "pollute" the original .csproj file with UtilPack.NuGet.MSBuild package reference. -->
   
+  <PropertyGroup>
+    <TargetFramework>netstandard1.0</TargetFramework>
+  </PropertyGroup>
+  
   <ItemGroup>
-    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.0.0" />
+    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.0.1" />
   </ItemGroup>
 
   <UsingTask

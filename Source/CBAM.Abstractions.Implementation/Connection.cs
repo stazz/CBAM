@@ -214,7 +214,7 @@ namespace CBAM.Abstractions.Implementation
       /// </summary>
       /// <param name="statementBuilder">The statement builder, created by <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> of this <see cref="VendorFunctionality"/>.</param>
       /// <returns>A new instance of <see cref="AsyncEnumeratorObservable{T, TMetadata}"/>.</returns>
-      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatement statementBuilder )
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatementInformation statementBuilder )
       {
          return this.ConnectionFunctionality.PrepareStatementForExecution( statementBuilder );
       }
@@ -425,9 +425,9 @@ namespace CBAM.Abstractions.Implementation
       /// </summary>
       /// <param name="statement">The statement which describes how to manipulate/query remote resource.</param>
       /// <returns>The <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> which can be used to execute the <paramref name="statement"/> statement and iterate the possible results.</returns>
-      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatement statement )
+      public AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> PrepareStatementForExecution( TStatementInformation statement )
       {
-         var info = this.GetInformationFromStatement( statement );
+         var info = statement is TStatement stmt ? this.GetInformationFromStatement( stmt ) : statement;
          this.ValidateStatementOrThrow( info );
          return AsyncEnumeratorFactory.CreateObservableEnumerator(
             token => this.InitialMoveNext( info, token ),

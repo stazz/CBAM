@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.SQL;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -23,6 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -172,5 +174,13 @@ namespace CBAM.SQL.PostgreSQL.Tests
             yield return ("'[1:1][-2:-1][3:5]={{{1,2,3},{4,NULL,6}}}'::int[]", loboArray);
          }
       }
+   }
+}
+
+public static partial class E_CBAM
+{
+   public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args )
+   {
+      return args.Current as SQLDataRow;
    }
 }

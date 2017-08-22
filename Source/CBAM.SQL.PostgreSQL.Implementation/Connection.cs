@@ -64,7 +64,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public override ValueTask<Boolean> ProcessStatementResultPassively(
          MemorizingPotentiallyAsyncReader<Char?, Char> reader,
-         String sql,
+         SQLStatementBuilderInformation statementInformation,
          SQLStatementExecutionResult executionResult
          )
       {
@@ -166,37 +166,45 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this.StandardConformingStrings = true;
       }
 
-      public override void AppendEscapedLiteral( StringBuilder builder, String literal )
+      public override String EscapeLiteral( String str )
       {
-         ArgumentValidator.ValidateNotNull( "Builder", builder );
+         if ( !String.IsNullOrEmpty( str ) )
+         {
+            if ( this.StandardConformingStrings )
+            {
+               const String STANDARD_ESCAPABLE = "'";
+               const String STANDARD_REPLACEABLE = "''";
+               if ( str.IndexOf( STANDARD_ESCAPABLE ) >= 0 )
+               {
+                  str = str.Replace( STANDARD_ESCAPABLE, STANDARD_REPLACEABLE );
+               }
+            }
+            else
+            {
+               // Escape both backslashes and single-quotes by doubling
+               //
+               if ( str.IndexOfAny( new[] { '\'', '\\' } ) >= 0 )
+               {
+                  // Use Regex for now but consider doing manual replacing if performance becomes a problem
+                  // C# does not allow replacing any character in string with other as built-in function, so just do this manually
+                  var sb = new StringBuilder( str.Length + 5 );
+                  foreach ( var ch in str )
+                  {
+                     sb.Append( ch );
+                     if ( ch == '\'' || ch == '\\' )
+                     {
+                        sb.Append( ch );
+                     }
+                  }
+                  str = sb.ToString();
+               }
+            }
+         }
 
-         if ( this.StandardConformingStrings )
-         {
-            // Escape only single-quotes by doubling
-            foreach ( var ch in literal )
-            {
-               builder.Append( ch );
-               if ( ch == '\'' )
-               {
-                  builder.Append( ch );
-               }
-            }
-         }
-         else
-         {
-            // Escape both backslashes and single-quotes by doubling
-            foreach ( var ch in literal )
-            {
-               builder.Append( ch );
-               if ( ch == '\'' || ch == '\\' )
-               {
-                  builder.Append( ch );
-               }
-            }
-         }
+         return str;
       }
 
-      protected override StatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices )
+      protected override SQLStatementBuilder CreateStatementBuilder( String sql, Int32[] parameterIndices )
       {
          var paramz = new StatementParameter[parameterIndices?.Length ?? 0];
          var batchParams = new List<StatementParameter[]>();

@@ -18,6 +18,7 @@
 using CBAM.SQL.Implementation;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
-   public class StatementBuilderInformationImpl<TParameter, TList> : StatementBuilderInformation
+   public class StatementBuilderInformationImpl<TParameter, TList> : SQLStatementBuilderInformation
       where TParameter : StatementParameter
       where TList : class,
 #if NET40
@@ -59,21 +60,23 @@ namespace CBAM.SQL.Implementation
 
       public StatementParameter GetParameterInfo( Int32 parameterIndex )
       {
-         return this._currentParameters[parameterIndex];
+         return this._currentParameters.CheckArrayIndexAndReturnOrThrow( parameterIndex, nameof( parameterIndex ) )[parameterIndex];
       }
 
       public StatementParameter GetBatchParameterInfo( Int32 batchIndex, Int32 parameterIndex )
       {
-         return this._batchParameters[batchIndex][parameterIndex];
+         return this._batchParameters
+            .CheckListIndexAndReturnOrThrow( batchIndex, nameof( batchIndex ) )[batchIndex]
+            .CheckArrayIndexAndReturnOrThrow( parameterIndex, nameof( parameterIndex ) )[parameterIndex];
       }
    }
 
-   public abstract class StatementBuilderImpl<TParameter> : StatementBuilderInformationImpl<TParameter, List<TParameter[]>>, StatementBuilder
+   public abstract class StatementBuilderImpl<TParameter> : StatementBuilderInformationImpl<TParameter, List<TParameter[]>>, SQLStatementBuilder
       where TParameter : StatementParameter
    {
 
       public StatementBuilderImpl(
-         StatementBuilderInformation information,
+         SQLStatementBuilderInformation information,
          TParameter[] currentParams,
          List<TParameter[]> batchParams
          ) : base( ArgumentValidator.ValidateNotNull( nameof( information ), information ).SQL, information.SQLParameterCount, currentParams, batchParams )
@@ -81,35 +84,46 @@ namespace CBAM.SQL.Implementation
          this.StatementBuilderInformation = information;
       }
 
-      public StatementBuilderInformation StatementBuilderInformation { get; }
+      public SQLStatementBuilderInformation StatementBuilderInformation { get; }
 
       public void AddBatch()
       {
-         if ( this._batchParameters.Count > 0 )
+         Int32 idx;
+         if ( ( idx = Array.FindIndex( this._currentParameters, p => p == null ) ) >= 0 )
          {
-            // Must verify batch parameters
-            var prevRow = this._batchParameters[this._batchParameters.Count - 1];
-            for ( var i = 0; i < this._currentParameters.Length; ++i )
-            {
-               var exc = this.VerifyBatchParameters( prevRow[i], this._currentParameters[i] );
-               if ( exc != null )
-               {
-                  throw exc;
-               }
-            }
+            throw new InvalidOperationException( $"The parameter at index {idx} has not been set." );
          }
+
+         //if ( this._batchParameters.Count > 0 )
+         //{
+         //   // Must verify batch parameters
+         //   var prevRow = this._batchParameters[this._batchParameters.Count - 1];
+         //   for ( var i = 0; i < this._currentParameters.Length; ++i )
+         //   {
+         //      var exc = this.VerifyBatchParameters( prevRow[i], this._currentParameters[i] );
+         //      if ( exc != null )
+         //      {
+         //         throw exc;
+         //      }
+         //   }
+         //}
+
          this._batchParameters.Add( this._currentParameters.CreateArrayCopy() );
          Array.Clear( this._currentParameters, 0, this._currentParameters.Length );
       }
 
       public void SetParameterObjectWithType( Int32 parameterIndex, Object value, Type clrType )
       {
+         if ( clrType == null && value == null )
+         {
+            throw new ArgumentNullException( $"Both {nameof( value )} and {nameof( clrType )} were null." );
+         }
          this._currentParameters[parameterIndex] = this.CreateStatementParameter( parameterIndex, value, clrType );
       }
 
       protected abstract TParameter CreateStatementParameter( Int32 parameterIndex, Object value, Type clrType );
 
-      protected abstract SQLException VerifyBatchParameters( TParameter previous, TParameter toBeAdded );
+      //protected abstract SQLException VerifyBatchParameters( TParameter previous, TParameter toBeAdded );
 
    }
 
@@ -137,4 +151,76 @@ namespace CBAM.SQL.Implementation
       //      );
       //}
    }
+
+   // TODO move these to UtilPack
+   internal static class CBAMExtensions
+   {
+
+      public static Boolean CheckArrayIndex( this Array array, Int32 index )
+      {
+         return array != null && index >= 0 && index < array.Length;
+      }
+
+      public static void CheckArrayIndexOrThrow( this Array array, Int32 index, String indexParameterName = null )
+      {
+         if ( !array.CheckArrayIndex( index ) )
+         {
+            throw new ArgumentException( String.IsNullOrEmpty( indexParameterName ) ? "array index" : indexParameterName );
+         }
+      }
+
+      public static T[] CheckArrayIndexAndReturnOrThrow<T>( this T[] array, Int32 index, String indexParameterName = null )
+      {
+         array.CheckArrayIndexOrThrow( index, indexParameterName );
+         return array;
+      }
+
+      // TODO Collections.Generic.IList<T> does not extend Collections.List...
+
+      public static Boolean CheckListIndex<T>( this
+#if NET40
+      IList<T>
+#else
+      IReadOnlyList<T>
+#endif
+         list, Int32 index )
+      {
+         return list != null && index >= 0 && index < list.Count;
+      }
+
+      public static void CheckListIndexOrThrow<T>( this
+#if NET40
+      IList<T>
+#else
+      IReadOnlyList<T>
+#endif
+         list, Int32 index, String indexParameterName = null )
+      {
+         if ( !list.CheckListIndex( index ) )
+         {
+            throw new ArgumentException( String.IsNullOrEmpty( indexParameterName ) ? "list index" : indexParameterName );
+         }
+      }
+
+
+      public static
+#if NET40
+      IList<T[]>
+#else
+      IReadOnlyList<T[]>
+#endif
+         CheckListIndexAndReturnOrThrow<T>( this
+#if NET40
+      IList<T[]>
+#else
+      IReadOnlyList<T[]>
+#endif
+         list, Int32 index, String indexParameterName = null )
+      {
+         list.CheckListIndexOrThrow( index, indexParameterName );
+         return list;
+      }
+   }
 }
+
+

@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.Abstractions;
+extern alias CBAMA;
+
+using CBAMA::CBAM.Abstractions;
 using CBAM.Abstractions.Implementation;
 using System;
 using System.Collections.Generic;
@@ -26,10 +28,9 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
-   using UtilPack.AsyncEnumeration;
    using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
-   public abstract class SQLConnectionFunctionalitySU<TVendor> : ConnectionFunctionalitySU<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
+   public abstract class SQLConnectionFunctionalitySU<TVendor> : ConnectionFunctionalitySU<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>, SQLConnectionFunctionality
       where TVendor : SQLConnectionVendorFunctionality
    {
 
@@ -38,7 +39,7 @@ namespace CBAM.SQL.Implementation
       {
       }
 
-      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservationObject )
+      protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatement( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject )
       {
          Task<TStatementExecutionSimpleTaskParameter> retValTask;
          if ( stmt.HasBatchParameters() )
@@ -56,25 +57,25 @@ namespace CBAM.SQL.Implementation
          return await retValTask;
       }
 
-      protected override StatementBuilderInformation GetInformationFromStatement( StatementBuilder statement )
+      protected override SQLStatementBuilderInformation GetInformationFromStatement( SQLStatementBuilder statement )
       {
          return statement?.StatementBuilderInformation;
       }
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
 
-      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( CancellationToken token, StatementBuilderInformation stmt, ReservedForStatement reservedState );
+      protected abstract Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservedState );
 
-      SQLConnectionVendorFunctionality Connection<StatementBuilder, StatementBuilderInformation, string, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
+      SQLConnectionVendorFunctionality Connection<SQLStatementBuilder, SQLStatementBuilderInformation, string, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
 
    }
 
-   public abstract class SQLConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality, String, StatementBuilder, StatementBuilderInformation, SQLStatementExecutionResult>
-      where TConnection : ConnectionImpl<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+   public abstract class SQLConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality> : ConnectionFactorySU<TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality, String, SQLStatementBuilder, SQLStatementBuilderInformation, SQLStatementExecutionResult>
+      where TConnection : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
       where TVendor : SQLConnectionVendorFunctionality
-      where TConnectionFunctionality : DefaultConnectionFunctionality<StatementBuilder, StatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
+      where TConnectionFunctionality : DefaultConnectionFunctionality<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
    {
 
    }

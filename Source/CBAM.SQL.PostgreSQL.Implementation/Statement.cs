@@ -43,10 +43,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
       }
 
-      protected override SQLException VerifyBatchParameters( StatementParameter previous, StatementParameter toBeAdded )
-      {
-         return null;
-      }
+      //protected override SQLException VerifyBatchParameters( StatementParameter previous, StatementParameter toBeAdded )
+      //{
+      //   return null;
+      //}
    }
 
    internal sealed class PgSQLStatementBuilderInformation : StatementBuilderInformationImpl<StatementParameter, List<StatementParameter[]>>

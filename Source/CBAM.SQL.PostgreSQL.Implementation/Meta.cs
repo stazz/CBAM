@@ -30,6 +30,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          PostgreSQLProtocol connectionFunctionality
          ) : base(
             connectionFunctionality,
+            connectionFunctionality.ServerParameters[PostgreSQLProtocol.SERVER_PARAMETER_DATABASE],
             SchemaSearchSQLFactory,
             TableSearchSQLFactory,
             ColumnSearchSQLFactory,
@@ -39,27 +40,27 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
       }
 
-      public override Task<SchemaMetadata> ExtractSchemaAsync( AsyncDataRow row )
+      protected override ValueTask<SchemaMetadata> DoExtractSchemaMetadataAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<TableMetadata> ExtractTableAsync( AsyncDataRow row )
+      protected override ValueTask<TableMetadata> DoExtractTableMetadataAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<ColumnMetadata> ExtractColumnAsync( AsyncDataRow row )
+      protected override ValueTask<ColumnMetadata> DoExtractColumnMetadataAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( AsyncDataRow row )
+      protected override ValueTask<PrimaryKeyMetadata> DoExtractPrimaryKeyMetadataAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }
 
-      public override Task<ForeignKeyMetadata> ExtractForeignKeyAsync( AsyncDataRow row )
+      protected override ValueTask<ForeignKeyMetadata> DoExtractForeignKeyMetadataAsync( AsyncDataRow row )
       {
          throw new NotImplementedException();
       }

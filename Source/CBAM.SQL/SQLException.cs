@@ -22,15 +22,17 @@ using System.Text;
 
 namespace CBAM.SQL
 {
+   /// <summary>
+   /// This class is common base class for all exceptions which signal some sort of SQL error in syntax or backend processing.
+   /// </summary>
    public class SQLException : Exception
    {
-      public SQLException( String msg )
-         : base( msg )
-      {
-
-      }
-
-      public SQLException( String msg, Exception cause )
+      /// <summary>
+      /// Creates a new instance of <see cref="SQLException"/> with given message and optional inner exception.
+      /// </summary>
+      /// <param name="msg">The error message.</param>
+      /// <param name="cause">The optional inner exception.</param>
+      public SQLException( String msg, Exception cause = null )
          : base( msg, cause )
       {
 

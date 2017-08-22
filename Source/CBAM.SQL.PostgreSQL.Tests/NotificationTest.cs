@@ -41,10 +41,10 @@ namespace CBAM.SQL.PostgreSQL.Tests
             Assert.IsNull( notificationArgs );
 
             // Start listening
-            await conn.ExecuteNonQueryAsync( "LISTEN " + NOTIFICATION_NAME );
+            await conn.ExecuteAndIgnoreResults( "LISTEN " + NOTIFICATION_NAME );
 
             // Use another connection pool to issue notify
-            await pool.UseResourceAsync( async conn2 => await conn2.ExecuteNonQueryAsync( "NOTIFY " + NOTIFICATION_NAME ) );
+            await pool.UseResourceAsync( async conn2 => await conn2.ExecuteAndIgnoreResults( "NOTIFY " + NOTIFICATION_NAME ) );
 
             // Make sure that we have received it
             await conn.CheckNotificationsAsync();

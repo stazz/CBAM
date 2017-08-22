@@ -44,7 +44,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
          await pool.UseResourceAsync( async conn =>
          {
-            await conn.ExecuteNonQueryAsync( "CREATE TEMPORARY TABLE batch_test( id SERIAL, value TEXT, PRIMARY KEY (id) )" );
+            await conn.ExecuteAndIgnoreResults( "CREATE TEMPORARY TABLE batch_test( id SERIAL, value TEXT, PRIMARY KEY (id) )" );
 
             var batchStmt = conn.CreateStatementBuilder( "INSERT INTO batch_test(value) VALUES ( ? )" );
 
@@ -63,7 +63,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
             //batchStmt.SetParameterString( 1, THIRD );
             batchStmt.AddBatch();
 
-            await conn.ExecuteNonQueryAsync( batchStmt );
+            await conn.ExecuteAndIgnoreResults( batchStmt );
 
             await AssertThatQueryProducesSameResults_IgnoreOrder( conn, "SELECT value FROM batch_test", FIRST, SECOND, THIRD );
          } );
@@ -80,14 +80,14 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
          await pool.UseResourceAsync( async conn =>
          {
-            await conn.ExecuteNonQueryAsync( "CREATE TEMPORARY TABLE batch_test( id SERIAL, PRIMARY KEY (id) )" );
+            await conn.ExecuteAndIgnoreResults( "CREATE TEMPORARY TABLE batch_test( id SERIAL, PRIMARY KEY (id) )" );
 
             var batchStmt = conn.CreateStatementBuilder( "INSERT INTO batch_test DEFAULT VALUES" );
             batchStmt.AddBatch();
             batchStmt.AddBatch();
             batchStmt.AddBatch();
 
-            await conn.ExecuteNonQueryAsync( batchStmt );
+            await conn.ExecuteAndIgnoreResults( batchStmt );
 
             await AssertThatQueryProducesSameResults_IgnoreOrder( conn, "SELECT id FROM batch_test", 1, 2, 3 );
          } );

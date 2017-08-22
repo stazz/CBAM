@@ -179,7 +179,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ) ) AS tmp" );
             stmt.SetParameterObject<Byte[]>( 0, bytez );
-            await conn.ExecuteNonQueryAsync( stmt );
+            await conn.ExecuteAndIgnoreResults( stmt );
          } );
       }
    }

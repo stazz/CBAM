@@ -328,7 +328,7 @@ namespace CBAM.SQL.PostgreSQL
             textSizeActual = ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, TValue value, Boolean isArrayElement ) =>
             {
                var thisTextSize = textSize( boundData, encoding, value, isArrayElement );
-               return thisTextSize.IsFirst ? (thisTextSize.First, null) : (encoding.Encoding.GetByteCount( thisTextSize.Second ), thisTextSize.Second);
+               return thisTextSize.IsFirst ? (Size: thisTextSize.First, AdditionalInfo: null) : (Size: encoding.Encoding.GetByteCount( thisTextSize.Second ), AdditionalInfo: thisTextSize.Second);
             };
          }
 

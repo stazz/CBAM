@@ -76,6 +76,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this.Buffer = buffer ?? new ResizableArray<Byte>( 8, exponentialResize: true );
          this.DataRowColumnSizes = new ResizableArray<ResettableTransformable<Int32?, Int32>>( exponentialResize: false );
          this._serverParameters = ArgumentValidator.ValidateNotNull( nameof( serverParameters ), serverParameters );
+         this.ServerParameters = new System.Collections.ObjectModel.ReadOnlyDictionary<String, String>( serverParameters );
          this.TypeRegistry = new TypeRegistryImpl( vendorFunctionality, this );
 
          if ( serverParameters.TryGetValue( "server_version", out var serverVersionString ) )
@@ -105,26 +106,28 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Int32 BackendProcessID { get; }
 
-      protected override ReservedForStatement CreateReservationObject( StatementBuilderInformation stmt )
+      public IReadOnlyDictionary<String, String> ServerParameters { get; }
+
+      protected override ReservedForStatement CreateReservationObject( SQLStatementBuilderInformation stmt )
       {
          return new PgReservedForStatement( stmt.IsSimple(), stmt.HasBatchParameters() ? "cbam_statement" : null );
       }
 
-      protected override void ValidateStatementOrThrow( StatementBuilderInformation statement )
+      protected override void ValidateStatementOrThrow( SQLStatementBuilderInformation statement )
       {
          ArgumentValidator.ValidateNotNull( nameof( statement ), statement );
          if ( statement.BatchParameterCount > 1 )
          {
             // Verify that all columns have same typeIDs
             var first = statement
-               .GetParameterEnumerable( 0 )
+               .GetParametersEnumerable( 0 )
                .Select( param => this.TypeRegistry.GetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
                .ToArray();
             var max = statement.BatchParameterCount;
             for ( var i = 1; i < max; ++i )
             {
                var j = 0;
-               foreach ( var param in statement.GetParameterEnumerable( i ) )
+               foreach ( var param in statement.GetParametersEnumerable( i ) )
                {
                   if ( first[j] != this.TypeRegistry.GetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
                   {
@@ -137,9 +140,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       private static (Int32[] ParameterIndices, TBoundTypeInfo[] TypeInfos, Int32[] TypeIDs) GetVariablesForExtendedQuerySequence(
-         StatementBuilderInformation stmt,
+         SQLStatementBuilderInformation stmt,
          TypeRegistry typeRegistry,
-         Func<StatementBuilderInformation, Int32, StatementParameter> paramExtractor
+         Func<SQLStatementBuilderInformation, Int32, StatementParameter> paramExtractor
          )
       {
          var pCount = stmt.SQLParameterCount;
@@ -173,7 +176,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
          CancellationToken token,
-         StatementBuilderInformation statement,
+         SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
       {
@@ -262,7 +265,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       private async Task SendMessagesForBatch(
-         StatementBuilderInformation statement,
+         SQLStatementBuilderInformation statement,
          TBoundTypeInfo[] typeInfos,
          String statementName,
          MessageIOArgs ioArgs,
@@ -281,7 +284,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                // Send Bind and Execute messages
                // TODO reuse BindMessage -> add Reset method.
                await new BindMessage(
-                  statement.GetParameterEnumerable( j ),
+                  statement.GetParametersEnumerable( j ),
                   singleRowParamCount,
                   typeInfos,
                   this.DisableBinaryProtocolSend,
@@ -335,7 +338,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
          CancellationToken token,
-         StatementBuilderInformation statement,
+         SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
       {
@@ -346,7 +349,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          await new ParseMessage( statement.SQL, parameterIndices, typeIDs ).SendMessageAsync( ioArgs, true );
 
          // Then send bind message
-         var bindMsg = new BindMessage( statement.GetParameterEnumerable(), parameterIndices.Length, typeInfos, this.DisableBinaryProtocolSend, this.DisableBinaryProtocolReceive );
+         var bindMsg = new BindMessage( statement.GetParametersEnumerable(), parameterIndices.Length, typeInfos, this.DisableBinaryProtocolSend, this.DisableBinaryProtocolReceive );
          await bindMsg.SendMessageAsync( ioArgs, true );
 
          // Then send describe message
@@ -433,7 +436,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async Task<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
          CancellationToken token,
-         StatementBuilderInformation stmt,
+         SQLStatementBuilderInformation stmt,
          ReservedForStatement reservedState
          )
       {
@@ -542,7 +545,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       }
 
-      private async Task<(Boolean Success, SQLStatementExecutionResult)> MoveNextAsync(
+      private async Task<(Boolean, SQLStatementExecutionResult)> MoveNextAsync(
          ReservedForStatement reservationObject,
          PgSQLDataRowColumn[] streams,
          List<PgSQLError> notices,
@@ -568,7 +571,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
             var retVal = dr != null;
             warningsLazy.Reset();
-            return (retVal, dataRow);
+            return (Success: retVal, Item: dataRow);
          } );
       }
 
@@ -1026,6 +1029,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return retVal;
       }
 
+      internal const String SERVER_PARAMETER_DATABASE = "database";
+
       private static async Task<(IDictionary<String, String> ServerParameters, Int32? backendProcessID, Int32? backendKeyData, List<PgSQLError> Notices, TransactionStatus TransactionStatus)> DoConnectionInitialization(
          PgSQLDatabaseConfiguration dbConfig,
          MessageIOArgs ioArgs
@@ -1036,7 +1041,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var username = dbConfig.Username ?? throw new ArgumentException( "Please specify username in database configuration." );
          var parameters = new Dictionary<String, String>()
          {
-            { "database", dbConfig.Database ?? throw new ArgumentException("Please specify database name in database configuration.") },
+            { SERVER_PARAMETER_DATABASE, dbConfig.Database ?? throw new ArgumentException("Please specify database name in database configuration.") },
             { "user",username },
             { "DateStyle", "ISO" },
             { "client_encoding", encoding.WebName  },

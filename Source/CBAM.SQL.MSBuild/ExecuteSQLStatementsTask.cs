@@ -103,11 +103,11 @@ namespace CBAM.SQL.MSBuild
                            "Executed {0} statements from \"{1}\".",
                            await connection.ExecuteStatementsFromStreamAsync(
                               fs,
-                              encoding.CreateDefaultEncodingInfo(),
+                              encoding,
                               onException: exc =>
                               {
                                  this.Log.LogError( exc.ToString() );
-                                 return WhenExceptionInMultipleStatements.Rollback;
+                                 return WhenExceptionInMultipleStatements.Continue;
                               }
                            ),
                            path
@@ -127,7 +127,7 @@ namespace CBAM.SQL.MSBuild
          }
       }
 
-      private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<StatementBuilderInformation> args )
+      private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<SQLStatementBuilderInformation> args )
       {
          this.Log.LogMessage( MessageImportance.Low, "Statement: {0}", args.Metadata.SQL );
       }

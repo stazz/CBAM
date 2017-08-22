@@ -31,17 +31,21 @@ namespace CBAM.SQL.Implementation
    public abstract class DatabaseMetadataImpl : DatabaseMetadata
    {
       public DatabaseMetadataImpl(
-         SQLConnectionFunctionality connectionFunctionality
+         SQLConnectionFunctionality connectionFunctionality,
+         String name
          )
       {
          this.ConnectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
+         this.Name = name;
       }
+
+      public String Name { get; }
 
       protected SQLConnectionVendorFunctionality VendorFunctionality => this.ConnectionFunctionality.VendorFunctionality;
 
       protected SQLConnectionFunctionality ConnectionFunctionality { get; }
 
-      public AsyncEnumerator<SQLStatementExecutionResult> PrepareSchemaSearch( String schemaNamePattern )
+      public AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareSchemaSearch( String schemaNamePattern )
       {
          return this.UseSQLSearch(
             this.CreateSQLForSchemaSearch( schemaNamePattern ),
@@ -49,7 +53,7 @@ namespace CBAM.SQL.Implementation
             );
       }
 
-      public AsyncEnumerator<SQLStatementExecutionResult> PrepareTableSearch( String schemaNamePattern, String tableNamePattern, TableType[] tableTypes )
+      public AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareTableSearch( String schemaNamePattern, String tableNamePattern, TableType[] tableTypes )
       {
          return this.UseSQLSearch(
             this.CreateSQLForTableSearch( schemaNamePattern, tableNamePattern, tableTypes ),
@@ -65,7 +69,7 @@ namespace CBAM.SQL.Implementation
             );
       }
 
-      public AsyncEnumerator<SQLStatementExecutionResult> PrepareColumnSearch( String schemaNamePattern, String tableNamePattern, String columnNamePattern )
+      public AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareColumnSearch( String schemaNamePattern, String tableNamePattern, String columnNamePattern )
       {
          return this.UseSQLSearch(
             this.CreateSQLForColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ),
@@ -73,7 +77,7 @@ namespace CBAM.SQL.Implementation
             );
       }
 
-      public AsyncEnumerator<SQLStatementExecutionResult> PreparePrimaryKeySearch( String schemaNamePattern, String tableNamePattern )
+      public AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PreparePrimaryKeySearch( String schemaNamePattern, String tableNamePattern )
       {
          return this.UseSQLSearch(
             this.CreateSQLForPrimaryKeySearch( schemaNamePattern, tableNamePattern ),
@@ -81,7 +85,7 @@ namespace CBAM.SQL.Implementation
             );
       }
 
-      public AsyncEnumerator<SQLStatementExecutionResult> PrepareForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
+      public AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
       {
          return this.UseSQLSearch(
             this.CreateSQLForForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ),
@@ -89,9 +93,9 @@ namespace CBAM.SQL.Implementation
             );
       }
 
-      protected AsyncEnumerator<SQLStatementExecutionResult> UseSQLSearch(
+      protected AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> UseSQLSearch(
          String sql,
-         Action<StatementBuilder> prepareStatement
+         Action<SQLStatementBuilder> prepareStatement
          )
       {
          var builder = this.VendorFunctionality.CreateStatementBuilder( sql );
@@ -99,13 +103,13 @@ namespace CBAM.SQL.Implementation
          return this.ConnectionFunctionality.PrepareStatementForExecution( builder );
       }
 
-      protected static void SetSubsequentNonNullStrings( StatementBuilder stmt, params String[] values )
+      protected static void SetSubsequentNonNullStrings( SQLStatementBuilder stmt, params String[] values )
       {
          var idx = 0;
          SetSubsequentNonNullStrings( stmt, ref idx, values );
       }
 
-      protected static void SetSubsequentNonNullStrings( StatementBuilder stmt, ref Int32 idx, params String[] values )
+      protected static void SetSubsequentNonNullStrings( SQLStatementBuilder stmt, ref Int32 idx, params String[] values )
       {
          foreach ( var str in values )
          {
@@ -116,11 +120,36 @@ namespace CBAM.SQL.Implementation
          }
       }
 
-      public abstract Task<SchemaMetadata> ExtractSchemaAsync( AsyncDataRow row );
-      public abstract Task<TableMetadata> ExtractTableAsync( AsyncDataRow row );
-      public abstract Task<ColumnMetadata> ExtractColumnAsync( AsyncDataRow row );
-      public abstract Task<PrimaryKeyMetadata> ExtractPrimaryKeyAsync( AsyncDataRow row );
-      public abstract Task<ForeignKeyMetadata> ExtractForeignKeyAsync( AsyncDataRow row );
+      public ValueTask<SchemaMetadata> ExtractSchemaMetadataAsync( AsyncDataRow row )
+      {
+         return this.DoExtractSchemaMetadataAsync( ArgumentValidator.ValidateNotNull( nameof( row ), row ) );
+      }
+
+      public ValueTask<TableMetadata> ExtractTableMetadataAsync( AsyncDataRow row )
+      {
+         return this.DoExtractTableMetadataAsync( ArgumentValidator.ValidateNotNull( nameof( row ), row ) );
+      }
+
+      public ValueTask<ColumnMetadata> ExtractColumnMetadataAsync( AsyncDataRow row )
+      {
+         return this.DoExtractColumnMetadataAsync( ArgumentValidator.ValidateNotNull( nameof( row ), row ) );
+      }
+
+      public ValueTask<PrimaryKeyMetadata> ExtractPrimaryKeyMetadataAsync( AsyncDataRow row )
+      {
+         return this.DoExtractPrimaryKeyMetadataAsync( ArgumentValidator.ValidateNotNull( nameof( row ), row ) );
+      }
+
+      public ValueTask<ForeignKeyMetadata> ExtractForeignKeyMetadataAsync( AsyncDataRow row )
+      {
+         return this.DoExtractForeignKeyMetadataAsync( ArgumentValidator.ValidateNotNull( nameof( row ), row ) );
+      }
+
+      protected abstract ValueTask<SchemaMetadata> DoExtractSchemaMetadataAsync( AsyncDataRow row );
+      protected abstract ValueTask<TableMetadata> DoExtractTableMetadataAsync( AsyncDataRow row );
+      protected abstract ValueTask<ColumnMetadata> DoExtractColumnMetadataAsync( AsyncDataRow row );
+      protected abstract ValueTask<PrimaryKeyMetadata> DoExtractPrimaryKeyMetadataAsync( AsyncDataRow row );
+      protected abstract ValueTask<ForeignKeyMetadata> DoExtractForeignKeyMetadataAsync( AsyncDataRow row );
 
       protected abstract String CreateSQLForSchemaSearch( String schemaNamePattern );
       protected abstract String CreateSQLForTableSearch( String schemaNamePattern, String tableNamePattern, TableType[] tableTypes );
@@ -202,12 +231,13 @@ namespace CBAM.SQL.Implementation
 
       public SQLCachingDatabaseMetadataImpl(
          SQLConnectionFunctionality connectionFunctionality,
+         String name,
          Func<Int32, String> schemaSearchSQLFactory, // 0 - (schemaNamePattern Missing), 1 - (schemaNamePattern Present)
          Func<Int32, TableType[], String> tableSearchSQLFactory, // 0 - (schemaNamePattern M, tableNamePattern M, tableTypes M), 1 - (schemaNamePattern M, tableNamePattern M, tableTypes P), 2 - (schemaNamePattern M, tableNamePattern P, tableTypes M), 3 - (schemaNamePattern M, tableNamePattern P, tableTypes P)
          Func<Int32, String> columnSearchSQLFactory,
          Func<Int32, String> primaryKeySearchSQLFactory,
          Func<Int32, String> foreignKeySearchSQLFactory
-         ) : base( connectionFunctionality )
+         ) : base( connectionFunctionality, name )
       {
          this._schemaSearchCache = new SQLCacheByParameterCount( 1 << 1, schemaSearchSQLFactory );
          this._tableSearchCache = new SQLCacheByParameterCount<TableType[]>( 1 << 3, tableSearchSQLFactory );
