@@ -422,15 +422,43 @@ namespace CBAM.SQL.Implementation
       public OrdinalSQLCache SchemaSearchCache { get; }
 
       /// <summary>
-      /// Implements <see cref="DatabaseMetadataSQLCache.TableSearchCache"/> and gets the <see cref="OrdinalSQLCache{T}"/> used for schema searches.
+      /// Implements <see cref="DatabaseMetadataSQLCache.TableSearchCache"/> and gets the <see cref="OrdinalSQLCache{T}"/> used for table searches.
       /// </summary>
-      /// <value>The <see cref="OrdinalSQLCache"/> used for schema searches.</value>
+      /// <value>The <see cref="OrdinalSQLCache{T}"/> used for table searches.</value>
       public OrdinalSQLCache<TableType?> TableSearchCache { get; }
+
+      /// <summary>
+      /// Implements <see cref="DatabaseMetadataSQLCache.ColumnSearchCache"/> and gets the <see cref="OrdinalSQLCache"/> used for column searches.
+      /// </summary>
+      /// <value>The <see cref="OrdinalSQLCache"/> used for column searches.</value>
       public OrdinalSQLCache ColumnSearchCache { get; }
+
+      /// <summary>
+      /// Implements <see cref="DatabaseMetadataSQLCache.PrimaryKeySearchCache"/> and gets the <see cref="OrdinalSQLCache"/> used for primary key searches.
+      /// </summary>
+      /// <value>The <see cref="OrdinalSQLCache"/> used for primary key searches.</value>
       public OrdinalSQLCache PrimaryKeySearchCache { get; }
+
+      /// <summary>
+      /// Implements <see cref="DatabaseMetadataSQLCache.ForeignKeySearchCache"/> and gets the <see cref="OrdinalSQLCache"/> used for foreign key searches.
+      /// </summary>
+      /// <value>The <see cref="OrdinalSQLCache"/> used for foreign key searches.</value>
       public OrdinalSQLCache ForeignKeySearchCache { get; }
    }
 
+   /// <summary>
+   /// Implements caching SQL statements based on ordinal number, which is binary sequence of null and non-null parameters of the original method.
+   /// </summary>
+   /// <remarks>
+   /// The "original method" here is one of the following:
+   /// <list type="bullet">
+   /// <item><description><see cref="DatabaseMetadata.CreateSchemaSearch"/>,</description></item>
+   /// <item><description><see cref="DatabaseMetadata.CreateSchemaSearch"/>,</description></item>
+   /// <item><description><see cref="DatabaseMetadata.CreateSchemaSearch"/>,</description></item>
+   /// <item><description><see cref="DatabaseMetadata.CreateSchemaSearch"/>, or</description></item>
+   /// <item><description><see cref="DatabaseMetadata.CreateSchemaSearch(string)"/>.</description></item>
+   /// </list>
+   /// </remarks>
    public interface OrdinalSQLCache
    {
       String GetSQL( Int32 permutationOrderNumber );
