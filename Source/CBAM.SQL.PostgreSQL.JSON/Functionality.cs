@@ -33,7 +33,6 @@ namespace CBAM.SQL.PostgreSQL.JSON
    {
       public static readonly PgSQLTypeFunctionality Instance = new DefaultPgSQLJSONTypeFunctionality();
 
-      public override Type CLRType => typeof( JToken );
 
       public override Boolean SupportsReadingBinaryFormat => false;
 
@@ -60,7 +59,7 @@ namespace CBAM.SQL.PostgreSQL.JSON
          return (helper.Encoding.CalculateJTokenTextSize( (JToken) value ), null);
       }
 
-      public override async ValueTask<Object> ReadBackendValue(
+      public override async ValueTask<Object> ReadBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,
@@ -88,7 +87,7 @@ namespace CBAM.SQL.PostgreSQL.JSON
          }
       }
 
-      public override async Task WriteBackendValue(
+      public override async Task WriteBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,

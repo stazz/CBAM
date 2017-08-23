@@ -92,7 +92,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var idx = 0;
 
          array.Array
-            .WriteByteToBytes( ref idx, (Byte) this._code )
+            .WriteByteToBytes( ref idx, (Byte)this._code )
             .WritePgInt32( ref idx, size );
          await stream.WriteAsync( array.Array, 0, PREFIX_SIZE, token );
          await this.PerformSendAfterWriteAsync( args, stream, size, token, array );
@@ -380,7 +380,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          var idx = 0;
          array.Array
-            .WriteByteToBytes( ref idx, (Byte) ( this._isStatement ? 'S' : 'P' ) )
+            .WriteByteToBytes( ref idx, (Byte)(this._isStatement ? 'S' : 'P') )
             .WritePgString( ref idx, args.Encoding, this._name );
       }
    }
@@ -391,7 +391,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private readonly String _portalName;
       private readonly String _statementName;
       private readonly IEnumerable<StatementParameter> _params;
-      private readonly (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)[] _types;
+      private readonly (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)[] _types;
       private readonly BackendSizeInfo[] _preCreatedParamSizes;
       private readonly Boolean _disableBinarySend;
       private readonly Boolean _disableBinaryReceive;
@@ -401,7 +401,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       internal BindMessage(
          IEnumerable<StatementParameter> paramz,
          Int32 paramCount,
-         (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)[] types,
+         (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)[] types,
          Boolean disableBinarySend,
          Boolean disableBinaryReceive,
          String portalName = null,
@@ -444,7 +444,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                var thisType = this._types[i];
                // Change type if needed
-               if ( !thisType.UnboundInfo.CLRType.Equals( val.GetType() ) )
+               if ( !thisType.CLRType.Equals( val.GetType() ) )
                {
                   val = thisType.UnboundInfo.ChangeTypeFrameworkToPgSQL( val );
                }
@@ -527,9 +527,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          Int32 formatCodesNumber;
          // Prepare format information
          if (
-            ( isForWriting && this._disableBinarySend )
-            || ( !isForWriting && this._disableBinaryReceive )
-            || this._types.All( t => !( isForWriting ? t.UnboundInfo.SupportsWritingBinaryFormat : t.UnboundInfo.SupportsReadingBinaryFormat ) ) )
+            (isForWriting && this._disableBinarySend)
+            || (!isForWriting && this._disableBinaryReceive)
+            || this._types.All( t => !(isForWriting ? t.UnboundInfo.SupportsWritingBinaryFormat : t.UnboundInfo.SupportsReadingBinaryFormat) ) )
          {
             // All parameters use text format
             formatCodesNumber = 0;
@@ -549,7 +549,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             for ( var i = 0; i < formatCodes.Length; ++i )
             {
                var thisType = this._types[i];
-               formatCodes[i] = ( isForWriting ? thisType.UnboundInfo.SupportsWritingBinaryFormat : thisType.UnboundInfo.SupportsReadingBinaryFormat ) ? DataFormat.Binary : DataFormat.Text;
+               formatCodes[i] = (isForWriting ? thisType.UnboundInfo.SupportsWritingBinaryFormat : thisType.UnboundInfo.SupportsReadingBinaryFormat) ? DataFormat.Binary : DataFormat.Text;
             }
          }
          return (formatCodes, formatCodesNumber);
@@ -566,7 +566,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var formatCodesTuple = isForWriting ? this._sendCodes : this._receiveCodes;
          var formatCodes = formatCodesTuple.Item1;
 
-         buffer.CurrentMaxCapacity = sizeof( Int16 ) + sizeof( Int16 ) * ( formatCodes?.Length ?? 0 );
+         buffer.CurrentMaxCapacity = sizeof( Int16 ) + sizeof( Int16 ) * (formatCodes?.Length ?? 0);
          var idx = 0;
          var array = buffer.Array;
          array.WritePgInt16( ref idx, formatCodesTuple.Item2 );
@@ -576,7 +576,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Format codes, if necessary
             for ( var i = 0; i < formatCodes.Length; ++i )
             {
-               array.WritePgInt16( ref idx, (Int16) formatCodes[i] );
+               array.WritePgInt16( ref idx, (Int16)formatCodes[i] );
             }
          }
 
@@ -610,7 +610,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          var idx = 0;
          array.Array
-            .WriteByteToBytes( ref idx, (Byte) ( this._isStatement ? 'S' : 'P' ) )
+            .WriteByteToBytes( ref idx, (Byte)(this._isStatement ? 'S' : 'P') )
             .WritePgString( ref idx, args.Encoding, this._name );
       }
    }
@@ -709,26 +709,26 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    internal enum FrontEndMessageCode : byte
    {
-      Bind = (Byte) 'B',
-      Close = (Byte) 'C',
-      Describe = (Byte) 'D',
-      Execute = (Byte) 'E',
+      Bind = (Byte)'B',
+      Close = (Byte)'C',
+      Describe = (Byte)'D',
+      Execute = (Byte)'E',
       //FunctionCall = (Byte) 'F', // Deprecated
-      Flush = (Byte) 'H',
-      Parse = (Byte) 'P',
-      Query = (Byte) 'Q',
-      Sync = (Byte) 'S',
-      Termination = (Byte) 'X',
-      PasswordMessage = (Byte) 'p',
-      CopyDone = (Byte) 'c',
-      CopyData = (Byte) 'd',
+      Flush = (Byte)'H',
+      Parse = (Byte)'P',
+      Query = (Byte)'Q',
+      Sync = (Byte)'S',
+      Termination = (Byte)'X',
+      PasswordMessage = (Byte)'p',
+      CopyDone = (Byte)'c',
+      CopyData = (Byte)'d',
    }
 
    public static partial class CBAMExtensions
    {
       public static Byte[] WritePgInt16( this Byte[] array, ref Int32 idx, Int32 value )
       {
-         array.WriteInt16BEToBytes( ref idx, (Int16) value );
+         array.WriteInt16BEToBytes( ref idx, (Int16)value );
          return array;
       }
 
@@ -750,7 +750,7 @@ public static partial class E_CBAM
 
    public static Int32 GetStringSize( this BackendABIHelper args, String str, ResizableArray<Byte> array )
    {
-      var retVal = String.IsNullOrEmpty( str ) ? 1 : ( args.Encoding.Encoding.GetByteCount( str ) + 1 );
+      var retVal = String.IsNullOrEmpty( str ) ? 1 : (args.Encoding.Encoding.GetByteCount( str ) + 1);
       array.CurrentMaxCapacity = retVal;
       return retVal;
    }

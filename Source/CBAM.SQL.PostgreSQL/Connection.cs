@@ -29,9 +29,12 @@ namespace CBAM.SQL.PostgreSQL
 {
    /// <summary>
    /// This interface extends <see cref="SQLConnection"/> to provide PostgreSQL-specific API.
-   /// Note that the <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of this connection will always return object which is castable to <see cref="PgSQLConnectionVendorFunctionality"/>.
-   /// Note also that <see cref="UtilPack.TabularData.AsyncDataColumnMetaData"/> objects of <see cref="SQLDataRow"/>s returned by this connection are of type <see cref="PgSQLDataColumnMetaData"/>.
    /// </summary>
+   /// <remarks>
+   /// The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of this connection will always return object which is castable to <see cref="PgSQLConnectionVendorFunctionality"/>.
+   /// Also, the <see cref="UtilPack.TabularData.AsyncDataColumnMetaData"/> objects of <see cref="SQLDataRow"/>s returned by this connection are of type <see cref="PgSQLDataColumnMetaData"/>.
+   /// The PostgreSQL-specific <see cref="SQLException"/> type is <see cref="PgSQLException"/>.
+   /// </remarks>
    public partial interface PgSQLConnection : SQLConnection
    {
       /// <summary>

@@ -27,7 +27,7 @@ using UtilPack;
 using CBAM.SQL.PostgreSQL.Implementation;
 using CBAM.SQL.PostgreSQL;
 using System.Net;
-using TBoundTypeInfo = System.ValueTuple<CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
+using TBoundTypeInfo = System.ValueTuple<System.Type, CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
 using CBAM.Abstractions;
 
 using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
@@ -122,7 +122,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Verify that all columns have same typeIDs
             var first = statement
                .GetParametersEnumerable( 0 )
-               .Select( param => this.TypeRegistry.GetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
+               .Select( param => this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
                .ToArray();
             var max = statement.BatchParameterCount;
             for ( var i = 1; i < max; ++i )
@@ -130,7 +130,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                var j = 0;
                foreach ( var param in statement.GetParametersEnumerable( i ) )
                {
-                  if ( first[j] != this.TypeRegistry.GetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
+                  if ( first[j] != this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
                   {
                      throw new PgSQLException( "When using batch parameters, columns must have same type IDs for all batch rows." );
                   }
@@ -156,7 +156,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             for ( var i = 0; i < pCount; ++i )
             {
                var param = paramExtractor( stmt, i );
-               var typeInfo = typeRegistry.GetTypeInfo( param.ParameterCILType ); ;
+               var typeInfo = typeRegistry.TryGetTypeInfo( param.ParameterCILType );
                typeInfos[i] = typeInfo;
                typeIDs[i] = typeInfo.BoundData?.TypeID ?? 0;
             }
@@ -401,7 +401,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   for ( var i = 0; i < streamArray.Length; ++i )
                   {
                      var curField = seenRD.Fields[i];
-                     var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
+                     var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.TryGetTypeInfo( curField.dataTypeID ), curField.name );
                      var curStream = new PgSQLDataRowColumn( curMD, i, prevCol, this, reservedState, curField );
                      prevCol = curStream;
                      streamArray[i] = curStream;
@@ -506,7 +506,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         for ( var i = 0; i < streamArray.Length; ++i )
                         {
                            var curField = seenRD.Fields[i];
-                           var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.GetTypeInfo( curField.dataTypeID ), curField.name );
+                           var curMD = new PgSQLDataColumnMetaDataImpl( this, curField.DataFormat, curField.dataTypeID, this.TypeRegistry.TryGetTypeInfo( curField.dataTypeID ), curField.name );
                            var curStream = new PgSQLDataRowColumn( curMD, i, prevCol, this, reservedState, curField );
                            prevCol = curStream;
                            streamArray[i] = curStream;
@@ -662,7 +662,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             stream = this.Stream;
          }
 
-         if ( this.TypeRegistry.TryGetTypeInfo( typeID, out (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo ) )
+         if ( this.TypeRegistry.TryGetTypeInfo( typeID, out var typeInfo ) )
          {
 
             var limitedStream = StreamFactory.CreateLimitedReader(
@@ -674,7 +674,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
             try
             {
-               return await typeInfo.UnboundInfo.ReadBackendValue(
+               return await typeInfo.UnboundInfo.ReadBackendValueAsync(
                   dataFormat,
                   typeInfo.BoundData,
                   this.MessageIOArgs,

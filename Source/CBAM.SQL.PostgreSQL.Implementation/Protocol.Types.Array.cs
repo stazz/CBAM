@@ -47,18 +47,19 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       private readonly Array _emptyArray;
       private readonly Type _arrayElementType;
-      private readonly TypeRegistry _protocol;
-      private readonly Int32 _elementTypeID;
+      private readonly Lazy<(PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)> _elementTypeInfo;
 
       public PgSQLTypeFunctionalityForArrays(
          TypeRegistry protocol,
-         PgSQLTypeFunctionality elementFunctionality,
+         Type arrayElementType,
          Int32 elementTypeID
          )
       {
-         this._protocol = ArgumentValidator.ValidateNotNull( nameof( protocol ), protocol );
-         this._elementTypeID = elementTypeID;
-         var arrayElementType = elementFunctionality.CLRType;
+         this._elementTypeInfo = new Lazy<(PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData)>( () =>
+         {
+            var tuple = protocol.TryGetTypeInfo( elementTypeID );
+            return (tuple.UnboundInfo, tuple.BoundData);
+         }, LazyThreadSafetyMode.PublicationOnly );
          if ( arrayElementType.GetTypeInfo().IsValueType && !arrayElementType.IsNullable() )
          {
             // Allow nulls
@@ -67,20 +68,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          // TODO maybe make CLRType getter throw exception? Since the actual type may be X[], X[,], X[,,], etc...?
          this._arrayElementType = arrayElementType;
-         this.CLRType = arrayElementType.MakeArrayType();
          this._emptyArray = Array.CreateInstance( arrayElementType, 0 );
       }
 
-      private (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) GetElementTypeInfo()
-      {
-         return this._protocol.GetTypeInfo( this._elementTypeID );
-      }
+      public override Boolean SupportsReadingBinaryFormat => this._elementTypeInfo.Value.UnboundInfo.SupportsReadingBinaryFormat;
 
-      public override Type CLRType { get; }
-
-      public override Boolean SupportsReadingBinaryFormat => this.GetElementTypeInfo().UnboundInfo.SupportsReadingBinaryFormat;
-
-      public override Boolean SupportsWritingBinaryFormat => this.GetElementTypeInfo().UnboundInfo.SupportsWritingBinaryFormat;
+      public override Boolean SupportsWritingBinaryFormat => this._elementTypeInfo.Value.UnboundInfo.SupportsWritingBinaryFormat;
 
       public override Object ChangeTypeFrameworkToPgSQL( Object obj )
       {
@@ -107,7 +100,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             size += array.Rank * 2 * sizeof( Int32 );
             elementSizes = new BackendSizeInfo[arrayLength];
             var i = 0;
-            var elementInfo = this._protocol.GetTypeInfo( this._elementTypeID );
+            var elementInfo = this._elementTypeInfo.Value;
             foreach ( var elem in array )
             {
                var sizeInfo = elementInfo.UnboundInfo.GetBackendBinarySizeCheckNull( elementInfo.BoundData, helper, elem );
@@ -157,7 +150,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Remember outermost braces
             bracesCount += 2;
             var elementSizes = new BackendSizeInfo[length];
-            var elementInfo = this._protocol.GetTypeInfo( this._elementTypeID );
+            var elementInfo = this._elementTypeInfo.Value;
             var j = 0;
             foreach ( var elem in array )
             {
@@ -195,7 +188,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return retVal;
       }
 
-      public override async ValueTask<Object> ReadBackendValue(
+      public override async ValueTask<Object> ReadBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,
@@ -226,7 +219,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return retVal;
       }
 
-      public override async Task WriteBackendValue(
+      public override async Task WriteBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,
@@ -282,7 +275,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          // We start with innermost array
          var innermostArrayIndex = rank - 1;
          var lowestEncounteredArrayEnd = innermostArrayIndex;
-         var elemTypeInfo = this.GetElementTypeInfo();
+         var elemTypeInfo = this._elementTypeInfo.Value;
          var asciiSize = helper.Encoding.BytesPerASCIICharacter;
          Boolean hasMore = true;
          while ( hasMore )
@@ -594,7 +587,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             stream.UnreadBytes();
             using ( var elementStream = stream.CreateWithLimitedSizeAndSharedBuffer( prevIdx ) )
             {
-               arrayElement = await elementTypeInfo.UnboundInfo.ReadBackendValue(
+               arrayElement = await elementTypeInfo.UnboundInfo.ReadBackendValueAsync(
                         DataFormat.Text,
                         elementTypeInfo.BoundData,
                         helper,
@@ -690,7 +683,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
             // Create & populate array instance
             stream.EraseReadBytesFromBuffer();
-            var elemInfo = this.GetElementTypeInfo();
+            var elemInfo = this._elementTypeInfo.Value;
             if ( rank == 1 && loBos == null )
             {
                // Can just use normal array
@@ -793,7 +786,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
             var elementSizeInfos = additionalSizeInfo.Item1;
             var eIdx = 0;
-            var elementTypeInfo = this.GetElementTypeInfo();
+            var elementTypeInfo = this._elementTypeInfo.Value;
             var delimByteCount = encoding.Encoding.GetByteCount( boundData.ArrayDelimiter );
             var curIdx = 0;
             foreach ( var element in value )
@@ -809,7 +802,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                {
                   using ( var elementStream = await stream.CreateWithLimitedSizeAndSharedBuffer( elementSizeInfo.Item1 ) )
                   {
-                     await elementTypeInfo.UnboundInfo.WriteBackendValue(
+                     await elementTypeInfo.UnboundInfo.WriteBackendValueAsync(
                         DataFormat.Text,
                         elementTypeInfo.BoundData,
                         helper,
@@ -872,22 +865,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          // Write header (3 integers + 2 integers per rank)
-         var elemInfo = this.GetElementTypeInfo();
+         var elemInfo = this._elementTypeInfo.Value;
          var arrayLength = value.Length;
          var rank = arrayLength <= 0 ? 0 : value.Rank;
          stream.AppendToBytes( ( 3 + 2 * rank ) * sizeof( Int32 ), ( bArray, idx, count ) =>
-         {
-            bArray
-               .WritePgInt32( ref idx, rank )
-               .WritePgInt32( ref idx, 1 ) // null map, always zero in our case
-               .WritePgInt32( ref idx, elemInfo.BoundData.TypeID );
-            for ( var i = 0; i < rank; ++i )
-            {
-               bArray
-                  .WritePgInt32( ref idx, value.GetLength( i ) )
-                  .WritePgInt32( ref idx, value.GetLowerBound( i ) + 1 ); // SQL lower bounds for arrays are 1 by default
+           {
+              bArray
+                 .WritePgInt32( ref idx, rank )
+                 .WritePgInt32( ref idx, 1 ) // null map, always zero in our case
+                 .WritePgInt32( ref idx, elemInfo.BoundData.TypeID );
+              for ( var i = 0; i < rank; ++i )
+              {
+                 bArray
+                    .WritePgInt32( ref idx, value.GetLength( i ) )
+                    .WritePgInt32( ref idx, value.GetLowerBound( i ) + 1 ); // SQL lower bounds for arrays are 1 by default
             }
-         } );
+           } );
 
          // Send header
          await stream.FlushAsync();

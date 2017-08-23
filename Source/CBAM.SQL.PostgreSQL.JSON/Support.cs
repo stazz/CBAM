@@ -19,6 +19,7 @@ using CBAM.Abstractions;
 using CBAM.SQL;
 using CBAM.SQL.PostgreSQL;
 using CBAM.SQL.PostgreSQL.JSON;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -46,19 +47,19 @@ public static partial class E_CBAM
    {
       // TODO detect if we already added support...
       await connection.TypeRegistry.AddTypeFunctionalitiesAsync(
-         ("json", CreateJSONSupport),
-         ("jsonb", CreateJSONBSupport)
+         ("json", typeof( JToken ), CreateJSONSupport),
+         ("jsonb", typeof( JToken ), CreateJSONBSupport)
          );
 
    }
 
-   private static (PgSQLTypeFunctionality UnboundFunctionality, Boolean IsDefaultForCLRType) CreateJSONSupport( (TypeRegistry TypeRegistry, PgSQLTypeDatabaseData DBTypeInfo) param )
+   private static TypeFunctionalityCreationResult CreateJSONSupport( TypeFunctionalityCreationParameters param )
    {
-      return (DefaultPgSQLJSONTypeFunctionality.Instance, false);
+      return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, false );
    }
 
-   private static (PgSQLTypeFunctionality UnboundFunctionality, Boolean IsDefaultForCLRType) CreateJSONBSupport( (TypeRegistry TypeRegistry, PgSQLTypeDatabaseData DBTypeInfo) param )
+   private static TypeFunctionalityCreationResult CreateJSONBSupport( TypeFunctionalityCreationParameters param )
    {
-      return (DefaultPgSQLJSONTypeFunctionality.Instance, true);
+      return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, true );
    }
 }

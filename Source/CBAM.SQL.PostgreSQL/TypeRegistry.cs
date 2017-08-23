@@ -32,26 +32,52 @@ using BackendSizeInfo = System.ValueTuple<System.Int32, System.Object>;
 
 namespace CBAM.SQL.PostgreSQL
 {
+   /// <summary>
+   /// This interface allows customization as to how <see cref="PgSQLConnection"/> handles SQL and CLR types and mapping between them.
+   /// </summary>
+   /// <seealso cref="PgSQLConnection.TypeRegistry"/>
    public interface TypeRegistry
    {
-      Task AddTypeFunctionalitiesAsync( params (String DBTypeName, Func<(TypeRegistry TypeRegistry, PgSQLTypeDatabaseData DBTypeInfo), (PgSQLTypeFunctionality UnboundFunctionality, Boolean IsDefaultForCLRType)> FunctionalityCreator)[] functionalities );
-      (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) GetTypeInfo( Int32 typeID );
-      (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) GetTypeInfo( Type clrType );
-      Int32 TypeInfoCount { get; }
+      Task AddTypeFunctionalitiesAsync( params (String DBTypeName, Type CLRType, Func<TypeFunctionalityCreationParameters, TypeFunctionalityCreationResult> FunctionalityCreator)[] functionalities );
+      (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TryGetTypeInfo( Int32 typeID );
+      (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TryGetTypeInfo( Type clrType );
+
    }
 
+   public struct TypeFunctionalityCreationParameters
+   {
+      public TypeFunctionalityCreationParameters( TypeRegistry typeRegistry, PgSQLTypeDatabaseData databaseData )
+      {
+         this.TypeRegistry = ArgumentValidator.ValidateNotNull( nameof( typeRegistry ), typeRegistry );
+         this.DatabaseData = ArgumentValidator.ValidateNotNull( nameof( databaseData ), databaseData );
+      }
 
+      public TypeRegistry TypeRegistry { get; }
+      public PgSQLTypeDatabaseData DatabaseData { get; }
+   }
 
+   public struct TypeFunctionalityCreationResult
+   {
+
+      public TypeFunctionalityCreationResult( PgSQLTypeFunctionality functionality, Boolean isDefaultForCLRType )
+      {
+         this.TypeFunctionality = ArgumentValidator.ValidateNotNull( nameof( functionality ), functionality );
+         this.IsDefaultForCLRType = isDefaultForCLRType;
+      }
+
+      public PgSQLTypeFunctionality TypeFunctionality { get; }
+      public Boolean IsDefaultForCLRType { get; }
+   }
 
    public interface PgSQLTypeFunctionality
    {
-      Type CLRType { get; }
+      //Type CLRType { get; }
       Boolean SupportsReadingBinaryFormat { get; }
       Boolean SupportsWritingBinaryFormat { get; }
       BackendSizeInfo GetBackendTextSize( PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement );
       BackendSizeInfo GetBackendBinarySize( PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value );
-      ValueTask<Object> ReadBackendValue( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamReaderWithResizableBufferAndLimitedSize stream );
-      Task WriteBackendValue( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
+      ValueTask<Object> ReadBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamReaderWithResizableBufferAndLimitedSize stream );
+      Task WriteBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
 
       Object ChangeTypeFrameworkToPgSQL( Object obj );
       Object ChangeTypePgSQLToFramework( PgSQLTypeDatabaseData boundData, Object obj, Type typeTo );
@@ -104,7 +130,7 @@ namespace CBAM.SQL.PostgreSQL
 
       public static System.Globalization.NumberFormatInfo NumberFormat { get; }
 
-      public abstract Type CLRType { get; }
+      //public abstract Type CLRType { get; }
 
       public abstract Boolean SupportsReadingBinaryFormat { get; }
 
@@ -118,9 +144,9 @@ namespace CBAM.SQL.PostgreSQL
 
       public abstract BackendSizeInfo GetBackendTextSize( PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement );
 
-      public abstract ValueTask<Object> ReadBackendValue( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamReaderWithResizableBufferAndLimitedSize stream );
+      public abstract ValueTask<Object> ReadBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamReaderWithResizableBufferAndLimitedSize stream );
 
-      public abstract Task WriteBackendValue( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
+      public abstract Task WriteBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
 
       //public static async ValueTask<(Char CharacterRead, Char[] AuxArray)> TryReadNextCharacter(
       //   BackendABIHelper helper,
@@ -200,13 +226,13 @@ namespace CBAM.SQL.PostgreSQL
          this._clr2Text = ArgumentValidator.ValidateNotNull( nameof( clr2Text ), clr2Text );
       }
 
-      public override Type CLRType
-      {
-         get
-         {
-            return typeof( TValue );
-         }
-      }
+      //public override Type CLRType
+      //{
+      //   get
+      //   {
+      //      return typeof( TValue );
+      //   }
+      //}
 
       public override Boolean SupportsReadingBinaryFormat
       {
@@ -234,7 +260,7 @@ namespace CBAM.SQL.PostgreSQL
       public override Object ChangeTypeFrameworkToPgSQL( Object obj )
       {
          return this._system2PG == null ?
-            Convert.ChangeType( obj, this.CLRType, System.Globalization.CultureInfo.InvariantCulture ) :
+            Convert.ChangeType( obj, typeof( TValue ), System.Globalization.CultureInfo.InvariantCulture ) :
             this._system2PG( obj );
       }
 
@@ -243,7 +269,7 @@ namespace CBAM.SQL.PostgreSQL
          return this._clr2BinarySize( boundData, args, (TValue) value );
       }
 
-      public override Task WriteBackendValue( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement )
+      public override Task WriteBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement )
       {
          switch ( dataFormat )
          {
@@ -261,7 +287,7 @@ namespace CBAM.SQL.PostgreSQL
          return value == null ? (-1, null) : this._textSize( boundData, args.Encoding, (TValue) value, isArrayElement );
       }
 
-      public override async ValueTask<Object> ReadBackendValue(
+      public override async ValueTask<Object> ReadBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper args,
@@ -287,6 +313,20 @@ namespace CBAM.SQL.PostgreSQL
             throw new NotSupportedException( $"The data format {dataFormat} is not supported." );
          }
          return del;
+      }
+
+      public static (Type Type, PgSQLTypeFunctionality<TValue> Functionality) CreateSingleBodyInfoWithType(
+         ReadFromBackendTextSync<TValue> text2CLR,
+         ReadFromBackendBinarySync<TValue> binary2CLR,
+         GetBackendSizeText<TValue, EitherOr<Int32, String>> textSize,
+         GetBackendSizeBinary<TValue, Int32> clr2BinarySize,
+         WriteBackendTextSync<TValue> clr2Text,
+         WriteBackendBinarySync<TValue> clr2Binary,
+         ChangePgSQLToSystem<TValue> pgSQL2System,
+         ChangeSystemToPgSQL<TValue> system2PgSQL
+         )
+      {
+         return (typeof( TValue ), CreateSingleBodyUnboundInfo( text2CLR, binary2CLR, textSize, clr2BinarySize, clr2Text, clr2Binary, pgSQL2System, system2PgSQL ));
       }
 
       public static PgSQLTypeFunctionality<TValue> CreateSingleBodyUnboundInfo(
@@ -355,14 +395,14 @@ namespace CBAM.SQL.PostgreSQL
                return text2CLR( boundData, args, stream.Buffer, 0, (Int32) stream.TotalByteCount );
             },
             binary2CLR == null ? (ReadFromBackendBinary<TValue>) null : async ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamReaderWithResizableBufferAndLimitedSize stream ) =>
-            {
-               if ( stream != null )
-               {
-                  await stream.ReadAllBytesToBuffer();
-               }
+             {
+                if ( stream != null )
+                {
+                   await stream.ReadAllBytesToBuffer();
+                }
 
-               return binary2CLR( boundData, args, stream.Buffer, 0, (Int32) stream.TotalByteCount );
-            },
+                return binary2CLR( boundData, args, stream.Buffer, 0, (Int32) stream.TotalByteCount );
+             },
             textSizeActual,
             clr2BinarySize == null ? (GetBackendSizeBinary<TValue, BackendSizeInfo>) null : ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, TValue value ) => (clr2BinarySize( boundData, args, value ), null),
             async ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, TValue value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement ) =>
@@ -371,10 +411,10 @@ namespace CBAM.SQL.PostgreSQL
                await stream.FlushAsync();
             },
             clr2Binary == null ? (WriteBackendBinary<TValue>) null : async ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, TValue value, BackendSizeInfo additionalInfoFromSize ) =>
-            {
-               stream.AppendToBytes( additionalInfoFromSize.Item1, ( array, actualOffset, actualCount ) => clr2Binary( boundData, args, array, actualOffset, value, additionalInfoFromSize ) );
-               await stream.FlushAsync();
-            },
+             {
+                stream.AppendToBytes( additionalInfoFromSize.Item1, ( array, actualOffset, actualCount ) => clr2Binary( boundData, args, array, actualOffset, value, additionalInfoFromSize ) );
+                await stream.FlushAsync();
+             },
             pgSQL2System,
             system2PgSQL
             );
@@ -483,7 +523,7 @@ public static partial class E_CBAM
          {
             try
             {
-               retVal = await typeFunctionality.ReadBackendValue(
+               retVal = await typeFunctionality.ReadBackendValueAsync(
                   dataFormat,
                   boundData,
                   helper,
@@ -535,21 +575,21 @@ public static partial class E_CBAM
       stream.AppendToBytes( sizeof( Int32 ), ( array, actualOffset, actualCount ) => array.WritePgInt32( ref actualOffset, value == null ? NULL_BYTE_COUNT : additionalInfoFromSize.Item1 ) );
       if ( value != null )
       {
-         await typeFunctionality.WriteBackendValue( dataFormat, boundData, helper, stream, value, additionalInfoFromSize, isArrayElement );
+         await typeFunctionality.WriteBackendValueAsync( dataFormat, boundData, helper, stream, value, additionalInfoFromSize, isArrayElement );
       }
       await stream.FlushAsync();
    }
 
-   public static Boolean TryGetTypeInfo( this TypeRegistry typeRegistry, Int32 typeID, out (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) value )
+   public static Boolean TryGetTypeInfo( this TypeRegistry typeRegistry, Int32 typeID, out (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) value )
    {
-      value = typeRegistry.GetTypeInfo( typeID );
-      return value.UnboundInfo != null && value.BoundData != null;
+      value = typeRegistry.TryGetTypeInfo( typeID );
+      return value.CLRType != null && value.UnboundInfo != null && value.BoundData != null;
    }
 
-   public static Boolean TryGetTypeInfo( this TypeRegistry typeRegistry, Type clrType, out (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) value )
+   public static Boolean TryGetTypeInfo( this TypeRegistry typeRegistry, Type clrType, out (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) value )
    {
-      value = typeRegistry.GetTypeInfo( clrType );
-      return value.UnboundInfo != null && value.BoundData != null;
+      value = typeRegistry.TryGetTypeInfo( clrType );
+      return value.CLRType != null && value.UnboundInfo != null && value.BoundData != null;
    }
 
 

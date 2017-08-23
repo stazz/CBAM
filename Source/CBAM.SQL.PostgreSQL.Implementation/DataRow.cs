@@ -32,7 +32,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override async ValueTask<Object> ReadValueAsync( Int32 byteCount )
       {
-         return await this.ConnectionFunctionality.ConvertFromBytes( ( (PgSQLDataColumnMetaDataImpl) this.MetaData ).SQLTypeID, this._dataFormat, null, byteCount );
+         return await this.ConnectionFunctionality.ConvertFromBytes( ((PgSQLDataColumnMetaDataImpl)this.MetaData).SQLTypeID, this._dataFormat, null, byteCount );
       }
 
       protected override async ValueTask<Int32> ReadByteCountAsync()
@@ -73,9 +73,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          PostgreSQLProtocol connectionFunctionality,
          DataFormat dataFormat,
          Int32 typeID,
-         (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo,
+         (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo,
          String label
-         ) : base( typeInfo.UnboundInfo?.CLRType ?? typeof( String ), label )
+         ) : base( typeInfo.CLRType ?? typeof( String ), label )
       {
          this._connectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
          this._dataFormat = dataFormat;
@@ -96,7 +96,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Int32 SQLTypeID { get; }
 
-      // TODO consider that this should be exposed as-it, since both PgSQLTypeFunctionality and PgSQLTypeDatabaseData are in CBAM.SQL.PostgreSQL project.
-      private (PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TypeInfo { get; }
+      private (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TypeInfo { get; }
    }
 }
