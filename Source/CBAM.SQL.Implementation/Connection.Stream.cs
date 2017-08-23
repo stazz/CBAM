@@ -28,7 +28,7 @@ namespace CBAM.SQL.Implementation
    using TStatementExecutionTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
 
    /// <summary>
-   /// This class extends <see cref="ConnectionFactorySU{TConnection, TVendor, TConnectionCreationParameters, TConnectionFunctionality, TStatementCreationArgs, TStatement, TStatementInformation, TEnumerableItem}"/> to provide SQL-related connection functionality which operates on non-seekable streams.
+   /// This class extends <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> to provide SQL-related connection functionality which operates on non-seekable streams.
    /// </summary>
    /// <typeparam name="TVendor">The actual type of <see cref="SQLConnectionVendorFunctionality"/>.</typeparam>
    public abstract class SQLConnectionFunctionalitySU<TVendor> : ConnectionFunctionalitySU<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>

@@ -15,10 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-extern alias CBAMA;
 
 using CBAM.Abstractions;
-using CBAMA::CBAM.Abstractions;
 using CBAM.SQL;
 using System;
 using System.Collections.Generic;
@@ -32,7 +30,7 @@ using UtilPack.TabularData;
 namespace CBAM.SQL.Implementation
 {
    /// <summary>
-   /// This class provides default implementation for <see cref="DatabaseMetadata"/> interface, using the same facaded actual connection implementation as <see cref="Abstractions.Implementation.ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/>.
+   /// This class provides default implementation for <see cref="DatabaseMetadata"/> interface, using the <see cref="SQLConnectionVendorFunctionality"/>.
    /// </summary>
    public abstract class DatabaseMetadataImpl : DatabaseMetadata
    {
@@ -660,7 +658,7 @@ namespace CBAM.SQL.Implementation
       public DefaultOrdinalSQLCache(
          Int32 maxPermutationCount,
          Func<Int32, T, String> factory
-         ) : this( maxPermutationCount, factory == null ? (Func<Int32, T, (String, Boolean)>)null : ( n, p ) => (factory( n, p ), true) )
+         ) : this( maxPermutationCount, factory == null ? (Func<Int32, T, (String, Boolean)>) null : ( n, p ) => (factory( n, p ), true) )
       {
       }
 

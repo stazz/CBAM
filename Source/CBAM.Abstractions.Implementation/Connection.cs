@@ -35,15 +35,17 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
    /// <typeparam name="TStatementCreationArgs">The type of object used to create an instance of <typeparamref name="TStatement"/>.</typeparam>
    /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
-   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information, as specified by the interface generic parameter.</typeparam>
+   /// <typeparam name="TActualVendorFunctionality">The actual type of object describing vendor-specific information.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The type of object actually implementing functionality for this facade.</typeparam>
-   public abstract class ConnectionImpl<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
+   public abstract class ConnectionImpl<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
       where TStatement : TStatementInformation
       where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
-      where TConnectionFunctionality : class, Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>
+      where TConnectionFunctionality : class, Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TActualVendorFunctionality>
+      where TActualVendorFunctionality : TVendorFunctionality
    {
       /// <summary>
-      /// Creats a new instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> with given parameters.
+      /// Creats a new instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> with given parameters.
       /// </summary>
       /// <param name="functionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> implementation.</param>
       /// <exception cref="ArgumentNullException">If <paramref name="functionality"/> is <c>null</c>.</exception>
@@ -58,7 +60,13 @@ namespace CBAM.Abstractions.Implementation
       /// Forwards the property to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.
       /// </summary>
       /// <value>The value of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.</value>
-      public TVendorFunctionality VendorFunctionality => this.ConnectionFunctionality.VendorFunctionality;
+      public TActualVendorFunctionality VendorFunctionality => this.ConnectionFunctionality.VendorFunctionality;
+
+      /// <summary>
+      /// Forwards the property to <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.
+      /// </summary>
+      /// <value>The value of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> of this <see cref="ConnectionFunctionality"/>.</value>
+      TVendorFunctionality Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
 
       /// <summary>
       /// Forwards the event (un)registration to the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationStart"/> event of this <see cref="ConnectionFunctionality"/>.
@@ -221,9 +229,9 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Gets the <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> is facade of.
+      /// Gets the <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> is facade of.
       /// </summary>
-      /// <value>The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> is facade of.</value>
+      /// <value>The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> that this <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> is facade of.</value>
       internal protected TConnectionFunctionality ConnectionFunctionality { get; }
 
       /// <summary>
@@ -235,29 +243,20 @@ namespace CBAM.Abstractions.Implementation
    }
 
    /// <summary>
-   /// This class provides the actual implementation for <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface.
+   /// This class exists so that life would be a bit easier when using properties of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> that do not require any generic parameters.
    /// </summary>
-   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
-   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
-   /// <typeparam name="TStatementCreationArgs">The type of object used to create an instance of <typeparamref name="TStatement"/>.</typeparam>
-   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
-   /// <typeparam name="TVendor">The type of object describing vendor-specific information.</typeparam>
-   public abstract class DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor>
-      where TStatement : TStatementInformation
-      where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
+   /// <remarks>
+   /// This class can not be instantiated directly, use <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> with generic arguments instead.
+   /// </remarks>
+   public abstract class DefaultConnectionFunctionality
    {
-
       private Object _cancellationToken;
 
-      /// <summary>
-      /// Creates a new instance of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> with given <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.
-      /// </summary>
-      /// <param name="vendorFunctionality">The connection vendor.</param>
-      public DefaultConnectionFunctionality( TVendor vendorFunctionality )
+      // Don't let this be subclassed directly - concrete implementations must use DefaultConnectionFunctionality with generic arguments.
+      internal DefaultConnectionFunctionality()
       {
-         this.VendorFunctionality = vendorFunctionality;
-      }
 
+      }
 
       /// <summary>
       /// Gets or sets the current cancellation token.
@@ -282,6 +281,45 @@ namespace CBAM.Abstractions.Implementation
             Interlocked.Exchange( ref this._cancellationToken, value );
          }
       }
+
+
+      /// <summary>
+      /// This method resets current cancellation token, so that <see cref="CurrentCancellationToken"/> property getter will throw.
+      /// </summary>
+      internal protected void ResetCancellationToken()
+      {
+         Interlocked.Exchange( ref this._cancellationToken, null );
+      }
+
+      /// <summary>
+      /// Gets the value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).
+      /// </summary>
+      /// <value>The value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).</value>
+      public abstract Boolean CanBeReturnedToPool { get; }
+   }
+
+   /// <summary>
+   /// This class provides the actual implementation for <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface.
+   /// </summary>
+   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   /// <typeparam name="TStatementCreationArgs">The type of object used to create an instance of <typeparamref name="TStatement"/>.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   /// <typeparam name="TVendor">The type of object describing vendor-specific information.</typeparam>
+   public abstract class DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : DefaultConnectionFunctionality, Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor>
+      where TStatement : TStatementInformation
+      where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
+   {
+
+      /// <summary>
+      /// Creates a new instance of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> with given <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.
+      /// </summary>
+      /// <param name="vendorFunctionality">The connection vendor.</param>
+      public DefaultConnectionFunctionality( TVendor vendorFunctionality )
+      {
+         this.VendorFunctionality = vendorFunctionality;
+      }
+
 
       /// <summary>
       /// Implements the <see cref="AsyncEnumerationObservation{T, TMetadata}.BeforeEnumerationStart"/> event (initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>).
@@ -407,13 +445,6 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      /// <summary>
-      /// This method resets current cancellation token, so that <see cref="CurrentCancellationToken"/> property getter will throw.
-      /// </summary>
-      internal protected void ResetCancellationToken()
-      {
-         Interlocked.Exchange( ref this._cancellationToken, null );
-      }
 
       /// <summary>
       /// Gets the <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/> of this <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
@@ -440,12 +471,6 @@ namespace CBAM.Abstractions.Implementation
             () => this.AfterEnumerationItemEncountered
             );
       }
-
-      /// <summary>
-      /// Gets the value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).
-      /// </summary>
-      /// <value>The value indicating whether this connection can be returned to the pool (e.g. underlying stream is open).</value>
-      public abstract Boolean CanBeReturnedToPool { get; }
 
       /// <summary>
       /// Derived classes should override this abstract method in order to extract read-only statement information object from modifiable statement.

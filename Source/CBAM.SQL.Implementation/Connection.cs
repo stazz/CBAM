@@ -15,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-extern alias CBAMA;
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,7 +23,7 @@ using System.Threading.Tasks;
 using UtilPack;
 using CBAM.SQL;
 using CBAM.SQL.Implementation;
-using CBAMA::CBAM.Abstractions;
+using CBAM.Abstractions;
 using CBAM.Abstractions.Implementation;
 using UtilPack.AsyncEnumeration;
 using UtilPack.TabularData;
@@ -33,11 +31,11 @@ using UtilPack.TabularData;
 namespace CBAM.SQL.Implementation
 {
    /// <summary>
-   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
+   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
    /// </summary>
    /// <typeparam name="TConnectionFunctionality">The type of object actually implementing the functionality for this facade.</typeparam>
    /// <typeparam name="TVendor">The actual type of vendor.</typeparam>
-   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor, TConnectionFunctionality>, SQLConnection
+   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TVendor, TConnectionFunctionality>, SQLConnection
       where TConnectionFunctionality : class, Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
       where TVendor : SQLConnectionVendorFunctionality
    {
@@ -102,12 +100,7 @@ namespace CBAM.SQL.Implementation
          ValueTask<Int64> retVal;
          if ( !propValue.HasValue || propValue.Value != level )
          {
-            // This class implements Connection interface twice (TVendor vs SQLConnectionVendorFunctionality), that's why we need to call extension method manually.
-            retVal = CBAMA::E_CBAM.ExecuteAndIgnoreResults<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>(
-               this,
-               this.GetSQLForSettingTransactionIsolationLevel( level ),
-               () => this.TransactionIsolationLevelProperty = level
-               );
+            retVal = this.ExecuteAndIgnoreResults( this.GetSQLForSettingTransactionIsolationLevel( level ), () => this.TransactionIsolationLevelProperty = level );
          }
          else
          {
@@ -128,12 +121,8 @@ namespace CBAM.SQL.Implementation
          ValueTask<Int64> retVal;
          if ( !propValue.HasValue || propValue.Value != isReadOnly )
          {
-            // This class implements Connection interface twice (TVendor vs SQLConnectionVendorFunctionality), that's why we need to call extension method manually.
-            retVal = CBAMA::E_CBAM.ExecuteAndIgnoreResults<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>(
-            this,
-            this.GetSQLForSettingReadOnly( isReadOnly ),
-            () => this.IsReadOnlyProperty = isReadOnly
-            );
+
+            retVal = this.ExecuteAndIgnoreResults( this.GetSQLForSettingReadOnly( isReadOnly ), () => this.IsReadOnlyProperty = isReadOnly );
          }
          else
          {
@@ -154,7 +143,7 @@ namespace CBAM.SQL.Implementation
       {
          get
          {
-            return (Boolean?)this._isReadOnly;
+            return (Boolean?) this._isReadOnly;
          }
          set
          {
@@ -170,15 +159,13 @@ namespace CBAM.SQL.Implementation
       {
          get
          {
-            return (TransactionIsolationLevel?)this._isolationLevel;
+            return (TransactionIsolationLevel?) this._isolationLevel;
          }
          set
          {
             Interlocked.Exchange( ref this._isolationLevel, value );
          }
       }
-
-      SQLConnectionVendorFunctionality Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>.VendorFunctionality => this.VendorFunctionality;
 
       /// <summary>
       /// This method should return SQL statement that is executed in order to get current default transaction isolation level.

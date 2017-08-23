@@ -8,7 +8,7 @@ using CBAM.Abstractions.Implementation;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   internal sealed class PgSQLConnectionAcquireInfo : ConnectionAcquireInfoImpl<PgSQLConnectionImpl, PostgreSQLProtocol, SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, PgSQLConnectionVendorFunctionality, System.IO.Stream>
+   internal sealed class PgSQLConnectionAcquireInfo : ConnectionAcquireInfoImpl<PgSQLConnectionImpl, PostgreSQLProtocol, SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, PgSQLConnectionVendorFunctionality, System.IO.Stream>
    {
       public PgSQLConnectionAcquireInfo( PgSQLConnectionImpl connection, Stream associatedStream )
          : base( connection, associatedStream )

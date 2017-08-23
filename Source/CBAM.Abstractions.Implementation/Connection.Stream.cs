@@ -258,7 +258,7 @@ namespace CBAM.Abstractions.Implementation
       protected abstract Task PerformDisposeStatementAsync( ReservedForStatement reservationObject );
 
       /// <summary>
-      /// This property implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
+      /// This property implements <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
       /// </summary>
       /// <value>Will return <c>true</c> if this connection is not reserved for any statement.</value>
       public override Boolean CanBeReturnedToPool => ReferenceEquals( this._currentlyExecutingStatement, NotInUse.Instance );
