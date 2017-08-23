@@ -137,7 +137,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             if ( typeName[0] == ARRAY_PREFIX )
             {
                clrType = clrTypeExtractor( typeName.Substring( 1 ) );
-               thisFunc = new PgSQLTypeFunctionalityForArrays( this, clrType, kvp.Value.ElementTypeID );
+               thisFunc = new PgSQLTypeFunctionalityForArrays( this, ref clrType, kvp.Value.ElementTypeID );
+               clrType = clrType.MakeArrayType();
                isDefaultForThisCLRType = true;
             }
             else

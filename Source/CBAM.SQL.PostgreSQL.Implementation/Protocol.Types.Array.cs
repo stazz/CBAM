@@ -51,7 +51,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public PgSQLTypeFunctionalityForArrays(
          TypeRegistry protocol,
-         Type arrayElementType,
+         ref Type arrayElementType,
          Int32 elementTypeID
          )
       {
@@ -879,7 +879,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                  bArray
                     .WritePgInt32( ref idx, value.GetLength( i ) )
                     .WritePgInt32( ref idx, value.GetLowerBound( i ) + 1 ); // SQL lower bounds for arrays are 1 by default
-            }
+              }
            } );
 
          // Send header
