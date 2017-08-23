@@ -46,17 +46,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
       }
 
-      public event EventHandler<NotificationEventArgs> NotificationEvent
-      {
-         add
-         {
-            this.ConnectionFunctionality.NotifyEvent += value;
-         }
-         remove
-         {
-            this.ConnectionFunctionality.NotifyEvent -= value;
-         }
-      }
+      public event GenericEventHandler<NotificationEventArgs> NotificationEvent;
 
       public Int32 BackendProcessID => this.ConnectionFunctionality.BackendProcessID;
 
@@ -72,9 +62,24 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return new ValueTask<Boolean>( false );
       }
 
-      public async Task CheckNotificationsAsync()
+      public async ValueTask<Int32> CheckNotificationsAsync()
       {
-         await this.ConnectionFunctionality.CheckNotificationsAsync();
+         var argsArray = await this.ConnectionFunctionality.CheckNotificationsAsync();
+
+         if ( !argsArray.IsNullOrEmpty() )
+         {
+            foreach ( var args in argsArray )
+            {
+#if DEBUG
+               this.NotificationEvent?.Invoke( args );
+#else
+               var curArgs = args;
+               this.NotificationEvent.InvokeAllEventHandlers( evt => evt( curArgs ), throwExceptions: false );
+#endif
+            }
+         }
+
+         return argsArray?.Length ?? 0;
       }
 
       public TypeRegistry TypeRegistry => this.ConnectionFunctionality.TypeRegistry;

@@ -34,10 +34,11 @@ namespace CBAM.SQL.PostgreSQL.Tests
          await pool.UseResourceAsync( async conn =>
          {
             NotificationEventArgs notificationArgs = null;
-            conn.NotificationEvent += ( sender, nArgs ) => notificationArgs = nArgs;
+            conn.NotificationEvent += ( nArgs ) => notificationArgs = nArgs;
 
             // Check that notification check will not stuck
-            await conn.CheckNotificationsAsync();
+            var notificationsFired = await conn.CheckNotificationsAsync();
+            Assert.AreEqual( 0, notificationsFired );
             Assert.IsNull( notificationArgs );
 
             // Start listening
@@ -47,11 +48,17 @@ namespace CBAM.SQL.PostgreSQL.Tests
             await pool.UseResourceAsync( async conn2 => await conn2.ExecuteAndIgnoreResults( "NOTIFY " + NOTIFICATION_NAME ) );
 
             // Make sure that we have received it
-            await conn.CheckNotificationsAsync();
+            notificationsFired = await conn.CheckNotificationsAsync();
+            Assert.AreEqual( 1, notificationsFired );
             Assert.IsNotNull( notificationArgs );
             Assert.AreEqual( notificationArgs.Name, NOTIFICATION_NAME );
             Assert.AreNotEqual( notificationArgs.ProcessID, conn.BackendProcessID );
             Assert.AreEqual( notificationArgs.Payload.Length, 0 );
+
+            notificationArgs = null;
+            notificationsFired = await conn.CheckNotificationsAsync();
+            Assert.AreEqual( 0, notificationsFired );
+            Assert.IsNull( notificationArgs );
          } );
       }
    }

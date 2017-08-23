@@ -100,6 +100,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
          this.LastSeenTransactionStatus = status;
          this.BackendProcessID = backendPID;
+         this.EnqueuedNotifications = new List<NotificationEventArgs>();
       }
 
       public TypeRegistryImpl TypeRegistry { get; }
@@ -651,7 +652,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       public Boolean DisableBinaryProtocolSend { get; }
       public Boolean DisableBinaryProtocolReceive { get; }
 
-      public event EventHandler<NotificationEventArgs> NotifyEvent;
+      public List<NotificationEventArgs> EnqueuedNotifications { get; }
 
       public async ValueTask<Object> ConvertFromBytes( Int32 typeID, DataFormat dataFormat, Stream stream, Int32 byteCount )
       {
@@ -707,7 +708,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
       }
 
-      internal async Task<(BackendMessageObject, Int32)> ReadMessagesUntilMeaningful(
+      internal async ValueTask<(BackendMessageObject, Int32)> ReadMessagesUntilMeaningful(
          List<PgSQLError> notices,
          Func<Boolean> checkReadForNextMessage = null,
          ResizableArray<Byte> bufferToUse = null,
@@ -738,18 +739,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   }
                   break;
                case NotificationMessage notification:
-                  try
-                  {
-#if DEBUG
-                     this.NotifyEvent?.Invoke( null, notification.Args );
-#else
-                     this.NotifyEvent.InvokeAllEventHandlers( evt => evt( null, notification.Args ), throwExceptions: false );
-#endif
-                  }
-                  catch
-                  {
-                     // Ignore
-                  }
+                  this.EnqueuedNotifications.Add( notification.Args );
                   encounteredMeaningful = false;
                   break;
                case ParameterStatus ps:
@@ -780,15 +770,27 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          await FrontEndMessageWithNoContent.TERMINATION.SendMessageAsync( this.GetIOArgs( tokenToUse: token ) );
       }
 
-      public async Task CheckNotificationsAsync()
+      public async ValueTask<NotificationEventArgs[]> CheckNotificationsAsync()
       {
+         NotificationEventArgs[] args = null;
+
+         NotificationEventArgs[] GetEnqueuedNotifications()
+         {
+            var enqueued = this.EnqueuedNotifications.ToArray();
+            this.EnqueuedNotifications.Clear();
+            return enqueued;
+         }
+
 #if !NETSTANDARD1_0
          var socket = this.Socket;
          if ( socket == null )
          {
 #endif
-         // Just do "SELECT 1"; to get any notifications 
-         await this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) ).EnumerateAsync( null );
+            // Just do "SELECT 1"; to get any notifications
+            var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
+            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+            enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+            await enumerator.EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -798,23 +800,30 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                return socket.Available > 0 || socket.Poll( 1, SelectMode.SelectRead ) || socket.Available > 0;
             };
-            if ( SocketHasDataPending() )
+            var hasDataPending = SocketHasDataPending();
+            if ( hasDataPending || this.EnqueuedNotifications.Count > 0 )
             {
                // There is pending data
+               // We always must use UseStreamOutsideStatementAsync method, since modifying this.EnqueuedNotifications outside that will result in concurrent modification exceptions
                await this.UseStreamOutsideStatementAsync( async () =>
                {
-                  await this.ReadMessagesUntilMeaningful(
-                     null,
-                     SocketHasDataPending
-                     );
+                  // If we call "ReadMessagesUntilMeaningful" with no socket data pending, we will become stuck.
+                  if ( hasDataPending )
+                  {
+                     await this.ReadMessagesUntilMeaningful(
+                        null,
+                        SocketHasDataPending
+                        );
+                  }
+                  args = GetEnqueuedNotifications();
+                  return false;
                } );
-            }
-            else
-            {
-               // TODO check if this connection is free to use.
             }
          }
 #endif
+
+         return args;
+
       }
 
 #if !NETSTANDARD1_0
@@ -883,7 +892,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                await SSLRequestMessage.INSTANCE.SendMessageAsync( (msgArgs, stream, token, buffer) );
 
-               var response = await msgArgs.ReadByte( stream, buffer, token );
+               var response = await stream.ReadByte( buffer, token );
                if ( response == (Byte) 'S' )
                {
                   // Start SSL session

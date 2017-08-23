@@ -42,7 +42,6 @@ namespace CBAM.SQL.PostgreSQL
 
 
 
-   // Using those classes makes things easier when exceptions fly from Read/WriteBackendValue.
 
    public interface PgSQLTypeFunctionality
    {
@@ -416,9 +415,52 @@ namespace CBAM.SQL.PostgreSQL
       public Int32 ElementTypeID { get; }
       public String ArrayDelimiter { get; } // String because we might get surrogate pairs here...
    }
+
+   public static partial class CBAMExtensions
+   {
+
+      public static Byte[] WritePgInt32( this Byte[] array, ref Int32 idx, Int32 value )
+      {
+         array.WriteInt32BEToBytes( ref idx, value );
+         return array;
+      }
+
+      public static Int32 ReadPgInt32( this Byte[] array, ref Int32 idx )
+      {
+         return array.ReadInt32BEFromBytes( ref idx );
+      }
+
+      public static Int16 ReadPgInt16( this Byte[] array, ref Int32 idx )
+      {
+         return array.ReadInt16BEFromBytes( ref idx );
+      }
+
+      public static Int32 ReadPgInt16Count( this Byte[] array, ref Int32 idx )
+      {
+         return array.ReadUInt16BEFromBytes( ref idx );
+      }
+
+      // TODO move to utilpack
+      public static Int32 CountOccurrances( this String str, String substring, StringComparison comparison )
+      {
+         var count = 0;
+
+         if ( substring != null && substring.Length > 0 )
+         {
+            var idx = 0;
+            while ( ( idx = str.IndexOf( substring, idx, comparison ) ) != -1 )
+            {
+               idx += substring.Length;
+               ++count;
+            }
+         }
+
+         return count;
+      }
+   }
 }
 
-public static partial class E_PgSQL
+public static partial class E_CBAM
 {
    private const Int32 NULL_BYTE_COUNT = -1;
 
@@ -510,44 +552,6 @@ public static partial class E_PgSQL
       return value.UnboundInfo != null && value.BoundData != null;
    }
 
-   public static Byte[] WritePgInt32( this Byte[] array, ref Int32 idx, Int32 value )
-   {
-      array.WriteInt32BEToBytes( ref idx, value );
-      return array;
-   }
-
-   public static Int32 ReadPgInt32( this Byte[] array, ref Int32 idx )
-   {
-      return array.ReadInt32BEFromBytes( ref idx );
-   }
-
-   public static Int16 ReadPgInt16( this Byte[] array, ref Int32 idx )
-   {
-      return array.ReadInt16BEFromBytes( ref idx );
-   }
-
-   public static Int32 ReadPgInt16Count( this Byte[] array, ref Int32 idx )
-   {
-      return array.ReadUInt16BEFromBytes( ref idx );
-   }
-
-   // TODO move to utilpack
-   public static Int32 CountOccurrances( this String str, String substring, StringComparison comparison )
-   {
-      var count = 0;
-
-      if ( substring != null && substring.Length > 0 )
-      {
-         var idx = 0;
-         while ( ( idx = str.IndexOf( substring, idx, comparison ) ) != -1 )
-         {
-            idx += substring.Length;
-            ++count;
-         }
-      }
-
-      return count;
-   }
 
 
 }

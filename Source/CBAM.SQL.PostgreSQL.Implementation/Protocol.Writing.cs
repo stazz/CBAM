@@ -723,25 +723,30 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       CopyDone = (Byte) 'c',
       CopyData = (Byte) 'd',
    }
+
+   public static partial class CBAMExtensions
+   {
+      public static Byte[] WritePgInt16( this Byte[] array, ref Int32 idx, Int32 value )
+      {
+         array.WriteInt16BEToBytes( ref idx, (Int16) value );
+         return array;
+      }
+
+      public static Byte[] WritePgString( this Byte[] array, ref Int32 idx, IEncodingInfo encoding, String value )
+      {
+         if ( !String.IsNullOrEmpty( value ) )
+         {
+            idx += encoding.Encoding.GetBytes( value, 0, value.Length, array, idx );
+         }
+         array[idx++] = 0;
+         return array;
+      }
+   }
 }
 
-public static partial class E_PgSQL
+public static partial class E_CBAM
 {
-   public static Byte[] WritePgInt16( this Byte[] array, ref Int32 idx, Int32 value )
-   {
-      array.WriteInt16BEToBytes( ref idx, (Int16) value );
-      return array;
-   }
 
-   public static Byte[] WritePgString( this Byte[] array, ref Int32 idx, IEncodingInfo encoding, String value )
-   {
-      if ( !String.IsNullOrEmpty( value ) )
-      {
-         idx += encoding.Encoding.GetBytes( value, 0, value.Length, array, idx );
-      }
-      array[idx++] = 0;
-      return array;
-   }
 
    public static Int32 GetStringSize( this BackendABIHelper args, String str, ResizableArray<Byte> array )
    {

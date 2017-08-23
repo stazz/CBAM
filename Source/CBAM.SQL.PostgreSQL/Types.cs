@@ -27,12 +27,6 @@ using UtilPack;
 
 namespace CBAM.SQL.PostgreSQL
 {
-   public interface IPgTypeWithBackendTextFormat
-   {
-      Int32 GetTextByteCount( IEncodingInfo encoding );
-      void WriteTextBytes( IEncodingInfo encoding, Byte[] array, ref Int32 offset );
-   }
-
    // TODO implement IPgTypeWithBackendTextFormat
    public struct PgSQLInterval : IComparable, IComparable<PgSQLInterval>, IEquatable<PgSQLInterval>
    {
@@ -735,7 +729,7 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLDate : IPgTypeWithBackendTextFormat
+   public interface IPgSQLDate
    {
       #region Properties
 
@@ -1359,7 +1353,7 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLTime : IPgTypeWithBackendTextFormat
+   public interface IPgSQLTime
    {
       #region Properties
 
@@ -1815,7 +1809,7 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public struct PgSQLTimeZone : IEquatable<PgSQLTimeZone>, IComparable, IComparable<PgSQLTimeZone>, IPgTypeWithBackendTextFormat
+   public struct PgSQLTimeZone : IEquatable<PgSQLTimeZone>, IComparable, IComparable<PgSQLTimeZone>
    {
       #region Consts
 
@@ -2620,7 +2614,7 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLTimestamp : IPgTypeWithBackendTextFormat
+   public interface IPgSQLTimestamp
    {
       #region Properties
 
@@ -3941,7 +3935,7 @@ namespace CBAM.SQL.PostgreSQL
 
 }
 
-public static partial class E_PgSQL
+public static partial class E_CBAM
 {
 
 
@@ -3981,27 +3975,7 @@ public static partial class E_PgSQL
       return retVal;
    }
 
-   // TODO move to utilpack, make "this REsizableARray" instead of "this Stream"
-   public static async Task<Byte> ReadByte( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
-   {
-      //array.CurrentMaxCapacity = sizeof( Byte );
-      await stream.ReadSpecificAmountAsync( array.Array, 0, 1, token );
-      return array.Array[0];
-   }
 
-   public static async Task<Int32> ReadInt16Count( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
-   {
-      //array.CurrentMaxCapacity = sizeof( Int16 );
-      await stream.ReadSpecificAmountAsync( array.Array, 0, sizeof( Int16 ), token );
-      return array.Array.ReadUInt16BEFromBytesNoRef( 0 );
-   }
-
-   public static async Task<Int32> ReadInt32( this BackendABIHelper args, Stream stream, ResizableArray<Byte> array, CancellationToken token )
-   {
-      //array.CurrentMaxCapacity = sizeof( Int32 );
-      await stream.ReadSpecificAmountAsync( array.Array, 0, sizeof( Int32 ), token );
-      return array.Array.ReadInt32BEFromBytesNoRef( 0 );
-   }
 
    //public static async Task<(Int32 result, Int32 bytesLeft)> ReadInt32( this BackendABIHelper args, Stream stream, CancellationToken token, Int32 bytesLeft )
    //{

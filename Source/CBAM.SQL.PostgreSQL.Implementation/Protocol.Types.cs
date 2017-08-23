@@ -642,7 +642,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             null,
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLDate value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
-               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement() );
+               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLDate v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
             ( PgSQLDate pgSQLObject, Type targetType ) =>
@@ -783,7 +783,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             null,
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestamp value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
-               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement() );
+               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLTimestamp v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
             ( PgSQLTimestamp pgSQLObject, Type targetType ) =>
@@ -830,7 +830,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             null,
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestampTZ value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
-               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement() );
+               value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLTimestampTZ v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
             ( PgSQLTimestampTZ pgSQLObject, Type targetType ) =>
@@ -949,7 +949,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 }
 
-public static partial class E_PgSQL
+public static partial class E_CBAM
 {
 
    internal static Boolean NeedsQuotingInArrayElement( this PgSQLDate date )
@@ -970,20 +970,22 @@ public static partial class E_PgSQL
       return timestamp.IsFinite;
    }
 
+   internal delegate void WriteTextBytes<T>( T value, IEncodingInfo encoding, Byte[] array, ref Int32 idx );
+
    internal static void WriteBytesAndPossiblyQuote<T>(
       this T value,
       IEncodingInfo encoding,
       Byte[] array,
       ref Int32 index,
-      Boolean needsQuoting
+      Boolean needsQuoting,
+      WriteTextBytes<T> writeTextBytes
       )
-      where T : IPgTypeWithBackendTextFormat
    {
       if ( needsQuoting )
       {
          encoding.WriteASCIIByte( array, ref index, (Byte) '"' );
       }
-      value.WriteTextBytes( encoding, array, ref index );
+      writeTextBytes( value, encoding, array, ref index );
       if ( needsQuoting )
       {
          encoding.WriteASCIIByte( array, ref index, (Byte) '"' );

@@ -27,8 +27,15 @@ namespace CBAM.SQL.PostgreSQL
 
    //}
 
+   /// <summary>
+   /// This interface extends <see cref="AsyncDataColumnMetaData"/> in order to provide PostgreSQL-specific information about the column metadata.
+   /// </summary>
    public interface PgSQLDataColumnMetaData : AsyncDataColumnMetaData
    {
+      /// <summary>
+      /// Gets the integer type ID (<c>oid</c>) of the type of this data column.
+      /// </summary>
+      /// <value>The integer type ID (<c>oid</c>) of the type of this data column.</value>
       Int32 SQLTypeID { get; }
    }
 }

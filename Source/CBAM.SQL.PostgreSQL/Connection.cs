@@ -27,72 +27,123 @@ using UtilPack;
 
 namespace CBAM.SQL.PostgreSQL
 {
+   /// <summary>
+   /// This interface extends <see cref="SQLConnection"/> to provide PostgreSQL-specific API.
+   /// Note that the <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of this connection will always return object which is castable to <see cref="PgSQLConnectionVendorFunctionality"/>.
+   /// Note also that <see cref="UtilPack.TabularData.AsyncDataColumnMetaData"/> objects of <see cref="SQLDataRow"/>s returned by this connection are of type <see cref="PgSQLDataColumnMetaData"/>.
+   /// </summary>
    public partial interface PgSQLConnection : SQLConnection
    {
-      event EventHandler<NotificationEventArgs> NotificationEvent;
+      /// <summary>
+      /// This event will be fired whenever a notification is processed, which happens *only* when <see cref="CheckNotificationsAsync"/> is called.
+      /// </summary>
+      /// <seealso cref="NotificationEventArgs"/>
+      event GenericEventHandler<NotificationEventArgs> NotificationEvent;
 
       /// <summary>
       /// Checks whether any notifications are pending.
       /// Please note that if runtime of the process is equivalent to .NET Standard 1.0-1.2, calling this method causes SQL query (<c>SELECT 1</c>).
-      /// In other frameworks, it does not cause any SQL queries.
+      /// In other frameworks, it does not cause any traffic from this process to backend.
       /// </summary>
-      /// <returns></returns>
-      Task CheckNotificationsAsync();
+      /// <returns>Task which will have completed after processing all pending notifies. The returned integer will be amount of event arguments processed.</returns>
+      /// <seealso cref="NotificationEvent"/>
+      /// <remarks>
+      /// During normal SQL statement processing, all encountered notifications will be queued to list.
+      /// This method will empty that list, and also check for any pending notifications from backend.
+      /// </remarks>
+      ValueTask<Int32> CheckNotificationsAsync();
 
+      /// <summary>
+      /// Gets the <see cref="PostgreSQL.TypeRegistry"/> object which manages the conversions between CLR types and PostgreSQL types.
+      /// </summary>
+      /// <value>The <see cref="PostgreSQL.TypeRegistry"/> object which manages the conversions between CLR types and PostgreSQL types.</value>
+      /// <seealso cref="PostgreSQL.TypeRegistry"/>
       TypeRegistry TypeRegistry { get; }
 
+      /// <summary>
+      /// Gets the process ID of the backend process this connection is connected to.
+      /// </summary>
+      /// <value>The process ID of the backend process this connection is connected to.</value>
       Int32 BackendProcessID { get; }
 
+      /// <summary>
+      /// Gets the last seen transaction status.
+      /// </summary>
+      /// <value>The last seen transaction status.</value>
+      /// <see cref="TransactionStatus"/>
       TransactionStatus LastSeenTransactionStatus { get; }
    }
 
+   /// <summary>
+   /// This interface extends <see cref="SQLConnectionVendorFunctionality"/> to provide PostgreSQL-specific vendor functionality.
+   /// Instances of this class are obtaineable from <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of <see cref="PgSQLConnection"/>.
+   /// </summary>
    public interface PgSQLConnectionVendorFunctionality : SQLConnectionVendorFunctionality
    {
+      /// <summary>
+      /// Tries to advance the given <see cref="PeekablePotentiallyAsyncReader{TValue}"/> to the end of <c>COPY IN</c> statement.
+      /// </summary>
+      /// <param name="reader">The <see cref="PeekablePotentiallyAsyncReader{TValue}"/>.</param>
+      /// <returns>A task which always returns <c>true</c>.</returns>
       ValueTask<Boolean> TryAdvanceReaderOverCopyInStatement( PeekablePotentiallyAsyncReader<Char?> reader );
    }
 
-   public sealed class NotificationEventArgs : EventArgs
+   /// <summary>
+   /// This class encapsulates all information about the data of single PostgreSQL notification (data received as a result of <c>NOTIFY</c> statement).
+   /// </summary>
+   public class NotificationEventArgs
    {
-      private readonly Int32 _pid;
-      private readonly String _name;
-      private readonly String _payload;
 
+      /// <summary>
+      /// Creates a new instance of <see cref="NotificationEventArgs"/> with given parameters.
+      /// </summary>
+      /// <param name="pid">The process ID of the backend which issued notify.</param>
+      /// <param name="name">The name of the notification.</param>
+      /// <param name="payload">The payload of the notification.</param>
       public NotificationEventArgs( Int32 pid, String name, String payload )
       {
-         this._pid = pid;
-         this._name = name;
-         this._payload = payload;
+         this.ProcessID = pid;
+         this.Name = name;
+         this.Payload = payload;
       }
 
-      public Int32 ProcessID
-      {
-         get
-         {
-            return this._pid;
-         }
-      }
+      /// <summary>
+      /// Gets the process ID of the backend which issued notify.
+      /// </summary>
+      /// <value>The process ID of the backend which issued notify.</value>
+      public Int32 ProcessID { get; }
 
-      public String Name
-      {
-         get
-         {
-            return this._name;
-         }
-      }
+      /// <summary>
+      /// Gets the name of the notification.
+      /// </summary>
+      /// <value>The name of the notification.</value>
+      public String Name { get; }
 
-      public String Payload
-      {
-         get
-         {
-            return this._payload;
-         }
-      }
+      /// <summary>
+      /// Gets the textual payload that was supplied with <c>NOTIFY</c> command.
+      /// </summary>
+      /// <value>The textual payload that was supplied with <c>NOTIFY</c> command.</value>
+      public String Payload { get; }
    }
 
+   /// <summary>
+   /// This enumeration describes the transaction status of the connection.
+   /// </summary>
    public enum TransactionStatus
    {
+      /// <summary>
+      /// No transaction is currently going on.
+      /// </summary>
       Idle = 'I',
+
+      /// <summary>
+      /// The transaction is going on.
+      /// </summary>
       InTransaction = 'T',
+
+      /// <summary>
+      /// Error was resulted.
+      /// </summary>
       ErrorInTransaction = 'E'
    }
 }

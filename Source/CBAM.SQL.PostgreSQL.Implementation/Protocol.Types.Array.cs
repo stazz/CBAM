@@ -921,7 +921,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
    }
 }
 
-public static partial class E_PgSQL
+public static partial class E_CBAM
 {
    // TODO move to UtilPack
    internal static Int32[] GetLowerBounds( this Array array )

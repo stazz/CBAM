@@ -39,7 +39,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       internal BackendMessageCode Code { get; }
 
-      public static async Task<(BackendMessageObject msg, Int32 msgSize)> ReadBackendMessageAsync(
+      public static async ValueTask<(BackendMessageObject msg, Int32 msgSize)> ReadBackendMessageAsync(
          MessageIOArgs ioArgs,
          ResizableArray<ResettableTransformable<Int32?, Int32>> columnSizes
          )
@@ -48,8 +48,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var stream = ioArgs.Item2;
          var token = ioArgs.Item3;
          var buffer = ioArgs.Item4;
-         var code = (BackendMessageCode) ( await args.ReadByte( stream, buffer, token ) );
-         var length = await args.ReadInt32( stream, buffer, token );
+         await stream.ReadSpecificAmountAsync( buffer.Array, 0, 5, token );
+         var code = (BackendMessageCode) buffer.Array[0];
+         var length = buffer.Array.ReadInt32BEFromBytesNoRef( 1 );
          var remaining = length - sizeof( Int32 );
          if ( code != BackendMessageCode.DataRow && code != BackendMessageCode.CopyData )
          {
@@ -77,7 +78,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                result = new RowDescription( array, encoding );
                break;
             case BackendMessageCode.DataRow:
-               (result, remaining) = await DataRowObject.ReadDataRow( args, stream, token, array, columnSizes, remaining );
+               (result, remaining) = await DataRowObject.ReadDataRow( stream, token, array, columnSizes, remaining );
                break;
             case BackendMessageCode.ParameterDescription:
                result = new ParameterDescription( array );
@@ -368,7 +369,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private readonly Transformable<Int32?, Int32>[] _columnSizes;
 
       private DataRowObject(
-         BackendABIHelper args,
          Int32 columnCount,
          ResizableArray<ResettableTransformable<Int32?, Int32>> columnSizes
          )
@@ -408,8 +408,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return columnSizeHolder.Transformed;
       }
 
-      public static async Task<(DataRowObject, Int32)> ReadDataRow(
-         BackendABIHelper args,
+      public static async ValueTask<(DataRowObject, Int32)> ReadDataRow(
          Stream stream,
          CancellationToken token,
          Byte[] array,
@@ -421,7 +420,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          msgSize -= sizeof( Int16 );
          var idx = 0;
          var colCount = array.ReadPgInt16Count( ref idx );
-         return (new DataRowObject( args, colCount, columnSizes ), msgSize);
+         return (new DataRowObject( colCount, columnSizes ), msgSize);
       }
    }
 
@@ -629,5 +628,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       NoData = (Byte) 'n',
       PortalSuspended = (Byte) 's', // We should never get this message, as we always specify to fetch all rows in Execute message.
       ParameterDescription = (Byte) 't',
+   }
+}
+
+public static partial class E_CBAM
+{
+   internal static async ValueTask<Byte> ReadByte( this Stream stream, ResizableArray<Byte> array, CancellationToken token )
+   {
+      //array.CurrentMaxCapacity = sizeof( Byte );
+      await stream.ReadSpecificAmountAsync( array.Array, 0, 1, token );
+      return array.Array[0];
    }
 }
