@@ -22,8 +22,8 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.1.1</VersionPrefix>
-    <VersionSuffix>beta</VersionSuffix>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
     <NeutralLanguage>en-US</NeutralLanguage>
@@ -53,7 +53,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to 1.0.0 of UtilPack.</PackageReleaseNotes>
+    <PackageReleaseNotes>Added documentation.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data</PackageTags>
     <Title>Skeleton Implementations for CBAM SQL API</Title>
     <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
