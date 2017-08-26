@@ -21,6 +21,7 @@ using CBAM.SQL.PostgreSQL.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UtilPack;
 using UtilPack.ResourcePooling;
 
 using TDefaultConfiguration = CBAM.SQL.PostgreSQL.
@@ -42,18 +43,11 @@ namespace CBAM.SQL.PostgreSQL
 {
    public sealed class PgSQLConnectionPoolProvider : ResourcePoolProvider<PgSQLConnection>
    {
-#if !NETSTANDARD1_0
-      private static readonly PgSQLConnectionFactory _Factory;
-#endif
-      private static readonly PgSQLConnectionFactoryForReadyMadeStreams _FactoryForReadyMadeStreams;
+      private static readonly IEncodingInfo Encoding;
 
       static PgSQLConnectionPoolProvider()
       {
-#if !NETSTANDARD1_0
-         _Factory = new PgSQLConnectionFactory();
-#endif
-         _FactoryForReadyMadeStreams = new PgSQLConnectionFactoryForReadyMadeStreams();
-
+         Encoding = new UTF8EncodingInfo();
          Instance = new PgSQLConnectionPoolProvider();
       }
 
@@ -77,7 +71,7 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          return new OneTimeUseAsyncResourcePool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
-            _Factory,
+            new PgSQLConnectionFactory( Encoding, connectionConfig?.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? false ),
             connectionConfig,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
@@ -89,7 +83,7 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          return new CachingAsyncResourcePoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfo>(
-            _Factory,
+            new PgSQLConnectionFactory( Encoding, connectionConfig?.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? false ),
             connectionConfig
             );
       }
@@ -100,7 +94,7 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          return new OneTimeUseAsyncResourcePool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfoForReadyMadeStreams>(
-            _FactoryForReadyMadeStreams,
+            new PgSQLConnectionFactoryForReadyMadeStreams( Encoding, connectionConfig?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? false ),
             connectionConfig,
             acquire => acquire,
             acquire => (PgSQLConnectionAcquireInfo) acquire
@@ -112,7 +106,7 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          return new CachingAsyncResourcePoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfoForReadyMadeStreams>(
-            _FactoryForReadyMadeStreams,
+            new PgSQLConnectionFactoryForReadyMadeStreams( Encoding, connectionConfig?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? false ),
             connectionConfig
             );
       }

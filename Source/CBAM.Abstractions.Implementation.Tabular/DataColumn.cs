@@ -45,12 +45,19 @@ namespace CBAM.Abstractions.Implementation.Tabular
 
       protected ReservedForStatement ReservedForStatement { get; }
 
-      protected override async ValueTask<Int32> DoReadFromStreamAsync( Byte[] array, Int32 offset, Int32 count )
+      protected override ValueTask<Object> ReadValueAsync( Int32 byteCount )
       {
-         return await this.ConnectionFunctionality.UseStreamWithinStatementAsync( this.ReservedForStatement, async () => await this.ReadFromStreamWhileReservedAsync( array, offset, count ) );
+         return this.ConnectionFunctionality.UseStreamWithinStatementAsync( this.ReservedForStatement, () => this.ReadValueWhileReservedAsync( byteCount ) );
+      }
+
+      protected override ValueTask<Int32> DoReadFromStreamAsync( Byte[] array, Int32 offset, Int32 count )
+      {
+         return this.ConnectionFunctionality.UseStreamWithinStatementAsync( this.ReservedForStatement, () => this.ReadFromStreamWhileReservedAsync( array, offset, count ) );
       }
 
       protected abstract ValueTask<Int32> ReadFromStreamWhileReservedAsync( Byte[] array, Int32 offset, Int32 count );
+
+      protected abstract ValueTask<Object> ReadValueWhileReservedAsync( Int32 byteCount );
 
    }
 }

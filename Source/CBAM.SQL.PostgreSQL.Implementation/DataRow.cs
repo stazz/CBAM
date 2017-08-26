@@ -30,9 +30,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this._dataFormat = ArgumentValidator.ValidateNotNull( nameof( fieldData ), fieldData ).DataFormat;
       }
 
-      protected override async ValueTask<Object> ReadValueAsync( Int32 byteCount )
+      protected override ValueTask<Object> ReadValueWhileReservedAsync( Int32 byteCount )
       {
-         return await this.ConnectionFunctionality.ConvertFromBytes( ((PgSQLDataColumnMetaDataImpl)this.MetaData).SQLTypeID, this._dataFormat, null, byteCount );
+         return this.ConnectionFunctionality.ConvertFromBytes( ( (PgSQLDataColumnMetaDataImpl) this.MetaData ).SQLTypeID, this._dataFormat, this.ReservedForStatement, byteCount );
       }
 
       protected override async ValueTask<Int32> ReadByteCountAsync()
@@ -73,9 +73,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          PostgreSQLProtocol connectionFunctionality,
          DataFormat dataFormat,
          Int32 typeID,
-         (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) typeInfo,
+         TypeFunctionalityInformation typeInfo,
          String label
-         ) : base( typeInfo.CLRType ?? typeof( String ), label )
+         ) : base( typeInfo?.CLRType ?? typeof( String ), label )
       {
          this._connectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
          this._dataFormat = dataFormat;
@@ -86,7 +86,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       public override Object ChangeType( Object value, Type targetType )
       {
          var typeInfo = this.TypeInfo;
-         return typeInfo.UnboundInfo.ChangeTypePgSQLToFramework( typeInfo.BoundData, value, targetType );
+         return typeInfo.Functionality.ChangeTypePgSQLToFramework( typeInfo.DatabaseData, value, targetType );
       }
 
       public override ValueTask<Object> ConvertFromBytesAsync( Stream stream, Int32 byteCount )
@@ -96,6 +96,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public Int32 SQLTypeID { get; }
 
-      private (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TypeInfo { get; }
+      private TypeFunctionalityInformation TypeInfo { get; }
    }
 }

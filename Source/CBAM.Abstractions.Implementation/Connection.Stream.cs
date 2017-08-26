@@ -242,7 +242,7 @@ namespace CBAM.Abstractions.Implementation
       {
          try
          {
-            await this.UseStreamWithinStatementAsync( reservationObject, async () => await this.PerformDisposeStatementAsync( reservationObject ) );
+            await this.UseStreamWithinStatementAsync( reservationObject, () => this.PerformDisposeStatementAsync( reservationObject ) );
          }
          finally
          {

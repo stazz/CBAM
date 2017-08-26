@@ -42,6 +42,7 @@ namespace CBAM.SQL.PostgreSQL
          var init = this.Initialization;
          var db = init?.Database;
          var protocol = init?.Protocol;
+         var pool = init?.ConnectionPool;
 
          return new PgSQLConnectionCreationInfoData()
          {
@@ -68,6 +69,10 @@ namespace CBAM.SQL.PostgreSQL
                   ForceTypeIDLoad = protocol?.ForceTypeIDLoad ?? false,
                   DisableBinaryProtocolSend = protocol?.DisableBinaryProtocolSend ?? false,
                   DisableBinaryProtocolReceive = protocol?.DisableBinaryProtocolReceive ?? false
+               },
+               ConnectionPool = new PgSQLPoolingConfiguration()
+               {
+                  ConnectionsOwnStringPool = pool?.ConnectionsOwnStringPool ?? false
                }
             }
          };
@@ -103,6 +108,12 @@ namespace CBAM.SQL.PostgreSQL
    {
       public PgSQLDatabaseConfiguration Database { get; set; }
       public PgSQLProtocolConfiguration Protocol { get; set; }
+      public PgSQLPoolingConfiguration ConnectionPool { get; set; }
+   }
+
+   public class PgSQLPoolingConfiguration
+   {
+      public Boolean ConnectionsOwnStringPool { get; set; }
    }
 
    public class PgSQLDatabaseConfiguration

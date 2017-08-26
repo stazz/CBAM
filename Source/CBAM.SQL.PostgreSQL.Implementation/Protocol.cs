@@ -122,7 +122,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             // Verify that all columns have same typeIDs
             var first = statement
                .GetParametersEnumerable( 0 )
-               .Select( param => this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
+               .Select( param => this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).DatabaseData.TypeID )
                .ToArray();
             var max = statement.BatchParameterCount;
             for ( var i = 1; i < max; ++i )
@@ -130,7 +130,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                var j = 0;
                foreach ( var param in statement.GetParametersEnumerable( i ) )
                {
-                  if ( first[j] != this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).BoundData.TypeID )
+                  if ( first[j] != this.TypeRegistry.TryGetTypeInfo( param.ParameterCILType ).DatabaseData.TypeID )
                   {
                      throw new PgSQLException( "When using batch parameters, columns must have same type IDs for all batch rows." );
                   }
@@ -140,30 +140,30 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
       }
 
-      private static (Int32[] ParameterIndices, TBoundTypeInfo[] TypeInfos, Int32[] TypeIDs) GetVariablesForExtendedQuerySequence(
+      private static (Int32[] ParameterIndices, TypeFunctionalityInformation[] TypeInfos, Int32[] TypeIDs) GetVariablesForExtendedQuerySequence(
          SQLStatementBuilderInformation stmt,
          TypeRegistry typeRegistry,
          Func<SQLStatementBuilderInformation, Int32, StatementParameter> paramExtractor
          )
       {
          var pCount = stmt.SQLParameterCount;
-         TBoundTypeInfo[] typeInfos;
+         TypeFunctionalityInformation[] typeInfos;
          Int32[] typeIDs;
          if ( pCount > 0 )
          {
-            typeInfos = new TBoundTypeInfo[pCount];
+            typeInfos = new TypeFunctionalityInformation[pCount];
             typeIDs = new Int32[pCount];
             for ( var i = 0; i < pCount; ++i )
             {
                var param = paramExtractor( stmt, i );
                var typeInfo = typeRegistry.TryGetTypeInfo( param.ParameterCILType );
                typeInfos[i] = typeInfo;
-               typeIDs[i] = typeInfo.BoundData?.TypeID ?? 0;
+               typeIDs[i] = typeInfo?.DatabaseData?.TypeID ?? 0;
             }
          }
          else
          {
-            typeInfos = Empty<TBoundTypeInfo>.Array;
+            typeInfos = Empty<TypeFunctionalityInformation>.Array;
             typeIDs = Empty<Int32>.Array;
          }
 
@@ -267,7 +267,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       private async Task SendMessagesForBatch(
          SQLStatementBuilderInformation statement,
-         TBoundTypeInfo[] typeInfos,
+         TypeFunctionalityInformation[] typeInfos,
          String statementName,
          MessageIOArgs ioArgs,
          Int32 chunkSize,
@@ -654,19 +654,19 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public List<NotificationEventArgs> EnqueuedNotifications { get; }
 
-      public async ValueTask<Object> ConvertFromBytes( Int32 typeID, DataFormat dataFormat, Stream stream, Int32 byteCount )
+      internal async ValueTask<Object> ConvertFromBytes(
+         Int32 typeID,
+         DataFormat dataFormat,
+         EitherOr<ReservedForStatement, Stream> stream,
+         Int32 byteCount
+         )
       {
-         if ( stream == null )
+         var actualStream = stream.IsFirst ? this.Stream : stream.Second;
+         var typeInfo = this.TypeRegistry.TryGetTypeInfo( typeID );
+         if ( typeInfo != null )
          {
-            // TODO this.UseStreamWithinStatementAsync(), would require ReservedForStatement object though
-            stream = this.Stream;
-         }
-
-         if ( this.TypeRegistry.TryGetTypeInfo( typeID, out var typeInfo ) )
-         {
-
             var limitedStream = StreamFactory.CreateLimitedReader(
-                  stream,
+                  actualStream,
                   byteCount,
                   this.CurrentCancellationToken,
                   this.Buffer
@@ -674,9 +674,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
             try
             {
-               return await typeInfo.UnboundInfo.ReadBackendValueAsync(
+               return await typeInfo.Functionality.ReadBackendValueAsync(
                   dataFormat,
-                  typeInfo.BoundData,
+                  typeInfo.DatabaseData,
                   this.MessageIOArgs,
                   limitedStream
                   );
@@ -698,8 +698,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          else if ( dataFormat == DataFormat.Text )
          {
             // Initial type load, or unknown type and format is textual
-            await this.Stream.ReadSpecificAmountAsync( this.Buffer, 0, byteCount, this.CurrentCancellationToken );
-            return this.MessageIOArgs.Encoding.Encoding.GetString( this.Buffer.Array, 0, byteCount );
+            await actualStream.ReadSpecificAmountAsync( this.Buffer, 0, byteCount, this.CurrentCancellationToken );
+            return this.MessageIOArgs.GetStringWithPool( this.Buffer.Array, 0, byteCount );
          }
          else
          {
@@ -786,11 +786,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-            // Just do "SELECT 1"; to get any notifications
-            var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
-            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
-            enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-            await enumerator.EnumerateAsync( null );
+         // Just do "SELECT 1"; to get any notifications
+         var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
+         // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+         enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+         await enumerator.EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -830,6 +830,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
          PgSQLConnectionCreationInfo creationParameters,
+         IEncodingInfo encoding,
+         BinaryStringPool stringPool,
          CancellationToken token
          )
       {
@@ -884,7 +886,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             stream = await InitNetworkStream( socket );
 
-            var msgArgs = new BackendABIHelper( new UTF8EncodingInfo() );
+            var msgArgs = new BackendABIHelper( encoding, stringPool );
             var buffer = new ResizableArray<Byte>( initialSize: 8, exponentialResize: true );
             var connectionMode = connectionConfig.ConnectionSSLMode;
             var isSSLRequired = connectionMode == ConnectionSSLMode.Required;
@@ -981,6 +983,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
          PgSQLInitializationConfiguration initData,
+         IEncodingInfo encoding,
+         BinaryStringPool stringPool,
          CancellationToken token,
          Stream stream
          )
@@ -990,7 +994,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             initData,
             token,
             ArgumentValidator.ValidateNotNull( nameof( stream ), stream ),
-            new BackendABIHelper( new UTF8EncodingInfo() ),
+            new BackendABIHelper( encoding, stringPool ),
             new ResizableArray<Byte>( initialSize: 8, exponentialResize: true )
 #if !NETSTANDARD1_0
             , null

@@ -332,6 +332,20 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    internal abstract class PgSQLConnectionFactory<TConnectionCreationParameters> : ConnectionFactorySU<PgSQLConnectionImpl, TConnectionCreationParameters, PostgreSQLProtocol>
    {
+      private readonly BinaryStringPool _stringPool;
+
+      public PgSQLConnectionFactory(
+         IEncodingInfo encoding,
+         Boolean connectionsOwnStringPool
+         )
+      {
+         this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
+         if ( !connectionsOwnStringPool )
+         {
+            this._stringPool = BinaryStringPoolFactory.NewConcurrentBinaryStringPool( encoding.Encoding );
+         }
+      }
+
       protected override ValueTask<PgSQLConnectionImpl> CreateConnection( PostgreSQLProtocol functionality )
       {
          return new ValueTask<PgSQLConnectionImpl>( new PgSQLConnectionImpl( functionality, new PgSQLDatabaseMetaData( functionality ) ) );
@@ -350,11 +364,25 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          return functionality?.Stream;
       }
+
+      protected IEncodingInfo Encoding { get; }
+
+      protected BinaryStringPool GetStringPoolForNewConnection()
+      {
+         return this._stringPool ?? BinaryStringPoolFactory.NewNotConcurrentBinaryStringPool();
+      }
    }
 
 #if !NETSTANDARD1_0
    internal sealed class PgSQLConnectionFactory : PgSQLConnectionFactory<PgSQLConnectionCreationInfo>
    {
+      public PgSQLConnectionFactory(
+         IEncodingInfo encoding,
+         Boolean connectionsOwnStringPool
+         ) : base( encoding, connectionsOwnStringPool )
+      {
+      }
+
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfo parameters,
          CancellationToken token
@@ -363,6 +391,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var tuple = await PostgreSQLProtocol.PerformStartup(
             new PgSQLConnectionVendorFunctionalityImpl(),
             parameters,
+            this.Encoding,
+            this.GetStringPoolForNewConnection(),
             token
             );
          // TODO event: StartupNoticeOccurred
@@ -373,6 +403,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    internal sealed class PgSQLConnectionFactoryForReadyMadeStreams : PgSQLConnectionFactory<PgSQLConnectionCreationInfoForReadyMadeStreams>
    {
+      public PgSQLConnectionFactoryForReadyMadeStreams(
+         IEncodingInfo encoding,
+         Boolean connectionsOwnStringPool
+         ) : base( encoding, connectionsOwnStringPool )
+      {
+      }
+
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfoForReadyMadeStreams parameters,
          CancellationToken token
@@ -381,6 +418,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var tuple = await PostgreSQLProtocol.PerformStartup(
             new PgSQLConnectionVendorFunctionalityImpl(),
             parameters.Initialization,
+            this.Encoding,
+            this.GetStringPoolForNewConnection(),
             token,
             parameters.Stream
             );

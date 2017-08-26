@@ -18,8 +18,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
    {
       private const Char ARRAY_PREFIX = '_';
 
-      private readonly IDictionary<Int32, TypeInfoWithCLRType> _typeInfos;
-      private readonly IDictionary<Type, TypeInfo> _typeInfosByCLRType;
+      private readonly IDictionary<Int32, TypeFunctionalityInformation> _typeInfos;
+      private readonly IDictionary<Type, TypeFunctionalityInformation> _typeInfosByCLRType;
 
       private readonly SQLConnectionVendorFunctionality _vendorFunctionality;
       private readonly SQLConnectionFunctionality _connectionFunctionality;
@@ -32,46 +32,49 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this._vendorFunctionality = ArgumentValidator.ValidateNotNull( nameof( vendorFunctionality ), vendorFunctionality );
          this._connectionFunctionality = ArgumentValidator.ValidateNotNull( nameof( connectionFunctionality ), connectionFunctionality );
 
-         this._typeInfos = new Dictionary<Int32, TypeInfoWithCLRType>();
-         this._typeInfosByCLRType = new Dictionary<Type, TypeInfo>();
+         this._typeInfos = new Dictionary<Int32, TypeFunctionalityInformation>();
+         this._typeInfosByCLRType = new Dictionary<Type, TypeFunctionalityInformation>();
       }
 
-      public async Task AddTypeFunctionalitiesAsync( params (String DBTypeName, Type CLRType, Func<TypeFunctionalityCreationParameters, TypeFunctionalityCreationResult> FunctionalityCreator)[] functionalities )
+      public async ValueTask<Int32> AddTypeFunctionalitiesAsync( params (String DBTypeName, Type CLRType, Func<PgSQLTypeDatabaseData, TypeFunctionalityCreationResult> FunctionalityCreator)[] functionalities )
       {
+         var retVal = 0;
          if ( functionalities != null )
          {
             var dic = functionalities.ToDictionary_Overwrite( tuple => tuple.DBTypeName, tuple => tuple );
+            retVal = dic.Count;
             this.AssignTypeData(
                await this.ReadTypeDataFromServer( dic.Keys ),
                typeName => dic[typeName].CLRType,
-               tuple => dic[tuple.DBTypeName].FunctionalityCreator( new TypeFunctionalityCreationParameters( this, tuple.BoundData ) )
+               tuple => dic[tuple.DBTypeName].FunctionalityCreator( tuple.BoundData )
                );
          }
+
+         return retVal;
       }
 
-      public (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TryGetTypeInfo( Int32 typeID )
+      public TypeFunctionalityInformation TryGetTypeInfo( Int32 typeID )
       {
          this._typeInfos.TryGetValue( typeID, out var retVal );
          return retVal;
       }
 
-      public (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) TryGetTypeInfo( Type clrType )
+      public TypeFunctionalityInformation TryGetTypeInfo( Type clrType )
       {
-         (Type CLRType, PgSQLTypeFunctionality UnboundInfo, PgSQLTypeDatabaseData BoundData) retVal;
+         TypeFunctionalityInformation retVal;
          if ( clrType != null )
          {
-            KeyValuePair<Type, TypeInfo> kvp;
-            if ( this._typeInfosByCLRType.TryGetValue( clrType, out var tuple ) )
+            KeyValuePair<Type, TypeFunctionalityInformation> kvp;
+            if ( !this._typeInfosByCLRType.TryGetValue( clrType, out retVal ) )
             {
-               retVal = (clrType, tuple.Item1, tuple.Item2);
-            }
-            else if ( ( kvp = this.TryFindByParent( clrType ) ).Key != null )
-            {
-               retVal = (kvp.Key, kvp.Value.Item1, kvp.Value.Item2);
-            }
-            else
-            {
-               retVal = default;
+               if ( ( kvp = this.TryFindByParent( clrType ) ).Value != null )
+               {
+                  retVal = kvp.Value;
+               }
+               else
+               {
+                  retVal = default;
+               }
             }
          }
          else
@@ -81,7 +84,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return retVal;
       }
 
-      private KeyValuePair<Type, TypeInfo> TryFindByParent( Type clrType )
+      private KeyValuePair<Type, TypeFunctionalityInformation> TryFindByParent( Type clrType )
       {
          var child = clrType
 #if !NET40 && !NET45
@@ -96,7 +99,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          );
       }
 
-      public async Task<TStaticTypeCacheValue> ReadTypeDataFromServer(
+      public async ValueTask<TStaticTypeCacheValue> ReadTypeDataFromServer(
          IEnumerable<String> typeNames
          )
       {
@@ -147,10 +150,14 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                var result = funcExtractor( (typeName, boundData) );
                (thisFunc, isDefaultForThisCLRType) = (result.TypeFunctionality, result.IsDefaultForCLRType);
             }
-            this._typeInfos[boundData.TypeID] = (clrType, thisFunc, boundData);
-            if ( isDefaultForThisCLRType || !this._typeInfosByCLRType.ContainsKey( clrType ) )
+            if ( thisFunc != null )
             {
-               this._typeInfosByCLRType[clrType] = (thisFunc, boundData);
+               var typeInfo = new TypeFunctionalityInformation( clrType, thisFunc, boundData );
+               this._typeInfos[boundData.TypeID] = typeInfo;
+               if ( isDefaultForThisCLRType || !this._typeInfosByCLRType.ContainsKey( clrType ) )
+               {
+                  this._typeInfosByCLRType[clrType] = typeInfo;
+               }
             }
          }
       }

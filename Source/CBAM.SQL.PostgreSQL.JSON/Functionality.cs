@@ -25,41 +25,42 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-using BackendSizeInfo = System.ValueTuple<System.Int32, System.Object>;
-
 namespace CBAM.SQL.PostgreSQL.JSON
 {
-   internal class DefaultPgSQLJSONTypeFunctionality : AbstractPgSQLTypeFunctionality
+   internal class DefaultPgSQLJSONTypeFunctionality : PgSQLTypeFunctionality
    {
       public static readonly PgSQLTypeFunctionality Instance = new DefaultPgSQLJSONTypeFunctionality();
 
 
-      public override Boolean SupportsReadingBinaryFormat => false;
+      public Boolean SupportsReadingBinaryFormat => false;
 
-      public override Boolean SupportsWritingBinaryFormat => false;
+      public Boolean SupportsWritingBinaryFormat => false;
 
-      public override Object ChangeTypeFrameworkToPgSQL( Object obj )
+      public Object ChangeTypeFrameworkToPgSQL( PgSQLTypeDatabaseData dbData, Object obj )
       {
          // JToken is abstract class, so we will enter here always
          return obj is JToken ? obj : throw new InvalidCastException( $"The object must be descendant of {typeof( JToken ).FullName}." );
       }
 
-      public override Object ChangeTypePgSQLToFramework( PgSQLTypeDatabaseData boundData, Object obj, Type typeTo )
+      public Object ChangeTypePgSQLToFramework( PgSQLTypeDatabaseData dbData, Object obj, Type typeTo )
       {
          throw new NotSupportedException();
       }
 
-      public override BackendSizeInfo GetBackendBinarySize( PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value )
+      public BackendSizeInfo GetBackendSize( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement )
       {
-         throw new NotSupportedException();
+         switch ( dataFormat )
+         {
+            case DataFormat.Text:
+               return new BackendSizeInfo( helper.Encoding.CalculateJTokenTextSize( (JToken) value ) );
+            case DataFormat.Binary:
+               throw new NotSupportedException();
+            default:
+               throw new NotSupportedException( $"Data format {dataFormat} is not recognized." );
+         }
       }
 
-      public override BackendSizeInfo GetBackendTextSize( PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement )
-      {
-         return (helper.Encoding.CalculateJTokenTextSize( (JToken) value ), null);
-      }
-
-      public override async ValueTask<Object> ReadBackendValueAsync(
+      public async ValueTask<Object> ReadBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,
@@ -87,7 +88,7 @@ namespace CBAM.SQL.PostgreSQL.JSON
          }
       }
 
-      public override async Task WriteBackendValueAsync(
+      public async Task WriteBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
          BackendABIHelper helper,

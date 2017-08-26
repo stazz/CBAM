@@ -27,13 +27,14 @@ using System.Threading.Tasks;
 using UtilPack;
 using TStaticTypeCacheValue = System.Collections.Generic.IDictionary<System.String, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
 using TStaticTypeCache = System.Collections.Generic.IDictionary<System.Version, System.Collections.Generic.IDictionary<System.String, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>>;
-using BinaryBackendSizeInfo = System.ValueTuple<System.Int32, System.Object>;
 using TextBackendSizeInfo = UtilPack.EitherOr<System.ValueTuple<System.Int32, System.Object>, System.String>;
 using TypeFunctionalityInfo = System.ValueTuple<System.ValueTuple<System.Type, CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality>, System.Boolean>;
 using CBAM.SQL.PostgreSQL;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
+   using TSyncTextualSizeInfo = ValueTuple<Int32, String>;
+
    internal sealed partial class PostgreSQLProtocol
    {
       private static readonly TStaticTypeCache _StaticTypeCache;
@@ -71,8 +72,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             { "timestamptz", (typeInfo[typeof(PgSQLTimestampTZ)], true) },
             { "abstime", (typeInfo[typeof(PgSQLTimestampTZ)], false) },
             { "bytea", (typeInfo[typeof(Byte[])], true) }
-            //{ "json", typeof(NewtonSoft.JSON.Linq.JToken) },
-            
+
          };
          _StaticTypeCache = new Dictionary<Version, TStaticTypeCacheValue>();
       }
@@ -121,8 +121,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                var c = value[i];
                switch ( c )
                {
-                  case (Char)PgSQLTypeFunctionalityForArrays.ARRAY_START:
-                  case (Char)PgSQLTypeFunctionalityForArrays.ARRAY_END:
+                  case (Char) PgSQLTypeFunctionalityForArrays.ARRAY_START:
+                  case (Char) PgSQLTypeFunctionalityForArrays.ARRAY_END:
                   case PgSQLTypeFunctionalityForArrays.ESCAPE:
                   case PgSQLTypeFunctionalityForArrays.QUOTE:
                      needsQuotes = true;
@@ -149,8 +149,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   var c = value[i];
                   switch ( c )
                   {
-                     case (Char)PgSQLTypeFunctionalityForArrays.ARRAY_START:
-                     case (Char)PgSQLTypeFunctionalityForArrays.ARRAY_END:
+                     case (Char) PgSQLTypeFunctionalityForArrays.ARRAY_START:
+                     case (Char) PgSQLTypeFunctionalityForArrays.ARRAY_END:
                      case PgSQLTypeFunctionalityForArrays.ESCAPE:
                      case PgSQLTypeFunctionalityForArrays.QUOTE:
                         needsQuotes = true;
@@ -235,7 +235,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   case PgSQLTypeFunctionalityForArrays.ESCAPE:
                   case PgSQLTypeFunctionalityForArrays.QUOTE:
                      offset += encoding.GetBytes( value, prevIdx, i - prevIdx, array, offset );
-                     helper.Encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.ESCAPE );
+                     helper.Encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.ESCAPE );
                      prevIdx = i;
                      break;
                   default:
@@ -269,7 +269,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   case PgSQLTypeFunctionalityForArrays.ESCAPE:
                   case PgSQLTypeFunctionalityForArrays.QUOTE:
                      offset += encoding.GetBytes( value, prevIdx, i - prevIdx, array, offset );
-                     helper.Encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.ESCAPE );
+                     helper.Encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.ESCAPE );
                      prevIdx = i;
                      break;
                      //default:
@@ -294,14 +294,14 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 
          // String
-         yield return PgSQLTypeFunctionality<String>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
          ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return args.GetString( array, offset, count );
+               return args.GetStringWithPool( array, offset, count );
             },
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return args.GetString( array, offset, count );
+               return args.GetStringWithPool( array, offset, count );
             },
             ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, String value, Boolean isArrayElement ) =>
             {
@@ -316,12 +316,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   if (
                      value.Length == 0
                      || isNullString
-                     || (isSingleDelimiter ? ArrayElementStringNeedsQuotesSingleDelimiter( boundData, value ) : ArrayElementStringNeedsQuotesMultiDelimiter( boundData, value ))
+                     || ( isSingleDelimiter ? ArrayElementStringNeedsQuotesSingleDelimiter( boundData, value ) : ArrayElementStringNeedsQuotesMultiDelimiter( boundData, value ) )
                   )
                   {
                      retVal = isNullString ?
                         6 * encoding.BytesPerASCIICharacter :
-                        (isSingleDelimiter ?
+                        ( isSingleDelimiter ?
                            CalculateArrayElementStringSizeSingleDelimiter( boundData, encoding, value ) :
                            CalculateArrayElementStringSizeMultiDelimiter( boundData, encoding, value )
                         );
@@ -340,18 +340,18 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
                return retVal;
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, String value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, String value, Boolean isArrayElement ) =>
             {
-               return args.Encoding.Encoding.GetByteCount( value );
+               return encoding.Encoding.GetByteCount( value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, String value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, String value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                if ( sizeInfo.Item2 == null )
                {
                   // Because of how text format size is calculated, and because we are handling string type, we will come here *only* when we are serializing array element, *and* it has data to be escaped.
 
                   // Write starting quote
-                  args.Encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.QUOTE );
+                  args.Encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.QUOTE );
 
                   // Write content, and escape any double quotes and backslashes
                   if ( boundData.ArrayDelimiter.Length == 1 )
@@ -364,7 +364,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   }
 
                   // Write ending quote
-                  args.Encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.QUOTE );
+                  args.Encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.QUOTE );
                }
                else
                {
@@ -372,7 +372,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                }
                System.Diagnostics.Debug.Assert( offset == sizeInfo.Item1 );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, String value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, String value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                args.Encoding.Encoding.GetBytes( value, 0, value.Length, array, offset );
             },
@@ -381,13 +381,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Boolean
-         yield return PgSQLTypeFunctionality<Boolean>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                Byte b;
                return count > 0
                   && (
-                     (b = args.Encoding.ReadASCIIByte( array, ref offset )) == 'T'
+                     ( b = args.Encoding.ReadASCIIByte( array, ref offset ) ) == 'T'
                      || b == 't'
                      );
             },
@@ -399,27 +399,27 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                return encoding.BytesPerASCIICharacter;
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Boolean value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Boolean value, Boolean isArrayElement ) =>
             {
                return 1;
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Boolean value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Boolean value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
-               args.Encoding.WriteASCIIByte( array, ref offset, (Byte)(value ? 't' : 'f') );
+               args.Encoding.WriteASCIIByte( array, ref offset, (Byte) ( value ? 't' : 'f' ) );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Boolean value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Boolean value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
-               array[offset] = (Byte)(value ? 1 : 0);
+               array[offset] = (Byte) ( value ? 1 : 0 );
             },
             null,
             null
             );
 
          // Int16
-         yield return PgSQLTypeFunctionality<Int16>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return (Int16)args.Encoding.ParseInt32Textual( array, ref offset, (count / args.Encoding.BytesPerASCIICharacter, true) );
+               return (Int16) args.Encoding.ParseInt32Textual( array, ref offset, (count / args.Encoding.BytesPerASCIICharacter, true) );
             },
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
@@ -429,15 +429,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                return encoding.GetTextualIntegerRepresentationSize( value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Int16 value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Int16 value, Boolean isArrayElement ) =>
             {
                return sizeof( Int16 );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int16 value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int16 value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                args.Encoding.WriteIntegerTextual( array, ref offset, value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int16 value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int16 value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                array.WriteInt16BEToBytes( ref offset, value );
             },
@@ -446,7 +446,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Int32
-         yield return PgSQLTypeFunctionality<Int32>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return args.Encoding.ParseInt32Textual( array, ref offset, (count / args.Encoding.BytesPerASCIICharacter, true) );
@@ -459,15 +459,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                return encoding.GetTextualIntegerRepresentationSize( value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Int32 value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Int32 value, Boolean isArrayElement ) =>
             {
                return sizeof( Int32 );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                args.Encoding.WriteIntegerTextual( array, ref offset, value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                array.WriteInt32BEToBytes( ref offset, value );
             },
@@ -476,7 +476,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Int64
-         yield return PgSQLTypeFunctionality<Int64>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return args.Encoding.ParseInt64Textual( array, ref offset, (count / args.Encoding.BytesPerASCIICharacter, true) );
@@ -489,15 +489,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             {
                return encoding.GetTextualIntegerRepresentationSize( value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Int64 value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Int64 value, Boolean isArrayElement ) =>
             {
                return sizeof( Int64 );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int64 value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int64 value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                args.Encoding.WriteIntegerTextual( array, ref offset, value );
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int64 value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int64 value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                array.WriteInt64BEToBytes( ref offset, value );
             },
@@ -509,22 +509,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          // so right now we have to allocate a new string and parse it.
          // It's a bit of a performance killer, so maybe should be fixed one day.
          // Single
-         yield return PgSQLTypeFunctionality<Single>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return Single.Parse( args.GetString( array, offset, count ), AbstractPgSQLTypeFunctionality.NumberFormat );
+               return Single.Parse( args.GetStringWithPool( array, offset, count ), CommonPgSQLTypeFunctionalityInfo.NumberFormat );
             },
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return array.ReadSingleBEFromBytes( ref offset );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Single value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Single value, Boolean isArrayElement ) =>
             {
                return sizeof( Single );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Single value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Single value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                array.WriteSingleBEToBytes( ref offset, value );
             },
@@ -533,22 +533,22 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Double
-         yield return PgSQLTypeFunctionality<Double>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return Double.Parse( args.GetString( array, offset, count ), AbstractPgSQLTypeFunctionality.NumberFormat );
+               return Double.Parse( args.GetStringWithPool( array, offset, count ), CommonPgSQLTypeFunctionalityInfo.NumberFormat );
             },
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return array.ReadDoubleBEFromBytes( ref offset );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Double value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Double value, Boolean isArrayElement ) =>
             {
                return sizeof( Double );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Double value, BinaryBackendSizeInfo sizeInfo ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Double value, Int32 sizeInfo, Boolean isArrayElement ) =>
             {
                array.WriteDoubleBEToBytes( ref offset, value );
             },
@@ -557,10 +557,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Decimal
-         yield return PgSQLTypeFunctionality<Decimal>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return Decimal.Parse( args.GetString( array, offset, count ), AbstractPgSQLTypeFunctionality.NumberFormat );
+               return Decimal.Parse( args.GetStringWithPool( array, offset, count ), CommonPgSQLTypeFunctionalityInfo.NumberFormat );
             },
             null,
             null,
@@ -572,10 +572,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Guid
-         yield return PgSQLTypeFunctionality<Guid>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
-               return Guid.Parse( args.GetString( array, offset, count ) );
+               return Guid.Parse( args.GetStringWithPool( array, offset, count ) );
             },
             null,
             null,
@@ -587,7 +587,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Xml
-         yield return PgSQLTypeFunctionality<System.Xml.Linq.XElement>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                // If there would be "LoadAsync" in XEelement, we could use new PgSQLTypeUnboundInfo constructor directly.
@@ -606,12 +606,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // PgSQLInterval
-         yield return PgSQLTypeFunctionality<PgSQLInterval>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                // TODO interval parsing without string allocation (PgSQLInterval.Load(Stream stream))
                // Or PgSQLInterval.ParseBinaryText
-               return PgSQLInterval.Parse( args.GetString( array, offset, count ) );
+               return PgSQLInterval.Parse( args.GetStringWithPool( array, offset, count ) );
             },
             null,
             // TODO interval string writing without string allocation
@@ -619,18 +619,18 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             null,
             null,
             null,
-            ( PgSQLInterval pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLInterval pgSQLObject, Type targetType ) =>
             {
-               return (TimeSpan)pgSQLObject;
+               return (TimeSpan) pgSQLObject;
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
-               return (TimeSpan)systemObject;
+               return (TimeSpan) systemObject;
             }
             );
 
          // PgSQLDate
-         yield return PgSQLTypeFunctionality<PgSQLDate>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return PgSQLDate.ParseBinaryText( args.Encoding, array, ref offset, count );
@@ -647,23 +647,23 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                return retVal;
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLDate value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLDate value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLDate v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
-            ( PgSQLDate pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLDate pgSQLObject, Type targetType ) =>
             {
-               return (DateTime)pgSQLObject;
+               return (DateTime) pgSQLObject;
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
-               return (PgSQLDate)(DateTime)systemObject;
+               return (PgSQLDate) (DateTime) systemObject;
             }
             );
 
          // PgSQLTime
-         yield return PgSQLTypeFunctionality<PgSQLTime>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return PgSQLTime.ParseBinaryText( args.Encoding, array, ref offset, count );
@@ -674,44 +674,44 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                return value.GetTextByteCount( encoding );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTime value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTime value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                value.WriteTextBytes( args.Encoding, array, ref offset );
             },
             null,
-            ( PgSQLTime pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLTime pgSQLObject, Type targetType ) =>
             {
                if ( typeof( DateTime ).Equals( targetType ) )
                {
-                  return (DateTime)pgSQLObject;
+                  return (DateTime) pgSQLObject;
                }
                else if ( typeof( TimeSpan ).Equals( targetType ) )
                {
-                  return (TimeSpan)pgSQLObject;
+                  return (TimeSpan) pgSQLObject;
                }
                else if ( typeof( PgSQLInterval ).Equals( targetType ) )
                {
-                  return (PgSQLInterval)pgSQLObject;
+                  return (PgSQLInterval) pgSQLObject;
                }
                else
                {
                   throw new InvalidCastException( "Can't cast time " + pgSQLObject + " to " + targetType + "." );
                }
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
                var tt = systemObject.GetType();
                if ( typeof( DateTime ).Equals( tt ) )
                {
-                  return (PgSQLTime)(DateTime)systemObject;
+                  return (PgSQLTime) (DateTime) systemObject;
                }
                else if ( typeof( TimeSpan ).Equals( tt ) )
                {
-                  return (PgSQLTime)(TimeSpan)systemObject;
+                  return (PgSQLTime) (TimeSpan) systemObject;
                }
                else if ( typeof( PgSQLInterval ).Equals( tt ) )
                {
-                  return (PgSQLTime)(PgSQLInterval)systemObject;
+                  return (PgSQLTime) (PgSQLInterval) systemObject;
                }
                else
                {
@@ -721,7 +721,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // PgSQLTimeTZ
-         yield return PgSQLTypeFunctionality<PgSQLTimeTZ>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return PgSQLTimeTZ.ParseBinaryText( args.Encoding, array, ref offset, count );
@@ -732,36 +732,36 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                return value.GetTextByteCount( encoding );
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimeTZ value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimeTZ value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                value.WriteTextBytes( args.Encoding, array, ref offset );
             },
             null,
-            ( PgSQLTimeTZ pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLTimeTZ pgSQLObject, Type targetType ) =>
             {
                if ( typeof( DateTime ).Equals( targetType ) )
                {
-                  return (DateTime)pgSQLObject;
+                  return (DateTime) pgSQLObject;
                }
                else if ( typeof( TimeSpan ).Equals( targetType ) )
                {
-                  return (TimeSpan)pgSQLObject;
+                  return (TimeSpan) pgSQLObject;
                }
                else
                {
                   throw new InvalidCastException( "Can't cast time " + pgSQLObject + " to " + targetType + "." );
                }
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
                var tt = systemObject.GetType();
                if ( typeof( DateTime ).Equals( tt ) )
                {
-                  return (PgSQLTimeTZ)(DateTime)systemObject;
+                  return (PgSQLTimeTZ) (DateTime) systemObject;
                }
                else if ( typeof( TimeSpan ).Equals( tt ) )
                {
-                  return (PgSQLTimeTZ)(TimeSpan)systemObject;
+                  return (PgSQLTimeTZ) (TimeSpan) systemObject;
                }
                else
                {
@@ -771,7 +771,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // PgSQLTimestamp
-         yield return PgSQLTypeFunctionality<PgSQLTimestamp>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return PgSQLTimestamp.ParseBinaryText( args.Encoding, array, ref offset, count );
@@ -788,28 +788,28 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                return retVal;
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestamp value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestamp value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLTimestamp v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
-            ( PgSQLTimestamp pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLTimestamp pgSQLObject, Type targetType ) =>
             {
                if ( typeof( DateTime ).Equals( targetType ) )
                {
-                  return (DateTime)pgSQLObject;
+                  return (DateTime) pgSQLObject;
                }
                else
                {
                   throw new InvalidCastException( "Can't cast time " + pgSQLObject + " to " + targetType + "." );
                }
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
                var tt = systemObject.GetType();
                if ( typeof( DateTime ).Equals( tt ) )
                {
-                  return (PgSQLTimestamp)(DateTime)systemObject;
+                  return (PgSQLTimestamp) (DateTime) systemObject;
                }
                else
                {
@@ -819,7 +819,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // PgSQLTimestampTZ
-         yield return PgSQLTypeFunctionality<PgSQLTimestampTZ>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                return PgSQLTimestampTZ.ParseBinaryText( args.Encoding, array, ref offset, count );
@@ -835,36 +835,36 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                return retVal;
             },
             null,
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestampTZ value, BinaryBackendSizeInfo sizeInfo, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, PgSQLTimestampTZ value, TSyncTextualSizeInfo sizeInfo, Boolean isArrayElement ) =>
             {
                value.WriteBytesAndPossiblyQuote( args.Encoding, array, ref offset, isArrayElement && value.NeedsQuotingInArrayElement(), ( PgSQLTimestampTZ v, IEncodingInfo e, Byte[] a, ref Int32 i ) => v.WriteTextBytes( e, a, ref i ) );
             },
             null,
-            ( PgSQLTimestampTZ pgSQLObject, Type targetType ) =>
+            ( PgSQLTypeDatabaseData dbData, PgSQLTimestampTZ pgSQLObject, Type targetType ) =>
             {
                if ( typeof( DateTime ).Equals( targetType ) )
                {
-                  return (DateTime)pgSQLObject;
+                  return (DateTime) pgSQLObject;
                }
                else if ( typeof( DateTimeOffset ).Equals( targetType ) )
                {
-                  return (DateTimeOffset)pgSQLObject;
+                  return (DateTimeOffset) pgSQLObject;
                }
                else
                {
                   throw new InvalidCastException( "Can't cast time " + pgSQLObject + " to " + targetType + "." );
                }
             },
-            ( Object systemObject ) =>
+            ( PgSQLTypeDatabaseData dbData, Object systemObject ) =>
             {
                var tt = systemObject.GetType();
                if ( typeof( DateTime ).Equals( tt ) )
                {
-                  return (PgSQLTimestampTZ)(DateTime)systemObject;
+                  return (PgSQLTimestampTZ) (DateTime) systemObject;
                }
                else if ( typeof( DateTimeOffset ).Equals( tt ) )
                {
-                  return (PgSQLTimestampTZ)(DateTimeOffset)systemObject;
+                  return (PgSQLTimestampTZ) (DateTimeOffset) systemObject;
                }
                else
                {
@@ -874,7 +874,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             );
 
          // Byte[]
-         yield return PgSQLTypeFunctionality<Byte[]>.CreateSingleBodyInfoWithType(
+         yield return CreateSingleBodyInfoWithType(
             ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count ) =>
             {
                // Byte[] textual format is "\x<hex decimal pairs>"
@@ -885,7 +885,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                && encoding.ReadASCIIByte( array, ref offset ) == 'x'
                )
                {
-                  var len = (count - offset) / encoding.BytesPerASCIICharacter / 2;
+                  var len = ( count - offset ) / encoding.BytesPerASCIICharacter / 2;
                   retVal = new Byte[len];
                   for ( var i = 0; i < len; ++i )
                   {
@@ -909,7 +909,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Byte[] value, Boolean isArrayElement ) =>
             {
                // Text size is 2 ASCII bytes + 2 ASCII bytes per each actual byte
-               var retVal = (2 + 2 * value.Length) * encoding.BytesPerASCIICharacter;
+               var retVal = ( 2 + 2 * value.Length ) * encoding.BytesPerASCIICharacter;
                if ( isArrayElement )
                {
                   // Always need quotation since there is a '\\' character
@@ -917,33 +917,33 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                }
                return retVal;
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] value ) =>
+            ( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, Byte[] value, Boolean isArrayElement ) =>
             {
                // Binary size is same as array size
                return value.Length;
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Byte[] value, BinaryBackendSizeInfo additionalInfoFromSize, Boolean isArrayElement ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Byte[] value, TSyncTextualSizeInfo additionalInfoFromSize, Boolean isArrayElement ) =>
             {
                // Write all text to array
                var encoding = args.Encoding;
                if ( isArrayElement )
                {
-                  encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.QUOTE );
+                  encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.QUOTE );
                }
 
                encoding
-                  .WriteASCIIByte( array, ref offset, (Byte)'\\' )
-                                 .WriteASCIIByte( array, ref offset, (Byte)'x' );
+                  .WriteASCIIByte( array, ref offset, (Byte) '\\' )
+                                 .WriteASCIIByte( array, ref offset, (Byte) 'x' );
                foreach ( var b in value )
                {
                   encoding.WriteHexDecimal( array, ref offset, b );
                }
                if ( isArrayElement )
                {
-                  encoding.WriteASCIIByte( array, ref offset, (Byte)PgSQLTypeFunctionalityForArrays.QUOTE );
+                  encoding.WriteASCIIByte( array, ref offset, (Byte) PgSQLTypeFunctionalityForArrays.QUOTE );
                }
             },
-            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Byte[] value, BinaryBackendSizeInfo additionalInfoFromSize ) =>
+            ( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Byte[] value, Int32 additionalInfoFromSize, Boolean isArrayElement ) =>
             {
                // Just copy array
                Array.Copy( value, 0, array, offset, value.Length );
@@ -951,6 +951,20 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             null,
             null
             );
+      }
+
+      private static (Type Type, DefaultPgSQLTypeFunctionality<TValue> Functionality) CreateSingleBodyInfoWithType<TValue>(
+         ReadFromBackendSync<TValue> text2CLR,
+         ReadFromBackendSync<TValue> binary2CLR,
+         CalculateBackendSize<TValue, EitherOr<Int32, String>> textSize,
+         CalculateBackendSize<TValue, Int32> clr2BinarySize,
+         WriteToBackendSync<TValue, TSyncTextualSizeInfo> clr2Text,
+         WriteToBackendSync<TValue, Int32> clr2Binary,
+         ChangePgSQLToSystem<TValue> pgSQL2System,
+         ChangeSystemToPgSQL<TValue> system2PgSQL
+         )
+      {
+         return (typeof( TValue ), DefaultPgSQLTypeFunctionality<TValue>.CreateSingleBodyUnboundInfo( text2CLR, binary2CLR, textSize, clr2BinarySize, clr2Text, clr2Binary, pgSQL2System, system2PgSQL ));
       }
    }
 
@@ -990,12 +1004,12 @@ public static partial class E_CBAM
    {
       if ( needsQuoting )
       {
-         encoding.WriteASCIIByte( array, ref index, (Byte)'"' );
+         encoding.WriteASCIIByte( array, ref index, (Byte) '"' );
       }
       writeTextBytes( value, encoding, array, ref index );
       if ( needsQuoting )
       {
-         encoding.WriteASCIIByte( array, ref index, (Byte)'"' );
+         encoding.WriteASCIIByte( array, ref index, (Byte) '"' );
       }
    }
 }

@@ -53,12 +53,12 @@ public static partial class E_CBAM
 
    }
 
-   private static TypeFunctionalityCreationResult CreateJSONSupport( TypeFunctionalityCreationParameters param )
+   private static TypeFunctionalityCreationResult CreateJSONSupport( PgSQLTypeDatabaseData param )
    {
       return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, false );
    }
 
-   private static TypeFunctionalityCreationResult CreateJSONBSupport( TypeFunctionalityCreationParameters param )
+   private static TypeFunctionalityCreationResult CreateJSONBSupport( PgSQLTypeDatabaseData param )
    {
       return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, true );
    }
