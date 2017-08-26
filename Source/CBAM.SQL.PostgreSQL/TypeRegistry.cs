@@ -171,7 +171,7 @@ namespace CBAM.SQL.PostgreSQL
    {
       /// <summary>
       /// Gets the value indicating whether this <see cref="PgSQLTypeFunctionality"/> supports reading the binary data format.
-      /// </summary><
+      /// </summary>
       /// <value>The value indicating whether this <see cref="PgSQLTypeFunctionality"/> supports reading the binary data format.</value>
       /// <seealso cref="DataFormat"/>
       Boolean SupportsReadingBinaryFormat { get; }
@@ -518,15 +518,15 @@ namespace CBAM.SQL.PostgreSQL
       /// <exception cref="ArgumentNullException">If <paramref name="value"/> is <c>null</c>.</exception>
       /// <exception cref="InvalidCastException">If <paramref name="value"/> is not of type <typeparamref name="TValue"/>.</exception>
       /// <exception cref="NotSupportedException">If given <paramref name="dataFormat"/> is not supported - either because required callback given to constructor was <c>null</c>, or because <paramref name="dataFormat"/> is something else than one of <see cref="DataFormat.Text"/> or <see cref="DataFormat.Binary"/>.</exception>
-      public BackendSizeInfo GetBackendSize( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper args, Object value, Boolean isArrayElement )
+      public BackendSizeInfo GetBackendSize( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement )
       {
          ArgumentValidator.ValidateNotNull( nameof( value ), value );
          switch ( dataFormat )
          {
             case DataFormat.Text:
-               return CheckDelegate( this._clr2TextSize, dataFormat )( boundData, args.Encoding, (TValue) value, isArrayElement );
+               return CheckDelegate( this._clr2TextSize, dataFormat )( boundData, helper.Encoding, (TValue) value, isArrayElement );
             case DataFormat.Binary:
-               return CheckDelegate( this._clr2BinarySize, dataFormat )( boundData, args.Encoding, (TValue) value, isArrayElement );
+               return CheckDelegate( this._clr2BinarySize, dataFormat )( boundData, helper.Encoding, (TValue) value, isArrayElement );
             default:
                throw new NotSupportedException( $"Data format {dataFormat} is not recognized." );
          }
@@ -546,15 +546,15 @@ namespace CBAM.SQL.PostgreSQL
       /// <exception cref="ArgumentNullException">If <paramref name="value"/> is <c>null</c>.</exception>
       /// <exception cref="InvalidCastException">If <paramref name="value"/> is not of type <typeparamref name="TValue"/>.</exception>
       /// <exception cref="NotSupportedException">If given <paramref name="dataFormat"/> is not supported - either because required callback given to constructor was <c>null</c>, or because <paramref name="dataFormat"/> is something else than one of <see cref="DataFormat.Text"/> or <see cref="DataFormat.Binary"/>.</exception>
-      public Task WriteBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement )
+      public Task WriteBackendValueAsync( DataFormat dataFormat, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, Object value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement )
       {
          ArgumentValidator.ValidateNotNull( nameof( value ), value );
          switch ( dataFormat )
          {
             case DataFormat.Text:
-               return CheckDelegate( this._clr2Text, dataFormat )( boundData, args, stream, (TValue) value, additionalInfoFromSize, isArrayElement );
+               return CheckDelegate( this._clr2Text, dataFormat )( boundData, helper, stream, (TValue) value, additionalInfoFromSize, isArrayElement );
             case DataFormat.Binary:
-               return CheckDelegate( this._clr2Binary, dataFormat )( boundData, args, stream, (TValue) value, additionalInfoFromSize, isArrayElement );
+               return CheckDelegate( this._clr2Binary, dataFormat )( boundData, helper, stream, (TValue) value, additionalInfoFromSize, isArrayElement );
             default:
                throw new NotSupportedException( $"Data format {dataFormat} is not recognized." );
          }
@@ -572,16 +572,16 @@ namespace CBAM.SQL.PostgreSQL
       public async ValueTask<Object> ReadBackendValueAsync(
          DataFormat dataFormat,
          PgSQLTypeDatabaseData boundData,
-         BackendABIHelper args,
+         BackendABIHelper helper,
          StreamReaderWithResizableBufferAndLimitedSize stream
          )
       {
          switch ( dataFormat )
          {
             case DataFormat.Binary:
-               return await CheckDelegate( this._binary2CLR, dataFormat )( boundData, args, stream );
+               return await CheckDelegate( this._binary2CLR, dataFormat )( boundData, helper, stream );
             case DataFormat.Text:
-               return await CheckDelegate( this._text2CLR, dataFormat )( boundData, args, stream );
+               return await CheckDelegate( this._text2CLR, dataFormat )( boundData, helper, stream );
             default:
                throw new NotSupportedException( $"Data format {dataFormat} is not recognized." );
          }
@@ -598,7 +598,7 @@ namespace CBAM.SQL.PostgreSQL
       }
 
       /// <summary>
-      /// Creates a new instance of <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> which will read and write whole data at once in its <see cref="ReadFromBackend{TValue}"/> and <see cref="WriteToBackend{TValue}"/> callbacks, respectively, and then call given <see cref="ReadFromBackendSync{TValue}"/> and <see cref="WriteToBackendSync{TValue}"/> callbacks, respectively.
+      /// Creates a new instance of <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> which will read and write whole data at once in its <see cref="ReadFromBackend{TValue}"/> and <see cref="WriteToBackend{TValue}"/> callbacks, respectively, and then call given <see cref="ReadFromBackendSync{TValue}"/> and <see cref="WriteToBackendSync{TValue, TResult}"/> callbacks, respectively.
       /// </summary>
       /// <param name="text2CLR">Synchronous <see cref="ReadFromBackendSync{TValue}"/> callback to deserialize textual data into CLR object.</param>
       /// <param name="binary2CLR">Synchronous <see cref="ReadFromBackendSync{TValue}"/> callback to deserialize binary data into CLR object.</param>
@@ -705,24 +705,104 @@ namespace CBAM.SQL.PostgreSQL
    }
 
    /// <summary>
-   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.ReadBackendValueAsync(DataFormat, PgSQLTypeDatabaseData, BackendABIHelper, StreamReaderWithResizableBufferAndLimitedSize)"/> method.
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.ReadBackendValueAsync"/> method.
    /// </summary>
    /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
    /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
    /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
    /// <param name="stream">The <see cref="StreamReaderWithResizableBufferAndLimitedSize"/> to use to read binary data from.</param>
-   /// <returns>Potentially asynchronously returns deserialized value from <paramref name=""/></returns>
+   /// <returns>Potentially asynchronously returns deserialized value from <paramref name="stream"/>.</returns>
+   /// <remarks>
+   /// The <see cref="DataFormat"/> is assumed to be known by this callback.
+   /// </remarks>
    public delegate ValueTask<TValue> ReadFromBackend<TValue>( PgSQLTypeDatabaseData dbData, BackendABIHelper helper, StreamReaderWithResizableBufferAndLimitedSize stream );
+
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.ChangeTypePgSQLToFramework"/> method.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="pgSQLObject">The object to change type.</param>
+   /// <param name="targetType">The type to change <paramref name="pgSQLObject"/> to.</param>
+   /// <returns>The object of given type.</returns>
+   /// <exception cref="ArgumentNullException">If <paramref name="pgSQLObject"/> is <c>null</c>.</exception>
+   /// <exception cref="InvalidCastException">If this <see cref="PgSQLTypeFunctionality"/> does not know how to change type of given <paramref name="pgSQLObject"/>.</exception>
    public delegate Object ChangePgSQLToSystem<TValue>( PgSQLTypeDatabaseData dbData, TValue pgSQLObject, Type targetType );
+
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.ChangeTypeFrameworkToPgSQL"/> method.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="systemObject">The object to change type to type recognized by this <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <returns>The object of type recognized by this <see cref="PgSQLTypeFunctionality"/>.</returns>
+   /// <exception cref="ArgumentNullException">If <paramref name="systemObject"/> is <c>null</c>.</exception>
+   /// <exception cref="InvalidCastException">If this <see cref="PgSQLTypeFunctionality"/> does not know how to change type of given <paramref name="systemObject"/>.</exception>
    public delegate TValue ChangeSystemToPgSQL<TValue>( PgSQLTypeDatabaseData dbData, Object systemObject );
-   public delegate TResult CalculateBackendSize<TValue, TResult>( PgSQLTypeDatabaseData boundData, IEncodingInfo encoding, TValue value, Boolean isArrayElement );
-   public delegate Task WriteToBackend<TValue>( PgSQLTypeDatabaseData boundData, BackendABIHelper args, StreamWriterWithResizableBufferAndLimitedSize stream, TValue value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
 
-   public delegate TValue ReadFromBackendSync<TValue>( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, Int32 count );
-   public delegate void WriteToBackendSync<TValue, TSizeInfo>( PgSQLTypeDatabaseData boundData, BackendABIHelper args, Byte[] array, Int32 offset, TValue value, TSizeInfo additionalInfoFromSize, Boolean isArrayElement );
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.GetBackendSize"/> method.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <typeparam name="TResult">The type of calculation result. The <see cref="DefaultPgSQLTypeFunctionality{TValue}.GetBackendSize"/> uses <see cref="BackendSizeInfo"/>, and <see cref="DefaultPgSQLTypeFunctionality{TValue}.CreateSingleBodyUnboundInfo"/> uses <see cref="EitherOr{T1, T2}"/> with <see cref="Int32"/> and <see cref="String"/> as type parameters.</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="encoding">The <see cref="IEncodingInfo"/> used for text (de)serialization.</param>
+   /// <param name="value">The value recognized by this <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <param name="isArrayElement">Whether the <paramref name="value"/> is being sent inside SQL array.</param>
+   /// <returns>The result of calculation.</returns>
+   public delegate TResult CalculateBackendSize<TValue, TResult>( PgSQLTypeDatabaseData dbData, IEncodingInfo encoding, TValue value, Boolean isArrayElement );
 
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/> in its <see cref="DefaultPgSQLTypeFunctionality{TValue}.WriteBackendValueAsync"/> method.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="stream">The <see cref="StreamWriterWithResizableBufferAndLimitedSize"/> to write binary data to.</param>
+   /// <param name="value">The CLR object to serialize.</param>
+   /// <param name="additionalInfoFromSize">The the <see cref="BackendSizeInfo"/>, as returned by <see cref="CalculateBackendSize{TValue, TResult}"/> callback.</param>
+   /// <param name="isArrayElement">Whether <paramref name="value"/> is being sent inside SQL array.</param>
+   /// <returns>Task which will complete once value has been written to <paramref name="stream"/>.</returns>
+   public delegate Task WriteToBackend<TValue>( PgSQLTypeDatabaseData dbData, BackendABIHelper helper, StreamWriterWithResizableBufferAndLimitedSize stream, TValue value, BackendSizeInfo additionalInfoFromSize, Boolean isArrayElement );
+
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}.CreateSingleBodyUnboundInfo"/>, to synchronously deserialize value from byte array containing whole data.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="array">The byte array containing whole data.</param>
+   /// <param name="offset">The offset in <paramref name="array"/> where to start reading.</param>
+   /// <param name="count">The amount of bytes to read from <paramref name="array"/>.</param>
+   /// <returns>The deserialized value.</returns>
+   public delegate TValue ReadFromBackendSync<TValue>( PgSQLTypeDatabaseData dbData, BackendABIHelper helper, Byte[] array, Int32 offset, Int32 count );
+
+   /// <summary>
+   /// This callback is used by <see cref="DefaultPgSQLTypeFunctionality{TValue}.CreateSingleBodyUnboundInfo"/>, to synchronously serialize value to byte array which has room for whole data.
+   /// </summary>
+   /// <typeparam name="TValue">The type of the value understood by <see cref="DefaultPgSQLTypeFunctionality{TValue}"/>.</typeparam>
+   /// <typeparam name="TSizeInfo">The type of size information (return type of <see cref="CalculateBackendSize{TValue, TResult}"/> callback).</typeparam>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="array">The byte array to write data to.</param>
+   /// <param name="offset">The offset in <paramref name="array"/> where to start writing.</param>
+   /// <param name="value">The vlue to serialize.</param>
+   /// <param name="additionalInfoFromSize">The result of calling the corresponding <see cref="CalculateBackendSize{TValue, TResult}"/>.</param>
+   /// <param name="isArrayElement">Whether the <paramref name="value"/> is inside an SQL array.</param>
+   public delegate void WriteToBackendSync<TValue, TSizeInfo>( PgSQLTypeDatabaseData dbData, BackendABIHelper helper, Byte[] array, Int32 offset, TValue value, TSizeInfo additionalInfoFromSize, Boolean isArrayElement );
+
+   /// <summary>
+   /// This class contains information contained within database of a single SQL type.
+   /// </summary>
    public sealed class PgSQLTypeDatabaseData
    {
+      /// <summary>
+      /// Creates a new instance of <see cref="PgSQLTypeDatabaseData"/> with given parameters.
+      /// </summary>
+      /// <param name="typeName">The textual name of the SQL type.</param>
+      /// <param name="typeID">The ID (<c>oid</c>) of the SQL type.</param>
+      /// <param name="arrayDelimiter">The textual delimiter character when values of this SQL type are within array.</param>
+      /// <param name="elementTypeID">The ID (<c>oid</c>) of element type, if this SQL type is an array.</param>
       public PgSQLTypeDatabaseData(
          String typeName,
          Int32 typeID,
@@ -736,53 +816,68 @@ namespace CBAM.SQL.PostgreSQL
          this.ElementTypeID = elementTypeID;
       }
 
+      /// <summary>
+      /// Gets the textual name of the SQL type.
+      /// </summary>
+      /// <value>The textual name of the SQL type.</value>
       public String TypeName { get; }
+
+      /// <summary>
+      /// Gets the ID (<c>oid</c>) of the SQL type.
+      /// </summary>
+      /// <value>The ID (<c>oid</c>) of the SQL type.</value>
       public Int32 TypeID { get; }
+
+      /// <summary>
+      /// Gets the ID (<c>oid</c>) of element type, if this SQL type is an array.
+      /// </summary>
+      /// <value>The ID (<c>oid</c>) of element type, if this SQL type is an array.</value>
       public Int32 ElementTypeID { get; }
-      public String ArrayDelimiter { get; } // String because we might get surrogate pairs here...
+
+      /// <summary>
+      /// Gets the textual delimiter character when values of this SQL type are within array.
+      /// </summary>
+      /// <value>The textual delimiter character when values of this SQL type are within array.</value>
+      /// <remarks>
+      /// This is <see cref="String"/> instead of <see cref="Char"/> in case we get exotic stuff like surrogate pairs here.
+      /// </remarks>
+      public String ArrayDelimiter { get; }
    }
 
+   /// <summary>
+   /// This class contains PostgreSQL-related extensions for types defined outside this assembly.
+   /// </summary>
    public static partial class CBAMExtensions
    {
 
-      public static Byte[] WritePgInt32( this Byte[] array, ref Int32 idx, Int32 value )
+      /// <summary>
+      /// Writes <see cref="Int32"/> value to this byte array, in endianness expected by PostgreSQL backend (big-endian).
+      /// </summary>
+      /// <param name="array">This <see cref="Byte"/> array.</param>
+      /// <param name="index">The index in <paramref name="array"/> where to write the <paramref name="value"/>.</param>
+      /// <param name="value">The <see cref="Int32"/> value to write.</param>
+      /// <returns>The <paramref name="array"/>.</returns>
+      /// <exception cref="NullReferenceException">If this <see cref="Byte"/> array is <c>null</c>.</exception>
+      /// <exception cref="IndexOutOfRangeException">If <paramref name="index"/> is out of valid range.</exception>
+      public static Byte[] WritePgInt32( this Byte[] array, ref Int32 index, Int32 value )
       {
-         array.WriteInt32BEToBytes( ref idx, value );
+         array.WriteInt32BEToBytes( ref index, value );
          return array;
       }
 
-      public static Int32 ReadPgInt32( this Byte[] array, ref Int32 idx )
+      /// <summary>
+      /// Reads <see cref="Int32"/> value from this byte array, in endianness specified by PostgreSQL backend (big-endien).
+      /// </summary>
+      /// <param name="array">This <see cref="Byte"/> array.</param>
+      /// <param name="index">The index in <paramref name="array"/> where to start reading for <see cref="Int32"/>value.</param>
+      /// <returns>Deserialized <see cref="Int32"/>.</returns>
+      /// <exception cref="NullReferenceException">If this <see cref="Byte"/> array is <c>null</c>.</exception>
+      /// <exception cref="IndexOutOfRangeException">If <paramref name="index"/> is out of valid range.</exception>
+      public static Int32 ReadPgInt32( this Byte[] array, ref Int32 index )
       {
-         return array.ReadInt32BEFromBytes( ref idx );
+         return array.ReadInt32BEFromBytes( ref index );
       }
 
-      public static Int16 ReadPgInt16( this Byte[] array, ref Int32 idx )
-      {
-         return array.ReadInt16BEFromBytes( ref idx );
-      }
-
-      public static Int32 ReadPgInt16Count( this Byte[] array, ref Int32 idx )
-      {
-         return array.ReadUInt16BEFromBytes( ref idx );
-      }
-
-      // TODO move to utilpack
-      public static Int32 CountOccurrances( this String str, String substring, StringComparison comparison )
-      {
-         var count = 0;
-
-         if ( substring != null && substring.Length > 0 )
-         {
-            var idx = 0;
-            while ( ( idx = str.IndexOf( substring, idx, comparison ) ) != -1 )
-            {
-               idx += substring.Length;
-               ++count;
-            }
-         }
-
-         return count;
-      }
    }
 }
 
@@ -790,6 +885,15 @@ public static partial class E_CBAM
 {
    private const Int32 NULL_BYTE_COUNT = -1;
 
+   /// <summary>
+   /// This is helper method to first read <see cref="Int32"/> as size of data incoming, and if it is greater or equal to <c>0</c>, invoke <see cref="PgSQLTypeFunctionality.ReadBackendValueAsync"/>, otherwise return <c>null</c>.
+   /// </summary>
+   /// <param name="typeFunctionality">This <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <param name="dataFormat">The <see cref="DataFormat"/> the value is being sent by backend.</param>
+   /// <param name="boundData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="stream">The <see cref="StreamReaderWithResizableBufferAndLimitedSize"/> to use to read binary data from.</param>
+   /// <returns>Asynchronously returns the CLR object deserialized from <paramref name="stream"/>, or <c>null</c>.</returns>
    public static async ValueTask<(Object Value, Int32 BytesReadFromStream)> ReadBackendValueCheckNull(
       this PgSQLTypeFunctionality typeFunctionality,
       DataFormat dataFormat,
@@ -820,6 +924,7 @@ public static partial class E_CBAM
             {
                try
                {
+                  // TODO this might not be necessary now with DisposeAsync delegate always called by AsyncEnumerator...
                   await limitedStream.SkipThroughRemainingBytes();
                }
                catch
@@ -837,16 +942,33 @@ public static partial class E_CBAM
       return (retVal, byteCount);
    }
 
-   public static BackendSizeInfo GetBackendTextSizeCheckNull( this PgSQLTypeFunctionality typeFunctionality, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement )
+   /// <summary>
+   /// This is helper method to first check whether given value is <c>null</c>, and then return <c>-1</c>, or invoke <see cref="PgSQLTypeFunctionality.GetBackendSize"/> for non-<c>null</c> values.
+   /// </summary>
+   /// <param name="typeFunctionality">This <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <param name="dataFormat">The <see cref="DataFormat"/> value is being sent to backend.</param>
+   /// <param name="dbData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="value">The value recognized by this <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <param name="isArrayElement">Whether the <paramref name="value"/> is being sent inside SQL array.</param>
+   /// <returns>The <see cref="BackendSizeInfo"/> object containing the byte count and optional custom information. Will return <c>-1</c> as byte count if <paramref name="value"/> is <c>null</c>.</returns>
+   public static BackendSizeInfo GetBackendSizeCheckNull( this PgSQLTypeFunctionality typeFunctionality, DataFormat dataFormat, PgSQLTypeDatabaseData dbData, BackendABIHelper helper, Object value, Boolean isArrayElement )
    {
-      return value == null ? new BackendSizeInfo( NULL_BYTE_COUNT ) : typeFunctionality.GetBackendSize( DataFormat.Text, boundData, helper, value, isArrayElement );
+      return value == null ? new BackendSizeInfo( NULL_BYTE_COUNT ) : typeFunctionality.GetBackendSize( dataFormat, dbData, helper, value, isArrayElement );
    }
 
-   public static BackendSizeInfo GetBackendBinarySizeCheckNull( this PgSQLTypeFunctionality typeFunctionality, PgSQLTypeDatabaseData boundData, BackendABIHelper helper, Object value, Boolean isArrayElement )
-   {
-      return value == null ? new BackendSizeInfo( NULL_BYTE_COUNT ) : typeFunctionality.GetBackendSize( DataFormat.Binary, boundData, helper, value, isArrayElement );
-   }
-
+   /// <summary>
+   /// This is helper method to first write the <see cref="BackendSizeInfo.ByteCount"/> property of <see cref="BackendSizeInfo"/> returned from <see cref="PgSQLTypeFunctionality.GetBackendSize"/>, and then, if it is is greater than <c>0</c>, call the <see cref="PgSQLTypeFunctionality.WriteBackendValueAsync"/> in order to write the rest of the data.
+   /// </summary>
+   /// <param name="typeFunctionality">This <see cref="PgSQLTypeFunctionality"/>.</param>
+   /// <param name="dataFormat">The <see cref="DataFormat"/> of the data, as expected by backend.</param>
+   /// <param name="boundData">The <see cref="PgSQLTypeDatabaseData"/> containing information about this type, specific to the database the <see cref="PgSQLConnection"/> is connected to.</param>
+   /// <param name="helper">The <see cref="BackendABIHelper"/> application binary interface helper.</param>
+   /// <param name="stream">The <see cref="StreamWriterWithResizableBufferAndLimitedSize"/> to write binary data to.</param>
+   /// <param name="value">The CLR object to serialize.</param>
+   /// <param name="additionalInfoFromSize">The the <see cref="BackendSizeInfo"/>, as returned by <see cref="PgSQLTypeFunctionality.GetBackendSize"/> method.</param>
+   /// <param name="isArrayElement">Whether <paramref name="value"/> is being sent inside SQL array.</param>
+   /// <returns>Asychronously returns after the <paramref name="value"/> has been serialized.</returns>
    public static async Task WriteBackendValueCheckNull(
       this PgSQLTypeFunctionality typeFunctionality,
       DataFormat dataFormat,
@@ -860,7 +982,7 @@ public static partial class E_CBAM
    {
       (var offset, var count) = stream.ReserveBufferSegment( sizeof( Int32 ) );
       stream.Buffer.WritePgInt32( ref offset, value == null ? NULL_BYTE_COUNT : additionalInfoFromSize.ByteCount );
-      if ( value != null && additionalInfoFromSize.ByteCount > 0 )
+      if ( additionalInfoFromSize.ByteCount > 0 )
       {
          await typeFunctionality.WriteBackendValueAsync( dataFormat, boundData, helper, stream, value, additionalInfoFromSize, isArrayElement );
       }

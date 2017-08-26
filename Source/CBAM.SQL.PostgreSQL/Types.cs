@@ -25,6 +25,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
+// TODO document these later.
+
+#pragma warning disable 1591
 namespace CBAM.SQL.PostgreSQL
 {
    // TODO implement IPgTypeWithBackendTextFormat
@@ -729,28 +732,28 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLDate
-   {
-      #region Properties
+   //public interface IPgSQLDate
+   //{
+   //   #region Properties
 
-      Int32 DayOfYear { get; }
+   //   Int32 DayOfYear { get; }
 
-      Int32 Year { get; }
+   //   Int32 Year { get; }
 
-      Int32 Month { get; }
+   //   Int32 Month { get; }
 
-      Int32 Day { get; }
+   //   Int32 Day { get; }
 
-      DayOfWeek DayOfWeek { get; }
+   //   DayOfWeek DayOfWeek { get; }
 
-      Int32 DaysSinceEra { get; }
+   //   Int32 DaysSinceEra { get; }
 
-      Boolean IsLeapYear { get; }
+   //   Boolean IsLeapYear { get; }
 
-      #endregion
-   }
+   //   #endregion
+   //}
 
-   public struct PgSQLDate : IEquatable<PgSQLDate>, IComparable, IComparable<PgSQLDate>, IPgSQLDate
+   public struct PgSQLDate : IEquatable<PgSQLDate>, IComparable, IComparable<PgSQLDate>//, IPgSQLDate
    {
       #region Consts
       public const Int32 MAX_YEAR = 5874897; // As per PostgreSQL documentation
@@ -1353,26 +1356,26 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLTime
-   {
-      #region Properties
+   //public interface IPgSQLTime
+   //{
+   //   #region Properties
 
-      Int64 Ticks { get; }
+   //   Int64 Ticks { get; }
 
-      Int32 Microseconds { get; }
+   //   Int32 Microseconds { get; }
 
-      Int32 Milliseconds { get; }
+   //   Int32 Milliseconds { get; }
 
-      Int32 Seconds { get; }
+   //   Int32 Seconds { get; }
 
-      Int32 Minutes { get; }
+   //   Int32 Minutes { get; }
 
-      Int32 Hours { get; }
+   //   Int32 Hours { get; }
 
-      #endregion
-   }
+   //   #endregion
+   //}
 
-   public struct PgSQLTime : IEquatable<PgSQLTime>, IComparable, IComparable<PgSQLTime>, IPgSQLTime
+   public struct PgSQLTime : IEquatable<PgSQLTime>, IComparable, IComparable<PgSQLTime>//, IPgSQLTime
    {
       #region Static
 
@@ -2178,20 +2181,20 @@ namespace CBAM.SQL.PostgreSQL
       #endregion
    }
 
-   public interface IPgSQLTimeTZ : IPgSQLTime
-   {
-      #region Properties
+   //public interface IPgSQLTimeTZ : IPgSQLTime
+   //{
+   //   #region Properties
 
-      PgSQLTime LocalTime { get; }
+   //   PgSQLTime LocalTime { get; }
 
-      PgSQLTimeZone TimeZone { get; }
+   //   PgSQLTimeZone TimeZone { get; }
 
-      PgSQLTime UTCTime { get; }
+   //   PgSQLTime UTCTime { get; }
 
-      #endregion
-   }
+   //   #endregion
+   //}
 
-   public struct PgSQLTimeTZ : IEquatable<PgSQLTimeTZ>, IComparable, IComparable<PgSQLTimeTZ>, IPgSQLTimeTZ
+   public struct PgSQLTimeTZ : IEquatable<PgSQLTimeTZ>, IComparable, IComparable<PgSQLTimeTZ>//, IPgSQLTimeTZ
    {
       #region Static
 
@@ -2614,22 +2617,22 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public interface IPgSQLTimestamp
-   {
-      #region Properties
+   //public interface IPgSQLTimestamp
+   //{
+   //   #region Properties
 
-      Boolean IsFinite { get; }
+   //   Boolean IsFinite { get; }
 
-      Boolean IsInfinity { get; }
+   //   Boolean IsInfinity { get; }
 
-      Boolean IsMinusInfinity { get; }
+   //   Boolean IsMinusInfinity { get; }
 
-      PgSQLDate Date { get; }
+   //   PgSQLDate Date { get; }
 
-      #endregion
-   }
+   //   #endregion
+   //}
 
-   public struct PgSQLTimestamp : IEquatable<PgSQLTimestamp>, IComparable, IComparable<PgSQLTimestamp>, IPgSQLDate, IPgSQLTime, IPgSQLTimestamp
+   public struct PgSQLTimestamp : IEquatable<PgSQLTimestamp>, IComparable, IComparable<PgSQLTimestamp>//, IPgSQLDate, IPgSQLTime, IPgSQLTimestamp
    {
       #region Inner types
 
@@ -3263,7 +3266,7 @@ namespace CBAM.SQL.PostgreSQL
 
    }
 
-   public struct PgSQLTimestampTZ : IEquatable<PgSQLTimestampTZ>, IComparable, IComparable<PgSQLTimestampTZ>, IPgSQLDate, IPgSQLTimeTZ, IPgSQLTimestamp
+   public struct PgSQLTimestampTZ : IEquatable<PgSQLTimestampTZ>, IComparable, IComparable<PgSQLTimestampTZ>//, IPgSQLDate, IPgSQLTimeTZ, IPgSQLTimestamp
    {
       #region Static
 
@@ -3934,6 +3937,8 @@ namespace CBAM.SQL.PostgreSQL
 
 
 }
+
+#pragma warning restore 1591
 
 public static partial class E_CBAM
 {

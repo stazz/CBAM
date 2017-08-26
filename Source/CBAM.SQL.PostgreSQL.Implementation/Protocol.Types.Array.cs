@@ -112,7 +112,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             var elementInfo = this._elementTypeInfo.Value;
             foreach ( var elem in array )
             {
-               var sizeInfo = elementInfo.Functionality.GetBackendBinarySizeCheckNull( elementInfo.DatabaseData, helper, elem, true );
+               var sizeInfo = elementInfo.Functionality.GetBackendSizeCheckNull( DataFormat.Binary, elementInfo.DatabaseData, helper, elem, true );
                elementSizes[i++] = sizeInfo;
                size += sizeof( Int32 );
                if ( sizeInfo.ByteCount > 0 )
@@ -163,7 +163,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             var j = 0;
             foreach ( var elem in array )
             {
-               elementSizes[j++] = elementInfo.Functionality.GetBackendTextSizeCheckNull( elementInfo.DatabaseData, helper, elem, true );
+               elementSizes[j++] = elementInfo.Functionality.GetBackendSizeCheckNull( DataFormat.Text, elementInfo.DatabaseData, helper, elem, true );
             }
 
             // All the space taken by array structure information
