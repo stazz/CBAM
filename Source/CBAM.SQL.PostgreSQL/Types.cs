@@ -26,6 +26,8 @@ using System.Threading.Tasks;
 using UtilPack;
 
 // TODO document these later.
+// TODO when (if?) we will have extension properties ( https://www.infoq.com/news/2017/08/CSharp-8 , under "extension everything" ), most of the properties of these types can be refactored into extension properties.
+// Writing them now as extension methods would not be feasible in terms of user experience.
 
 #pragma warning disable 1591
 namespace CBAM.SQL.PostgreSQL
