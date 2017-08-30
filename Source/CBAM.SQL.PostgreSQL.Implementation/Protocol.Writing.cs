@@ -722,7 +722,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       CopyData = (Byte) 'd',
    }
 
-   public static partial class CBAMExtensions
+   internal static partial class CBAMExtensions
    {
       public static Byte[] WritePgInt16( this Byte[] array, ref Int32 idx, Int32 value )
       {
@@ -746,14 +746,14 @@ public static partial class E_CBAM
 {
 
 
-   public static Int32 GetStringSize( this BackendABIHelper args, String str, ResizableArray<Byte> array )
+   internal static Int32 GetStringSize( this BackendABIHelper args, String str, ResizableArray<Byte> array )
    {
       var retVal = String.IsNullOrEmpty( str ) ? 1 : ( args.Encoding.Encoding.GetByteCount( str ) + 1 );
       array.CurrentMaxCapacity = retVal;
       return retVal;
    }
 
-   public static async Task WriteString( this BackendABIHelper args, Stream stream, String str, CancellationToken token, ResizableArray<Byte> array )
+   internal static async Task WriteString( this BackendABIHelper args, Stream stream, String str, CancellationToken token, ResizableArray<Byte> array )
    {
       //if ( !String.IsNullOrEmpty( str ) )
       //{

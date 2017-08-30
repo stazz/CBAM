@@ -26,6 +26,7 @@ using UtilPack;
 using CBAM.Abstractions.Implementation;
 using UtilPack.ResourcePooling;
 using UtilPack.TabularData;
+using System.Net;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
@@ -330,20 +331,60 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal abstract class PgSQLConnectionFactory<TConnectionCreationParameters> : ConnectionFactorySU<PgSQLConnectionImpl, TConnectionCreationParameters, PostgreSQLProtocol>
+   internal sealed class PgSQLConnectionFactory : ConnectionFactorySU<PgSQLConnectionImpl, PgSQLConnectionCreationInfo, PostgreSQLProtocol>
    {
       private readonly BinaryStringPool _stringPool;
 
+#if !NETSTANDARD1_0
+      private readonly ReadOnlyResettableAsyncLazy<IPAddress> _remoteAddress;
+#endif
+
       public PgSQLConnectionFactory(
          IEncodingInfo encoding,
-         Boolean connectionsOwnStringPool
+         PgSQLConnectionCreationInfo creationInfo
          )
       {
          this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
-         if ( !connectionsOwnStringPool )
+         if ( !( creationInfo.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? default ) )
          {
             this._stringPool = BinaryStringPoolFactory.NewConcurrentBinaryStringPool( encoding.Encoding );
          }
+
+#if !NETSTANDARD1_0
+         this._remoteAddress = new ReadOnlyResettableAsyncLazy<IPAddress>( async () =>
+         {
+            var hostName = creationInfo.CreationData?.Connection?.Host;
+            if ( !IPAddress.TryParse( hostName, out IPAddress thisAddress ) )
+            {
+               var allIPs = await
+#if NETSTANDARD1_3
+               ( creationInfo.DNSResolve?.Invoke( hostName ) ?? new ValueTask<IPAddress[]>( (IPAddress[]) null ) )
+#else
+
+#if NET40
+                  DnsEx
+#else
+                  Dns
+#endif
+                  .GetHostAddressesAsync( hostName )
+#endif
+               ;
+
+               if ( allIPs.Length > 1 )
+               {
+                  thisAddress = creationInfo.SelectRemoteIPAddress?.Invoke( allIPs );
+               }
+
+               if ( thisAddress == null )
+               {
+                  thisAddress = allIPs.GetElementOrDefault( 0 );
+               }
+            }
+
+            return thisAddress;
+
+         } );
+#endif
       }
 
       protected override ValueTask<PgSQLConnectionImpl> CreateConnection( PostgreSQLProtocol functionality )
@@ -365,22 +406,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return functionality?.Stream;
       }
 
-      protected IEncodingInfo Encoding { get; }
+      private IEncodingInfo Encoding { get; }
 
-      protected BinaryStringPool GetStringPoolForNewConnection()
+      private BinaryStringPool GetStringPoolForNewConnection()
       {
          return this._stringPool ?? BinaryStringPoolFactory.NewNotConcurrentBinaryStringPool();
-      }
-   }
-
-#if !NETSTANDARD1_0
-   internal sealed class PgSQLConnectionFactory : PgSQLConnectionFactory<PgSQLConnectionCreationInfo>
-   {
-      public PgSQLConnectionFactory(
-         IEncodingInfo encoding,
-         Boolean connectionsOwnStringPool
-         ) : base( encoding, connectionsOwnStringPool )
-      {
       }
 
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
@@ -388,43 +418,45 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          CancellationToken token
          )
       {
-         var tuple = await PostgreSQLProtocol.PerformStartup(
-            new PgSQLConnectionVendorFunctionalityImpl(),
-            parameters,
-            this.Encoding,
-            this.GetStringPoolForNewConnection(),
-            token
-            );
-         // TODO event: StartupNoticeOccurred
-         return tuple.Protocol;
-      }
-   }
+         var streamFactory = parameters.StreamFactory;
+
+         (PostgreSQLProtocol, List<PgSQLError>) tuple;
+#if !NETSTANDARD1_0
+         if ( streamFactory != null )
+         {
 #endif
-
-   internal sealed class PgSQLConnectionFactoryForReadyMadeStreams : PgSQLConnectionFactory<PgSQLConnectionCreationInfoForReadyMadeStreams>
-   {
-      public PgSQLConnectionFactoryForReadyMadeStreams(
-         IEncodingInfo encoding,
-         Boolean connectionsOwnStringPool
-         ) : base( encoding, connectionsOwnStringPool )
-      {
-      }
-
-      protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
-         PgSQLConnectionCreationInfoForReadyMadeStreams parameters,
-         CancellationToken token
-         )
-      {
-         var tuple = await PostgreSQLProtocol.PerformStartup(
-            new PgSQLConnectionVendorFunctionalityImpl(),
-            parameters.Initialization,
-            this.Encoding,
-            this.GetStringPoolForNewConnection(),
-            token,
-            parameters.Stream
-            );
+            tuple = await PostgreSQLProtocol.PerformStartup(
+               new PgSQLConnectionVendorFunctionalityImpl(),
+               parameters.CreationData?.Initialization,
+               this.Encoding,
+               this.GetStringPoolForNewConnection(),
+               token,
+#if NETSTANDARD1_0
+               ArgumentValidator.ValidateNotNull(nameof(streamFactory), 
+#endif
+               streamFactory
+#if NETSTANDARD1_0
+               )
+#endif
+               ()
+               );
+#if !NETSTANDARD1_0
+         }
+         else
+         {
+            tuple = await PostgreSQLProtocol.PerformStartup(
+               new PgSQLConnectionVendorFunctionalityImpl(),
+               parameters,
+               await this._remoteAddress,
+               this.Encoding,
+               this.GetStringPoolForNewConnection(),
+               token
+               );
+         }
+#endif
          // TODO event: StartupNoticeOccurred
-         return tuple.Protocol;
+         return tuple.Item1;
       }
    }
+
 }

@@ -786,11 +786,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-         // Just do "SELECT 1"; to get any notifications
-         var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
-         // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
-         enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-         await enumerator.EnumerateAsync( null );
+            // Just do "SELECT 1"; to get any notifications
+            var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
+            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+            enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+            await enumerator.EnumerateAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -830,28 +830,19 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
          PgSQLConnectionCreationInfo creationParameters,
+         IPAddress remoteAddress,
          IEncodingInfo encoding,
          BinaryStringPool stringPool,
          CancellationToken token
          )
       {
-         IPAddress GetAddressFromHost( String hostToParse )
-         {
-            if ( !IPAddress.TryParse( hostToParse, out IPAddress thisAddress ) )
-            {
-               thisAddress = creationParameters.DNS?.Invoke( hostToParse );
-            }
-
-            return thisAddress;
-         }
 
          var creationData = creationParameters.CreationData;
          var connectionConfig = creationData?.Connection ?? throw new ArgumentException( "Please specify connection configuration." );
          var remoteHost = connectionConfig?.Host ?? throw new ArgumentException( "Please specify remote host in connection configuration." );
-         var remoteAddress = GetAddressFromHost( remoteHost );
          if ( remoteAddress == null )
          {
-            throw new InvalidOperationException( "No remote address supplied, either via host property, or via DNS event." );
+            throw new InvalidOperationException( "No remote address supplied, either via host property, or via selection callback." );
          }
 
          var remoteEP = new IPEndPoint( remoteAddress, connectionConfig?.Port ?? throw new ArgumentException( "Please specify remote port in connection configuration." ) );
@@ -864,9 +855,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             ProtocolType.Tcp
             );
          }
-         var localEP = !String.IsNullOrEmpty( connectionConfig.LocalHost ) && connectionConfig.LocalPort > 0 ?
-            new IPEndPoint( GetAddressFromHost( connectionConfig.LocalHost ), connectionConfig.LocalPort ) :
-            null;
+         var localEP = creationParameters.SelectLocalIPEndPoint?.Invoke( remoteEP );
 
          async Task<Stream> InitNetworkStream( Socket thisSocket )
          {
@@ -906,7 +895,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                      {
                         var clientCerts = new System.Security.Cryptography.X509Certificates.X509CertificateCollection();
                         creationParameters.ProvideClientCertificates?.Invoke( clientCerts );
-                        sslStream = provideSSLStream.Invoke( stream, false, creationParameters.ValidateServerCertificate, creationParameters.SelectLocalCertificate, out AuthenticateAsClientAsync authenticateAsClient );
+                        sslStream = provideSSLStream( stream, false, creationParameters.ValidateServerCertificate, creationParameters.SelectLocalCertificate, out AuthenticateAsClientAsync authenticateAsClient );
                         if ( isSSLRequired )
                         {
                            if ( sslStream == null )
@@ -920,7 +909,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         }
                         if ( sslStream != null && authenticateAsClient != null )
                         {
-                           await authenticateAsClient( sslStream, remoteHost, clientCerts, connectionConfig.SSLProtocols, true )();
+                           await authenticateAsClient( sslStream, remoteHost, clientCerts, connectionConfig.SSLProtocols, true );
                            stream = sslStream;
                         }
                      }

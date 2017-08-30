@@ -471,7 +471,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 public static partial class E_CBAM
 {
-   public static Boolean IsOfValue( this Char? nullable, Char value )
+   internal static Boolean IsOfValue( this Char? nullable, Char value )
    {
       return nullable.HasValue && nullable.Value == value;
    }
