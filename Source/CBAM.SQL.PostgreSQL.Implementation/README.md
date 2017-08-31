@@ -22,10 +22,18 @@ pool.UseResourceAsync( async pgConnection => pgConnection
   .PrepareStatementForExecution( "SELECT 1" )
   .EnumerateSQLRowsAsync( async row => Console.WriteLine( await row.GetValueAsync<Int32>( 0 ) ) )
   );
+
+// Elsewhere, e.g. maybe in a separate background thread/loop:
+// This will close all connections that has been idle in a pool for over one minute
+await pool.CleanUpAsync( TimeSpan.FromMinutes( 1 ) );
+
+// It is also possible to completely dispose of the pool, in synchronous matter (this will not affect connections currently in use via UseResourceAsync method)
+pool.Dispose();
+
 ```
 
 The configuration file in the example above should mimic the structure of `PgSQLConnectionCreationInfoData` class.
-For example, it could be something like this:
+Here is one example of structurally valid configuration file:
 ```json
 {
    "Connection": {

@@ -57,8 +57,8 @@
     <PackageReleaseNotes>Added documentation. Notification events are now fired only during call of CheckNotificationsAsync method of PgSQLConnection interface.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL API</Title>
-    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
-    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 

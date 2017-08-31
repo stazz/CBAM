@@ -56,8 +56,8 @@
     <PackageReleaseNotes>Added documentation.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data</PackageTags>
     <Title>Skeleton Implementations for CBAM SQL API</Title>
-    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
-    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 

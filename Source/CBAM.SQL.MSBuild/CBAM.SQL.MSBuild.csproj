@@ -46,8 +46,8 @@
     <PackageReleaseNotes>Updating to 1.0.0 of UtilPack.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
     <Title>SQL-Oriented MSBuild Tasks</Title>
-    <PackageProjectUrl>https://github.com/CometaSolutions/CBAM</PackageProjectUrl>
-    <RepositoryUrl>$(PackageProjectUrl)</RepositoryUrl>
+    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 

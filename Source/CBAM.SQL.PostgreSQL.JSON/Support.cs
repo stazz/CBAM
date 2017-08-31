@@ -26,40 +26,71 @@ using System.Text;
 using System.Threading.Tasks;
 using UtilPack.ResourcePooling;
 
-public static partial class E_CBAM
+namespace CBAM.SQL.PostgreSQL.JSON
 {
-   public static void EnableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
+   /// <summary>
+   /// This class contains extension methods for types defined in other assemblies.
+   /// </summary>
+   public static class CBAMExtensions
    {
-      pool.AfterResourceCreationEvent += Pool_AfterConnectionCreationEvent;
-   }
+      /// <summary>
+      /// This method will add support for <c>json</c> and <c>jsonb</c> PostgreSQL types for all connections instantiated by this <see cref="AsyncResourcePoolObservable{TResource}"/>.
+      /// </summary>
+      /// <param name="pool">This <see cref="AsyncResourcePoolObservable{TResource}"/>.</param>
+      /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePoolObservable{TResource}"/> is <c>null</c>.</exception>
+      /// <remarks>
+      /// The "support" here means that the value returned by <see cref="UtilPack.TabularData.AsyncDataColumn.TryGetValueAsync"/> method is directly of type <see cref="JObject"/>, <see cref="JArray"/>, and <see cref="JValue"/>, without any further need to parse etc process the value.
+      /// </remarks>
+      public static void EnableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
+      {
+         pool.AfterResourceCreationEvent += Pool_AfterConnectionCreationEvent;
+      }
 
-   public static void DisableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
-   {
-      pool.AfterResourceCreationEvent -= Pool_AfterConnectionCreationEvent;
-   }
+      /// <summary>
+      /// This method will remove support for <c>json</c> and <c>jsonb</c> PostgreSQL types for all connections instantied by this <see cref="AsyncResourcePoolObservable{TResource}"/>.
+      /// </summary>
+      /// <param name="pool">This <see cref="AsyncResourcePoolObservable{TResource}"/>.</param>
+      /// <exception cref="NullReferenceException">If this <see cref="AsyncResourcePoolObservable{TResource}"/> is <c>null</c>.</exception>
+      /// <remarks>
+      /// The "support" here means that the value returned by <see cref="UtilPack.TabularData.AsyncDataColumn.TryGetValueAsync"/> method is directly of type <see cref="JObject"/>, <see cref="JArray"/>, and <see cref="JValue"/>, without any further need to parse etc process the value.
+      /// If this <paramref name="pool"/> has cached connections, the support will not be removed from them.
+      /// </remarks>
+      public static void DisableJSONSupport( this AsyncResourcePoolObservable<PgSQLConnection> pool )
+      {
+         pool.AfterResourceCreationEvent -= Pool_AfterConnectionCreationEvent;
+      }
 
-   private static void Pool_AfterConnectionCreationEvent( AfterAsyncResourceCreationEventArgs<PgSQLConnection> e )
-   {
-      e.AddAwaitable( e.Resource.AddJSONSupportAsync() );
-   }
+      private static void Pool_AfterConnectionCreationEvent( AfterAsyncResourceCreationEventArgs<PgSQLConnection> e )
+      {
+         e.AddAwaitable( e.Resource.AddJSONSupportAsync() );
+      }
 
-   public static async Task AddJSONSupportAsync( this PgSQLConnection connection )
-   {
-      // TODO detect if we already added support...
-      await connection.TypeRegistry.AddTypeFunctionalitiesAsync(
-         ("json", typeof( JToken ), CreateJSONSupport),
-         ("jsonb", typeof( JToken ), CreateJSONBSupport)
-         );
+      /// <summary>
+      /// This method will add support for <c>json</c> and <c>jsonb</c> PostgreSQL types for this specific <see cref="PgSQLConnection"/>.
+      /// </summary>
+      /// <param name="connection">This <see cref="PgSQLConnection"/>.</param>
+      /// <returns>A task which on completion has added support for <c>json</c> and <c>jsonb</c> PostgreSQL types for this <see cref="PgSQLConnection"/>.</returns>
+      /// <remarks>
+      /// The "support" here means that the value returned by <see cref="UtilPack.TabularData.AsyncDataColumn.TryGetValueAsync"/> method is directly of type <see cref="JObject"/>, <see cref="JArray"/>, and <see cref="JValue"/>, without any further need to parse etc process the value.
+      /// </remarks>
+      public static async Task AddJSONSupportAsync( this PgSQLConnection connection )
+      {
+         // TODO detect if we already added support...
+         await connection.TypeRegistry.AddTypeFunctionalitiesAsync(
+            ("json", typeof( JToken ), CreateJSONSupport),
+            ("jsonb", typeof( JToken ), CreateJSONBSupport)
+            );
 
-   }
+      }
 
-   private static TypeFunctionalityCreationResult CreateJSONSupport( PgSQLTypeDatabaseData param )
-   {
-      return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, false );
-   }
+      private static TypeFunctionalityCreationResult CreateJSONSupport( PgSQLTypeDatabaseData param )
+      {
+         return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, false );
+      }
 
-   private static TypeFunctionalityCreationResult CreateJSONBSupport( PgSQLTypeDatabaseData param )
-   {
-      return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, true );
+      private static TypeFunctionalityCreationResult CreateJSONBSupport( PgSQLTypeDatabaseData param )
+      {
+         return new TypeFunctionalityCreationResult( DefaultPgSQLJSONTypeFunctionality.Instance, true );
+      }
    }
 }
