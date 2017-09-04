@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL", "CBAM.SQL\CBAM.SQL.csproj", "{83108C39-24E6-4605-AE25-1F1A9872F64F}"
 EndProject
@@ -18,8 +18,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation", "CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj", "{0F1E2844-8622-4F66-A9DE-8E10EB44706A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.JSON", "CBAM.SQL.PostgreSQL.JSON\CBAM.SQL.PostgreSQL.JSON.csproj", "{B436E209-2B49-4759-9891-93F193695345}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.MSBuild.Abstractions", "CBAM.MSBuild.Abstractions\CBAM.MSBuild.Abstractions.csproj", "{B7366C82-4AC8-4F3C-AED9-0E57E7C7DCB3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.MSBuild", "CBAM.SQL.MSBuild\CBAM.SQL.MSBuild.csproj", "{86884EC7-6915-4A88-9214-91320877019B}"
 EndProject
@@ -63,10 +61,6 @@ Global
 		{B436E209-2B49-4759-9891-93F193695345}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B436E209-2B49-4759-9891-93F193695345}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B436E209-2B49-4759-9891-93F193695345}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B7366C82-4AC8-4F3C-AED9-0E57E7C7DCB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B7366C82-4AC8-4F3C-AED9-0E57E7C7DCB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B7366C82-4AC8-4F3C-AED9-0E57E7C7DCB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B7366C82-4AC8-4F3C-AED9-0E57E7C7DCB3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{86884EC7-6915-4A88-9214-91320877019B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{86884EC7-6915-4A88-9214-91320877019B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86884EC7-6915-4A88-9214-91320877019B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -78,5 +72,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {095D38D1-3875-4616-B324-C66D56B7ECF5}
 	EndGlobalSection
 EndGlobal

@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.MSBuild.Abstractions;
 using Microsoft.Build.Framework;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UtilPack;
@@ -31,43 +31,70 @@ using UtilPack.AsyncEnumeration;
 
 namespace CBAM.SQL.MSBuild
 {
+   /// <summary>
+   /// This task extends <see cref="AbstractSQLConnectionUsingTask"/> in order to implement SQL dump functionality: executing SQL statements located in some file(s) against the database.
+   /// </summary>
    public class ExecuteSQLStatementsTask : AbstractSQLConnectionUsingTask
    {
+      /// <summary>
+      /// Creates a new instance of <see cref="ExecuteSQLStatementsTask"/> with given callback to load NuGet assemblies.
+      /// </summary>
+      /// <param name="nugetResolver">The callback to asynchronously load assembly based on NuGet package ID and version.</param>
+      /// <seealso cref="UtilPack.ResourcePooling.MSBuild.AbstractResourceUsingTask{TResource}(TNuGetPackageResolverCallback)"/>
       public ExecuteSQLStatementsTask( TNuGetPackageResolverCallback nugetResolver )
          : base( nugetResolver )
       {
 
       }
 
-      protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
+      /// <summary>
+      /// This method implements <see cref="UtilPack.ResourcePooling.MSBuild.AbstractResourceUsingTask{TResource}.CheckTaskParametersBeforeResourcePoolUsage"/> and checks that all file paths passed via <see cref="SQLFilePaths"/> property exist.
+      /// </summary>
+      /// <returns><c>true</c> if all file paths passed via <see cref="SQLFilePaths"/> property exist; <c>false</c> otherwise.</returns>
+      protected override Boolean CheckTaskParametersBeforeResourcePoolUsage()
       {
-         return true;
+         return this.GetAllFilePaths().All( t =>
+         {
+            var retVal = false;
+            try
+            {
+               retVal = File.Exists( t.Item2 );
+            }
+            catch
+            {
+
+            }
+            if ( !retVal )
+            {
+               this.Log.LogError( $"Path \"{t.Item2}\" did not exist or was invalid." );
+            }
+            return retVal;
+         } );
       }
 
-      //protected override Boolean CheckTaskParametersBeforeConnectionPoolUsage()
-      //{
-      //   var fp = Path.GetFullPath( this.SQLStatementsFilePath );
-      //   var retVal = File.Exists( fp );
-      //   if ( !retVal )
-      //   {
-      //      this.Log.LogError( "SQL statements \"{0}\" file does not exist", fp );
-      //   }
-      //   return retVal;
-
-      //}
-
-      protected override async System.Threading.Tasks.Task UseConnection( SQLConnection connection )
+      private IEnumerable<(ITaskItem, String)> GetAllFilePaths() => this.SQLFilePaths.Select( f =>
       {
-         Encoding encoding;
-         var encodingName = this.FileEncoding;
-         if ( String.IsNullOrEmpty( encodingName ) )
+         var path = f.GetMetadata( "FullPath" );
+         try
          {
-            encoding = Encoding.UTF8;
+            path = Path.GetFullPath( path );
          }
-         else
+         catch
          {
-            encoding = Encoding.GetEncoding( encodingName );
+
          }
+
+         return (f, path);
+      } );
+
+      /// <summary>
+      /// This method implements <see cref="UtilPack.ResourcePooling.MSBuild.AbstractResourceUsingTask{TResource}.UseResource(TResource)"/> and sequentially executes SQL statements from files given in <see cref="SQLFilePaths"/>.
+      /// </summary>
+      /// <param name="connection">The <see cref="SQLConnection"/> acquired from the connection pool loaded by <see cref="UtilPack.ResourcePooling.MSBuild.AbstractResourceUsingTask{TResource}"/>.</param>
+      /// <returns>Always asynchronously returns <c>true</c>.</returns>
+      protected override async System.Threading.Tasks.Task<Boolean> UseResource( SQLConnection connection )
+      {
+         var defaultEncoding = GetEncoding( this.DefaultFileEncoding ) ?? Encoding.UTF8;
 
          connection.BeforeEnumerationStart += this.Connection_BeforeStatementExecutionStart;
          connection.AfterEnumerationItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
@@ -78,53 +105,38 @@ namespace CBAM.SQL.MSBuild
             connection.AfterEnumerationItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
          } ) )
          {
-            foreach ( var item in this.SQLFilePaths )
+            foreach ( var tuple in this.GetAllFilePaths() )
             {
-               var path = item.GetMetadata( "FullPath" );
-               var exists = false;
+               var path = tuple.Item2;
+
                try
                {
-                  path = Path.GetFullPath( path );
-                  exists = File.Exists( path );
-               }
-               catch
-               {
-                  // Ignore
-               }
-
-               if ( exists )
-               {
-                  try
+                  using ( var fs = File.Open( path, FileMode.Open, FileAccess.Read, FileShare.Read ) )
                   {
-                     using ( var fs = File.Open( path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read ) )
-                     {
-                        this.Log.LogMessage(
-                           MessageImportance.High,
-                           "Executed {0} statements from \"{1}\".",
-                           await connection.ExecuteStatementsFromStreamAsync(
-                              fs,
-                              encoding,
-                              onException: exc =>
-                              {
-                                 this.Log.LogError( exc.ToString() );
-                                 return WhenExceptionInMultipleStatements.Continue;
-                              }
-                           ),
-                           path
-                           );
-                     }
-                  }
-                  catch ( Exception exc )
-                  {
-                     this.Log.LogErrorFromException( exc );
+                     this.Log.LogMessage(
+                        MessageImportance.High,
+                        "Executed {0} statements from \"{1}\".",
+                        await connection.ExecuteStatementsFromStreamAsync(
+                           fs,
+                           GetEncoding( tuple.Item1.GetMetadata( "Encoding" ) ) ?? defaultEncoding,
+                           onException: exc =>
+                           {
+                              this.Log.LogError( exc.ToString() );
+                              return WhenExceptionInMultipleStatements.Continue;
+                           }
+                        ),
+                        path
+                        );
                   }
                }
-               else
+               catch ( Exception exc )
                {
-                  this.Log.LogWarning( "Path {0} did not exist or was invalid.", path );
+                  this.Log.LogErrorFromException( exc );
                }
             }
          }
+
+         return true;
       }
 
       private void Connection_BeforeStatementExecutionStart( EnumerationStartedEventArgs<SQLStatementBuilderInformation> args )
@@ -140,9 +152,32 @@ namespace CBAM.SQL.MSBuild
          }
       }
 
+      /// <summary>
+      /// Gets or sets the paths for files containing SQL statements to execute.
+      /// </summary>
+      /// <value>The paths for files containing SQL statements to execute.</value>
+      /// <remarks>
+      /// Each item may have <c>"Encoding"</c> metadata, which will be used if specified.
+      /// Otherwise, the encoding will be the one specified by <see cref="DefaultFileEncoding"/>.
+      /// </remarks>
       [Required]
       public ITaskItem[] SQLFilePaths { get; set; }
 
-      public String FileEncoding { get; set; }
+      /// <summary>
+      /// Gets or sets the default <see cref="Encoding"/> for the files specified in <see cref="SQLFilePaths"/> property.
+      /// </summary>
+      /// <value>The default <see cref="Encoding"/> for the files specified in <see cref="SQLFilePaths"/> property.</value>
+      /// <remarks>
+      /// The value is transformed into <see cref="Encoding"/> by using <see cref="Encoding.GetEncoding(string)"/> property.
+      /// If this property is not specified, the <see cref="Encoding.UTF8"/> encoding will be used.
+      /// </remarks>
+      public String DefaultFileEncoding { get; set; }
+
+      private static Encoding GetEncoding( String encodingName )
+      {
+         return String.IsNullOrEmpty( encodingName ) ?
+            null :
+            Encoding.GetEncoding( encodingName );
+      }
    }
 }

@@ -387,12 +387,20 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 #endif
       }
 
+      public override void ResetFactoryState()
+      {
+         this._stringPool.ClearPool();
+#if !NETSTANDARD1_0
+         this._remoteAddress.Reset();
+#endif
+      }
+
       protected override ValueTask<PgSQLConnectionImpl> CreateConnection( PostgreSQLProtocol functionality )
       {
          return new ValueTask<PgSQLConnectionImpl>( new PgSQLConnectionImpl( functionality, new PgSQLDatabaseMetaData( functionality ) ) );
       }
 
-      protected override ResourceAcquireInfo<PgSQLConnectionImpl> CreateConnectionAcquireInfo( PostgreSQLProtocol functionality, PgSQLConnectionImpl connection )
+      protected override AsyncResourceAcquireInfo<PgSQLConnectionImpl> CreateConnectionAcquireInfo( PostgreSQLProtocol functionality, PgSQLConnectionImpl connection )
       {
          return new PgSQLConnectionAcquireInfo(
             connection,
@@ -425,21 +433,21 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( streamFactory != null )
          {
 #endif
-            tuple = await PostgreSQLProtocol.PerformStartup(
-               new PgSQLConnectionVendorFunctionalityImpl(),
-               parameters.CreationData?.Initialization,
-               this.Encoding,
-               this.GetStringPoolForNewConnection(),
-               token,
+         tuple = await PostgreSQLProtocol.PerformStartup(
+            new PgSQLConnectionVendorFunctionalityImpl(),
+            parameters.CreationData?.Initialization,
+            this.Encoding,
+            this.GetStringPoolForNewConnection(),
+            token,
 #if NETSTANDARD1_0
-               ArgumentValidator.ValidateNotNull(nameof(streamFactory), 
+               ArgumentValidator.ValidateNotNull( nameof( streamFactory ),
 #endif
                streamFactory
 #if NETSTANDARD1_0
                )
 #endif
                ()
-               );
+            );
 #if !NETSTANDARD1_0
          }
          else

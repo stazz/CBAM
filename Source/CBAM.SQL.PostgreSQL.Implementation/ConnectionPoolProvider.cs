@@ -35,7 +35,7 @@ namespace CBAM.SQL.PostgreSQL
    /// The <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/> and <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/> are the most commonly used methods.
    /// This class also (explicitly) implements <see cref="ResourcePoolProvider{TResource}"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
    /// </remarks>
-   public sealed class PgSQLConnectionPoolProvider : ResourcePoolProvider<PgSQLConnection>
+   public sealed class PgSQLConnectionPoolProvider : AsyncResourcePoolProvider<PgSQLConnection>
    {
       private static readonly IEncodingInfo Encoding;
 
@@ -71,7 +71,7 @@ namespace CBAM.SQL.PostgreSQL
       /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
       /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
-      AsyncResourcePoolObservable<PgSQLConnection> ResourcePoolProvider<PgSQLConnection>.CreateOneTimeUseResourcePool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection> AsyncResourcePoolProvider<PgSQLConnection>.CreateOneTimeUseResourcePool( Object creationParameters )
       {
 #if NETSTANDARD1_0
          throw new NotSupportedException( "This method is not supported for this platform." );
@@ -89,9 +89,13 @@ namespace CBAM.SQL.PostgreSQL
       /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
       /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
-      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> ResourcePoolProvider<PgSQLConnection>.CreateTimeoutingResourcePool( Object creationParameters )
+      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> AsyncResourcePoolProvider<PgSQLConnection>.CreateTimeoutingResourcePool( Object creationParameters )
       {
+#if NETSTANDARD1_0
+         throw new NotSupportedException( "This method is not supported for this platform." );
+#else
          return this.CreateTimeoutingResourcePool( CheckCreationParameters( creationParameters ) );
+#endif
       }
 
       /// <summary>

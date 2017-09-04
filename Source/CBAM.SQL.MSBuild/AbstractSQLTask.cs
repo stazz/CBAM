@@ -15,18 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using CBAM.Abstractions;
-using CBAM.MSBuild.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using UtilPack.ResourcePooling.MSBuild;
 
 using TNuGetPackageResolverCallback = System.Func<System.String, System.String, System.String, System.Threading.Tasks.Task<System.Reflection.Assembly>>;
 
 namespace CBAM.SQL.MSBuild
 {
-   public abstract class AbstractSQLConnectionUsingTask : AbstractCBAMConnectionUsingTask<SQLConnection>
+   /// <summary>
+   /// This class binds the generic parameter of <see cref="AbstractResourceUsingTask{TResource}"/> to <see cref="SQLConnection"/>.
+   /// </summary>
+   public abstract class AbstractSQLConnectionUsingTask : AbstractResourceUsingTask<SQLConnection>
    {
+      /// <summary>
+      /// Initializes new instance of <see cref="AbstractSQLConnectionUsingTask"/> with given callback to load NuGet assemblies.
+      /// </summary>
+      /// <param name="nugetResolver">The callback to asynchronously load assembly based on NuGet package ID and version.</param>
+      /// <seealso cref="AbstractResourceUsingTask{TResource}(TNuGetPackageResolverCallback)"/>
       public AbstractSQLConnectionUsingTask( TNuGetPackageResolverCallback nugetResolver )
          : base( nugetResolver )
       {

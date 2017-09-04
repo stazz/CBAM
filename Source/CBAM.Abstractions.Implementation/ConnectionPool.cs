@@ -33,7 +33,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   public abstract class DefaultConnectionFactory<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : ResourceFactory<TConnection, TConnectionCreationParameters>
+   public abstract class DefaultConnectionFactory<TConnection, TConnectionCreationParameters, TConnectionFunctionality> : AsyncResourceFactory<TConnection, TConnectionCreationParameters>
       where TConnection : class
       where TConnectionFunctionality : DefaultConnectionFunctionality
    {
@@ -53,7 +53,7 @@ namespace CBAM.Abstractions.Implementation
       /// 
       /// In case of an error, the <see cref="OnConnectionAcquirementError(TConnectionFunctionality, TConnection, CancellationToken, Exception)"/> will be called.
       /// </remarks>
-      public async ValueTask<ResourceAcquireInfo<TConnection>> AcquireResourceAsync( TConnectionCreationParameters parameters, CancellationToken token )
+      public async ValueTask<AsyncResourceAcquireInfo<TConnection>> AcquireResourceAsync( TConnectionCreationParameters parameters, CancellationToken token )
       {
          TConnectionFunctionality functionality = null;
          TConnection connection = null;
@@ -82,6 +82,9 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
+      /// <inheritdoc/>
+      public abstract void ResetFactoryState();
+
       /// <summary>
       /// This method is called by <see cref="AcquireResourceAsync(TConnectionCreationParameters, CancellationToken)"/> initially, to create <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> for the <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.
       /// </summary>
@@ -103,7 +106,7 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="functionality">The <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> created by <see cref="CreateConnectionFunctionality(TConnectionCreationParameters, CancellationToken)"/> method.</param>
       /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> created by <see cref="CreateConnection(TConnectionFunctionality)"/> method.</param>
       /// <returns>A new instance of <see cref="ResourceAcquireInfo{TResource}"/>.</returns>
-      protected abstract ResourceAcquireInfo<TConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TConnection connection );
+      protected abstract AsyncResourceAcquireInfo<TConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TConnection connection );
 
       /// <summary>
       /// This method is called whenever an error occurs within <see cref="AcquireResourceAsync(TConnectionCreationParameters, CancellationToken)"/> method.
@@ -128,7 +131,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>, as specified by interface generic parameter.</typeparam>
    /// <typeparam name="TActualVendor">The actual type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
    /// <typeparam name="TStream">The actual type of underlying stream or other disposable resource.</typeparam>
-   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor, TActualVendor, TStream> : ResourceAcquireInfoImpl<TConnection, TStream>, ResourceAcquireInfo<TConnection>
+   public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor, TActualVendor, TStream> : AsyncResourceAcquireInfoImpl<TConnection, TStream>
       where TStatement : TStatementInformation
       where TConnection : ConnectionImpl<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor, TActualVendor, TConnectionFunctionality>
       where TConnectionFunctionality : DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TActualVendor>

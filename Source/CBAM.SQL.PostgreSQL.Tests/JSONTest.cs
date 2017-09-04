@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using CBAM.SQL.PostgreSQL.JSON;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {

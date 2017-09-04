@@ -37,7 +37,7 @@ Here is one example of structurally valid configuration file:
 ```json
 {
    "Connection": {
-      "Host": "127.0.0.1",
+      "Host": "localhost",
       "Port": 5432
    },
    "Initialization": {
