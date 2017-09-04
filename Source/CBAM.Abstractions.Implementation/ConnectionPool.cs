@@ -28,7 +28,7 @@ using UtilPack.ResourcePooling;
 namespace CBAM.Abstractions.Implementation
 {
    /// <summary>
-   /// This class implements <see cref="ResourceFactory{TResource, TParams}"/> in order to create instances of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> as resource instances.
+   /// This class implements <see cref="AsyncResourceFactory{TResource, TParams}"/> in order to create instances of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> as resource instances.
    /// </summary>
    /// <typeparam name="TConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
@@ -38,7 +38,7 @@ namespace CBAM.Abstractions.Implementation
       where TConnectionFunctionality : DefaultConnectionFunctionality
    {
       /// <summary>
-      /// This method implements <see cref="ResourceFactory{TResource, TParams}.AcquireResourceAsync(TParams, CancellationToken)"/> by calling a number of abstract methods in this class.
+      /// This method implements <see cref="AsyncResourceFactory{TResource, TParams}.AcquireResourceAsync(TParams, CancellationToken)"/> by calling a number of abstract methods in this class.
       /// </summary>
       /// <param name="parameters"></param>
       /// <param name="token"></param>
@@ -101,11 +101,11 @@ namespace CBAM.Abstractions.Implementation
       protected abstract ValueTask<TConnection> CreateConnection( TConnectionFunctionality functionality );
 
       /// <summary>
-      /// This method is called after <see cref="CreateConnection(TConnectionFunctionality)"/> in order to create instance of <see cref="ResourceAcquireInfo{TResource}"/> to be returned from <see cref="AcquireResourceAsync(TConnectionCreationParameters, CancellationToken)"/> method.
+      /// This method is called after <see cref="CreateConnection(TConnectionFunctionality)"/> in order to create instance of <see cref="AsyncResourceAcquireInfo{TResource}"/> to be returned from <see cref="AcquireResourceAsync(TConnectionCreationParameters, CancellationToken)"/> method.
       /// </summary>
       /// <param name="functionality">The <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> created by <see cref="CreateConnectionFunctionality(TConnectionCreationParameters, CancellationToken)"/> method.</param>
       /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> created by <see cref="CreateConnection(TConnectionFunctionality)"/> method.</param>
-      /// <returns>A new instance of <see cref="ResourceAcquireInfo{TResource}"/>.</returns>
+      /// <returns>A new instance of <see cref="AsyncResourceAcquireInfo{TResource}"/>.</returns>
       protected abstract AsyncResourceAcquireInfo<TConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TConnection connection );
 
       /// <summary>
@@ -120,7 +120,7 @@ namespace CBAM.Abstractions.Implementation
    }
 
    /// <summary>
-   /// This class provides CBAM-related implementation for <see cref="ResourceAcquireInfoImpl{TConnection, TChannel}"/> using <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
+   /// This class provides CBAM-related implementation for <see cref="AsyncResourceAcquireInfoImpl{TConnection, TChannel}"/> using <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
    /// </summary>
    /// <typeparam name="TConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
@@ -154,7 +154,7 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// This method overrides <see cref="AbstractDisposable.Dispose(bool)"/> and will dispose this <see cref="ResourceAcquireInfoImpl{TPublicResource, TPrivateResource}.Channel"/> if <paramref name="disposing"/> is <c>true</c>.
+      /// This method overrides <see cref="AbstractDisposable.Dispose(bool)"/> and will dispose this <see cref="AsyncResourceAcquireInfoImpl{TPublicResource, TPrivateResource}.Channel"/> if <paramref name="disposing"/> is <c>true</c>.
       /// </summary>
       /// <param name="disposing">Whether this method is callsed from <see cref="IDisposable.Dispose"/> method.</param>
       protected override void Dispose( Boolean disposing )
@@ -176,7 +176,7 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Overrides the abstract <see cref="ResourceAcquireInfoImpl{TConnection, TStream}.PublicResourceCanBeReturnedToPool"/> method and forwards the call to <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/>.
+      /// Overrides the abstract <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.PublicResourceCanBeReturnedToPool"/> method and forwards the call to <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/>.
       /// </summary>
       /// <returns>The value indicating whether this <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TActualVendorFunctionality, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor, TStream}"/> can be returned to pool, as indicated by <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/> property.</returns>
       protected override Boolean PublicResourceCanBeReturnedToPool()
@@ -185,7 +185,7 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Derived classes should implement the disposing functionality, see <see cref="ResourceAcquireInfoImpl{TConnection, TStream}.DisposeBeforeClosingChannel(CancellationToken)"/>.
+      /// Derived classes should implement the disposing functionality, see <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.DisposeBeforeClosingChannel(CancellationToken)"/>.
       /// </summary>
       /// <param name="token">The cancellation token to use.</param>
       /// <param name="connectionFunctionality">The <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</param>

@@ -14,6 +14,44 @@ The `ExecuteSQLStatementsTask` has a number of required and optional parameters,
 * `DefaultFileEncoding` of type `String`: Specifies the default encoding to use when `Encoding` metadata is missing from a file path in `SQLFilePaths` parameter. Defaults to UTF-8, if left out.
 * `RunSynchronously` of type `Boolean`: this is infrastructure-related parameter, and actually is always used, since the usage is in non-virtual method. This parameter, if `true`, will skip calling [Yield](https://docs.microsoft.com/en-us/dotnet/api/microsoft.build.framework.ibuildengine3.yield) method.
 
+# Example
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard1.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.1.0"/>
+  </ItemGroup>
+  
+  <UsingTask
+    Condition=" '$(UtilPackNuGetMSBuildAssemblyPath)' != '' "
+    TaskFactory="UtilPack.NuGet.MSBuild.NuGetTaskRunnerFactory"
+    AssemblyFile="$(UtilPackNuGetMSBuildAssemblyPath)"
+    TaskName="CBAM.SQL.MSBuild.ExecuteSQLStatementsTask"
+  >
+    <Task>
+      <NuGetTaskInfo>
+        <PackageID>CBAM.SQL.MSBuild</PackageID>
+        <PackageVersion>0.2.0</PackageVersion>
+      </NuGetTaskInfo>
+    </Task>
+  </UsingTask>
+  
+  <Target Name="ExecuteSQL">
+    <CBAM.SQL.MSBuild.ExecuteSQLStatementsTask
+      ResourcePoolProviderPackageID="CBAM.SQL.PostgreSQL.Implementation"
+      ResourcePoolProviderVersion="0.2.0"
+      ResourceConfigurationFilePath="my/path/to/database_config.json"
+      SQLFilePaths="my/path/to/sql_file.sql"
+    />
+    
+  </Target>
+</Project>
+```
+
 # Distribution
 The [NuGet package](http://www.nuget.org/packages/UtilPack.NuGet.Deployment.MSBuild) has the same package ID as this folder name.
 __The task provided by this project should be loaded using [UtilPack.NuGet.MSBuild](../UtilPack.NuGet.MSBuild) task factory.__

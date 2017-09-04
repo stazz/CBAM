@@ -29,11 +29,11 @@ namespace CBAM.SQL.PostgreSQL
    /// <summary>
    /// This is the entrypoint-class for using PostgreSQL connections.
    /// This class implements has methods to create <see cref="AsyncResourcePool{TResource}"/> that exposes API to use <see cref="PgSQLConnection"/>s.
-   /// Use <see cref="Instance"/> to access the API of this class: this class has not state, and constructor is public *only* to enable generic load scenarios required by <see cref="ResourcePoolProvider{TResource}"/> interface.
+   /// Use <see cref="Instance"/> to access the API of this class: this class has not state, and constructor is public *only* to enable generic load scenarios required by <see cref="AsyncResourcePoolProvider{TResource}"/> interface.
    /// </summary>
    /// <remarks>
    /// The <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/> and <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/> are the most commonly used methods.
-   /// This class also (explicitly) implements <see cref="ResourcePoolProvider{TResource}"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
+   /// This class also (explicitly) implements <see cref="AsyncResourcePoolProvider{TResource}"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
    /// </remarks>
    public sealed class PgSQLConnectionPoolProvider : AsyncResourcePoolProvider<PgSQLConnection>
    {
@@ -48,13 +48,13 @@ namespace CBAM.SQL.PostgreSQL
       /// <summary>
       /// Gets the default instance of this class.
       /// This is preferred way of getting this class, since it has no state on its own.
-      /// The constructor is public only to enable dynamic load scenarios related to <see cref="ResourcePoolProvider{TResource}"/> interface.
+      /// The constructor is public only to enable dynamic load scenarios related to <see cref="AsyncResourcePoolProvider{TResource}"/> interface.
       /// </summary>
       /// <value>The default instance of this class.</value>
       public static PgSQLConnectionPoolProvider Instance { get; }
 
       /// <summary>
-      /// This property implements <see cref="ResourcePoolProvider{TResource}.DefaultTypeForCreationParameter"/> and returns the type of the default connection creation parameter.
+      /// This property implements <see cref="AsyncResourcePoolProvider{TResource}.DefaultTypeForCreationParameter"/> and returns the type of the default connection creation parameter.
       /// </summary>
       /// <value>The type of the default connection creation parameter.</value>
       /// <remarks>
@@ -63,11 +63,11 @@ namespace CBAM.SQL.PostgreSQL
       public Type DefaultTypeForCreationParameter => typeof( PgSQLConnectionCreationInfoData );
 
       /// <summary>
-      /// Explicitly implements <see cref="ResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/> to call <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/>.
+      /// Explicitly implements <see cref="AsyncResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/> to call <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/>.
       /// </summary>
       /// <param name="creationParameters">The creation parameters, which should be of type <see cref="PgSQLConnectionCreationInfoData"/>.</param>
       /// <returns>A new instance of <see cref="AsyncResourcePoolObservable{TResource}"/>.</returns>
-      /// <seealso cref="ResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/>
+      /// <seealso cref="AsyncResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/>
       /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
       /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
@@ -81,11 +81,11 @@ namespace CBAM.SQL.PostgreSQL
       }
 
       /// <summary>
-      /// Explicitly implements <see cref="ResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/> to call <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/>.
+      /// Explicitly implements <see cref="AsyncResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/> to call <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/>.
       /// </summary>
       /// <param name="creationParameters">The creation parameters, which should be of type <see cref="PgSQLConnectionCreationInfoData"/>.</param>
       /// <returns>A new instance of <see cref="AsyncResourcePool{TResource, TCleanUpParameters}"/>.</returns>
-      /// <seealso cref="ResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/>
+      /// <seealso cref="AsyncResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/>
       /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
       /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
       /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
