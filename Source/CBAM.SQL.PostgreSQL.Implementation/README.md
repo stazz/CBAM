@@ -18,7 +18,7 @@ var configData = new ConfigurationBuilder() // This line requires reference to M
 var pool = PgSQLConnectionPoolProvider.Instance.CreateTimeoutingResourcePool( new PgSQLConnectionCreationInfo( configData ) );
 
 // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
-pool.UseResourceAsync( async pgConnection => pgConnection
+await pool.UseResourceAsync( async pgConnection => pgConnection
   .PrepareStatementForExecution( "SELECT 1" )
   .EnumerateSQLRowsAsync( async row => Console.WriteLine( await row.GetValueAsync<Int32>( 0 ) ) )
   );
