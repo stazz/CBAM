@@ -354,7 +354,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this._remoteAddress = new ReadOnlyResettableAsyncLazy<IPAddress>( async () =>
          {
             var hostName = creationInfo.CreationData?.Connection?.Host;
-            if ( !IPAddress.TryParse( hostName, out IPAddress thisAddress ) )
+            if ( !IPAddress.TryParse( hostName, out var thisAddress ) )
             {
                var allIPs = await
 #if NETSTANDARD1_3
@@ -370,7 +370,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 #endif
                ;
 
-               if ( allIPs.Length > 1 )
+               if ( ( allIPs?.Length ?? 0 ) > 1 )
                {
                   thisAddress = creationInfo.SelectRemoteIPAddress?.Invoke( allIPs );
                }
@@ -433,12 +433,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( streamFactory != null )
          {
 #endif
-         tuple = await PostgreSQLProtocol.PerformStartup(
-            new PgSQLConnectionVendorFunctionalityImpl(),
-            parameters.CreationData?.Initialization,
-            this.Encoding,
-            this.GetStringPoolForNewConnection(),
-            token,
+            tuple = await PostgreSQLProtocol.PerformStartup(
+               new PgSQLConnectionVendorFunctionalityImpl(),
+               parameters.CreationData?.Initialization,
+               this.Encoding,
+               this.GetStringPoolForNewConnection(),
+               token,
 #if NETSTANDARD1_0
                ArgumentValidator.ValidateNotNull( nameof( streamFactory ),
 #endif
@@ -447,7 +447,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                )
 #endif
                ()
-            );
+               );
 #if !NETSTANDARD1_0
          }
          else
