@@ -28,8 +28,14 @@ using UtilPack.ResourcePooling;
 using UtilPack.TabularData;
 using System.Net;
 
+#if !NETSTANDARD1_0
+using UtilPack.ResourcePooling.NetworkStream;
+#endif
+
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
+   using TNetworkStreamInitState = ValueTuple<BackendABIHelper, ResizableArray<Byte>, CancellationToken, Stream>;
+
    internal sealed class PgSQLConnectionImpl : SQLConnectionImpl<PostgreSQLProtocol, PgSQLConnectionVendorFunctionality>, PgSQLConnection
    {
       private const String TRANSACTION_ISOLATION_PREFIX = "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ";
@@ -337,6 +343,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 #if !NETSTANDARD1_0
       private readonly ReadOnlyResettableAsyncLazy<IPAddress> _remoteAddress;
+      private readonly NetworkStreamFactoryConfiguration<TNetworkStreamInitState> _networkStreamConfig;
 #endif
 
       public PgSQLConnectionFactory(
@@ -345,45 +352,53 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
+         ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
          if ( !( creationInfo.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? default ) )
          {
             this._stringPool = BinaryStringPoolFactory.NewConcurrentBinaryStringPool( encoding.Encoding );
          }
 
 #if !NETSTANDARD1_0
-         this._remoteAddress = new ReadOnlyResettableAsyncLazy<IPAddress>( async () =>
-         {
-            var hostName = creationInfo.CreationData?.Connection?.Host;
-            if ( !IPAddress.TryParse( hostName, out var thisAddress ) )
-            {
-               var allIPs = await
+         var data = creationInfo.CreationData;
+         var host = data.Connection?.Host;
+         this._remoteAddress = host.CreateAddressOrHostNameResolvingLazy(
+               creationInfo.SelectRemoteIPAddress,
 #if NETSTANDARD1_3
-               ( creationInfo.DNSResolve?.Invoke( hostName ) ?? new ValueTask<IPAddress[]>( (IPAddress[]) null ) )
+               creationInfo.DNSResolve
 #else
-
-#if NET40
-                  DnsEx
-#else
-                  Dns
+               null
 #endif
-                  .GetHostAddressesAsync( hostName )
-#endif
-               ;
+            );
+         this._networkStreamConfig = new NetworkStreamFactoryConfiguration<TNetworkStreamInitState>()
+         {
+            CreateState = ( socket, stream, token ) => this.CreateNetworkStreamInitState( token, stream ),
+            SelectLocalIPEndPoint = creationInfo.SelectLocalIPEndPoint,
+            RemoteAddress = async ( token ) => await this._remoteAddress,
+            RemotePort = addr => creationInfo.CreationData?.Connection?.Port ?? 5432,
 
-               if ( ( allIPs?.Length ?? 0 ) > 1 )
-               {
-                  thisAddress = creationInfo.SelectRemoteIPAddress?.Invoke( allIPs );
-               }
+            // SSL stuff here
+            ConnectionSSLMode = ( state ) => data.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired,
+            IsSSLPossible = async ( state ) =>
+            {
+               await SSLRequestMessage.INSTANCE.SendMessageAsync( (state.Item1, state.Item4, state.Item3, state.Item2) );
 
-               if ( thisAddress == null )
-               {
-                  thisAddress = allIPs.GetElementOrDefault( 0 );
-               }
-            }
+               var response = await state.Item4.ReadByte( state.Item2, state.Item3 );
+               return response == (Byte) 'S';
+            },
+            ProvideSSLStream = creationInfo.ProvideSSLStream,
+            ProtocolType = System.Net.Sockets.ProtocolType.Tcp,
+            SocketType = System.Net.Sockets.SocketType.Stream,
+            ProvideSSLHost = ( state ) => host,
+            SelectLocalCertificate = creationInfo.SelectLocalCertificate,
+            ValidateServerCertificate = creationInfo.ValidateServerCertificate,
 
-            return thisAddress;
-
-         } );
+            // Exception creation callbacks
+            NoSSLStreamProvider = () => new PgSQLException( "Server accepted SSL request, but the creation parameters did not have callback to create SSL stream" ),
+            RemoteNoSSLSupport = () => new PgSQLException( "Server does not support SSL." ),
+            SSLStreamProviderNoStream = () => new PgSQLException( "SSL stream creation callback returned null." ),
+            SSLStreamProviderNoAuthenticationCallback = () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
+            SSLStreamOtherError = inner => new PgSQLException( "Unable to start SSL client.", inner )
+         };
 #endif
       }
 
@@ -421,6 +436,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return this._stringPool ?? BinaryStringPoolFactory.NewNotConcurrentBinaryStringPool();
       }
 
+      private TNetworkStreamInitState CreateNetworkStreamInitState( CancellationToken token, Stream stream )
+      {
+         return (new BackendABIHelper( this.Encoding, this.GetStringPoolForNewConnection() ), new ResizableArray<Byte>( initialSize: 8, exponentialResize: true ), token, stream);
+      }
+
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
          PgSQLConnectionCreationInfo parameters,
          CancellationToken token
@@ -428,42 +448,47 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          var streamFactory = parameters.StreamFactory;
 
-         (PostgreSQLProtocol, List<PgSQLError>) tuple;
 #if !NETSTANDARD1_0
-         if ( streamFactory != null )
+         System.Net.Sockets.Socket socket;
+#endif
+         Stream stream;
+         TNetworkStreamInitState state;
+         if ( streamFactory == null )
          {
-#endif
-            tuple = await PostgreSQLProtocol.PerformStartup(
-               new PgSQLConnectionVendorFunctionalityImpl(),
-               parameters.CreationData?.Initialization,
-               this.Encoding,
-               this.GetStringPoolForNewConnection(),
-               token,
 #if NETSTANDARD1_0
-               ArgumentValidator.ValidateNotNull( nameof( streamFactory ),
+            throw new ArgumentNullException( nameof( streamFactory ) );
+#else
+            (socket, stream, state) = await NetworkStreamFactory<TNetworkStreamInitState>.AcquireNetworkStreamFromConfiguration(
+                  this._networkStreamConfig,
+                  token );
 #endif
-               streamFactory
-#if NETSTANDARD1_0
-               )
-#endif
-               ()
-               );
-#if !NETSTANDARD1_0
          }
          else
          {
-            tuple = await PostgreSQLProtocol.PerformStartup(
-               new PgSQLConnectionVendorFunctionalityImpl(),
-               parameters,
-               await this._remoteAddress,
-               this.Encoding,
-               this.GetStringPoolForNewConnection(),
-               token
-               );
-         }
+            (
+#if !NETSTANDARD1_0
+               socket,
 #endif
-         // TODO event: StartupNoticeOccurred
-         return tuple.Item1;
+               stream, state) = (
+#if !NETSTANDARD1_0
+               null,
+#endif
+               await streamFactory(), this.CreateNetworkStreamInitState( token, null ));
+         }
+
+         (var proto, var warnings) = await PostgreSQLProtocol.PerformStartup(
+            new PgSQLConnectionVendorFunctionalityImpl(),
+            parameters.CreationData?.Initialization,
+            token,
+            stream,
+            state.Item1,
+            state.Item2
+#if !NETSTANDARD1_0
+            , socket
+#endif
+            );
+
+         return proto;
       }
    }
 

@@ -617,7 +617,7 @@ public static partial class E_CBAM
    {
       var md = connection.DatabaseMetadata;
       var list = new List<SchemaMetadata>();
-      await connection.PrepareSchemaSearch( schemaNamePattern ).EnumerateAsync( async schema => list.Add( await md.ExtractSchemaMetadataAsync( (SQLDataRow) schema ) ) );
+      await connection.PrepareSchemaSearch( schemaNamePattern ).EnumerateSequentiallyAsync( async schema => list.Add( await md.ExtractSchemaMetadataAsync( (SQLDataRow) schema ) ) );
       return list;
    }
 
@@ -639,7 +639,7 @@ public static partial class E_CBAM
    {
       var md = connection.DatabaseMetadata;
       var list = new List<TableMetadata>();
-      await connection.PrepareTableSearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async table => list.Add( await md.ExtractTableMetadataAsync( (SQLDataRow) table ) ) );
+      await connection.PrepareTableSearch( schemaNamePattern, tableNamePattern ).EnumerateSequentiallyAsync( async table => list.Add( await md.ExtractTableMetadataAsync( (SQLDataRow) table ) ) );
       return list;
    }
 
@@ -661,7 +661,7 @@ public static partial class E_CBAM
    {
       var md = connection.DatabaseMetadata;
       var list = new List<ColumnMetadata>();
-      await connection.PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ).EnumerateAsync( async column => list.Add( await md.ExtractColumnMetadataAsync( (SQLDataRow) column ) ) );
+      await connection.PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ).EnumerateSequentiallyAsync( async column => list.Add( await md.ExtractColumnMetadataAsync( (SQLDataRow) column ) ) );
       return list;
    }
 
@@ -682,7 +682,7 @@ public static partial class E_CBAM
    {
       var md = connection.DatabaseMetadata;
       var list = new List<PrimaryKeyMetadata>();
-      await connection.PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern ).EnumerateAsync( async pk => list.Add( await md.ExtractPrimaryKeyMetadataAsync( (SQLDataRow) pk ) ) );
+      await connection.PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern ).EnumerateSequentiallyAsync( async pk => list.Add( await md.ExtractPrimaryKeyMetadataAsync( (SQLDataRow) pk ) ) );
       return list;
    }
 
@@ -705,7 +705,7 @@ public static partial class E_CBAM
    {
       var md = connection.DatabaseMetadata;
       var list = new List<ForeignKeyMetadata>();
-      await connection.PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ).EnumerateAsync( async fk => list.Add( await md.ExtractForeignKeyMetadataAsync( (SQLDataRow) fk ) ) );
+      await connection.PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ).EnumerateSequentiallyAsync( async fk => list.Add( await md.ExtractForeignKeyMetadataAsync( (SQLDataRow) fk ) ) );
       return list;
    }
 

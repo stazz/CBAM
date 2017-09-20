@@ -6,7 +6,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.0.1" />
+    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.1.1" />
   </ItemGroup>
 
   <UsingTask

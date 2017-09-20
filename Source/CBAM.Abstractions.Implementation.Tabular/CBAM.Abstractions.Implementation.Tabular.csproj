@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -50,7 +50,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Initial release. Result of separating functionality of CBAM.Tabular and CBAM.Tabular.Implementation packages into UtilPack.TabularData and this package.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking releases of dependant packages.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular data</PackageTags>
     <Title>Skeleton Tabular Implementations for Common CBAM Abstractions</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

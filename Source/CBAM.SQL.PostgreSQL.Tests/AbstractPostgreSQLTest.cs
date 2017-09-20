@@ -56,8 +56,12 @@ namespace CBAM.SQL.PostgreSQL.Tests
          IEnumerable<(String ArraySpec, Array Array)> GenerateArrays();
       }
 
-      protected static async Task AssertThatConnectionIsStillUseable( PgSQLConnection connection )
+      protected static async Task AssertThatConnectionIsStillUseable( PgSQLConnection connection, AsyncEnumerator<SQLStatementExecutionResult> enumerator )
       {
+         if ( enumerator != null )
+         {
+            await enumerator.EnumerationEnded();
+         }
          var selectResult = await connection.GetFirstOrDefaultAsync<Int32>( "SELECT 1" );
          Assert.AreEqual( 1, selectResult );
       }
@@ -65,7 +69,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       protected static async Task AssertThatQueryProducesSameResults( PgSQLConnection connection, String query, params Object[] values )
       {
          var queryCount = 0;
-         await connection.PrepareStatementForExecution( query ).EnumerateAsync( async item =>
+         await connection.PrepareStatementForExecution( query ).EnumerateSequentiallyAsync( async item =>
          {
             Assert.AreEqual( values[queryCount++], await ( (SQLDataRow) item ).GetValueAsObjectAsync( 0 ) );
          } );
@@ -78,7 +82,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var valuesSet = new HashSet<Object>( values );
          var querySet = new HashSet<Object>();
          var queryCount = 0;
-         await connection.PrepareStatementForExecution( query ).EnumerateAsync( async item =>
+         await connection.PrepareStatementForExecution( query ).EnumerateSequentiallyAsync( async item =>
          {
             querySet.Add( await ( (SQLDataRow) item ).GetValueAsObjectAsync( 0 ) );
             ++queryCount;
@@ -179,8 +183,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
 public static partial class E_CBAM
 {
-   public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args )
+   public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args, Int64? token )
    {
-      return args.Current as SQLDataRow;
+      return (SQLDataRow) args.OneTimeRetrieve( token.Value );
    }
 }

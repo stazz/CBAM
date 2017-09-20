@@ -158,7 +158,7 @@ namespace CBAM.SQL.Implementation
       public void AddBatch()
       {
          Int32 idx;
-         if ( (idx = Array.FindIndex( this._currentParameters, p => p == null )) >= 0 )
+         if ( ( idx = Array.FindIndex( this._currentParameters, p => p == null ) ) >= 0 )
          {
             throw new InvalidOperationException( $"The parameter at index {idx} has not been set." );
          }
@@ -252,28 +252,9 @@ namespace CBAM.SQL.Implementation
       //}
    }
 
-   // TODO move these to UtilPack
    internal static class CBAMExtensions
    {
 
-      public static Boolean CheckArrayIndex( this Array array, Int32 index )
-      {
-         return array != null && index >= 0 && index < array.Length;
-      }
-
-      public static void CheckArrayIndexOrThrow( this Array array, Int32 index, String indexParameterName = null )
-      {
-         if ( !array.CheckArrayIndex( index ) )
-         {
-            throw new ArgumentException( String.IsNullOrEmpty( indexParameterName ) ? "array index" : indexParameterName );
-         }
-      }
-
-      public static T[] CheckArrayIndexAndReturnOrThrow<T>( this T[] array, Int32 index, String indexParameterName = null )
-      {
-         array.CheckArrayIndexOrThrow( index, indexParameterName );
-         return array;
-      }
 
       // TODO Collections.Generic.IList<T> does not extend Collections.List...
 

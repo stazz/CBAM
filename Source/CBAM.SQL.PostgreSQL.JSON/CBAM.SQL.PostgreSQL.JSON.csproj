@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
     <PackageReference Include="UtilPack.JSON" Version="1.0.0" />
-    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC1" />
+    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -54,7 +54,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Added documentation.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking releases of dependant packages.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql json</PackageTags>
     <Title>CBAM PostgreSQL JSON Extension</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

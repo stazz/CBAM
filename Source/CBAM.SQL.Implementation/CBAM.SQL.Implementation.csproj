@@ -22,7 +22,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -53,7 +53,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Added documentation.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking dependant packages releases.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data</PackageTags>
     <Title>Skeleton Implementations for CBAM SQL API</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

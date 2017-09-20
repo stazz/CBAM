@@ -972,23 +972,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 public static partial class E_CBAM
 {
-   // TODO move to utilpack
-   internal static Int32 CountOccurrances( this String str, String substring, StringComparison comparison )
-   {
-      var count = 0;
-
-      if ( substring != null && substring.Length > 0 )
-      {
-         var idx = 0;
-         while ( ( idx = str.IndexOf( substring, idx, comparison ) ) != -1 )
-         {
-            idx += substring.Length;
-            ++count;
-         }
-      }
-
-      return count;
-   }
 
    internal static Boolean NeedsQuotingInArrayElement( this PgSQLDate date )
    {

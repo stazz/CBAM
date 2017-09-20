@@ -921,39 +921,3 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 }
-
-public static partial class E_CBAM
-{
-   // TODO move to UtilPack
-   internal static Int32[] GetLowerBounds( this Array array )
-   {
-      var rank = array.Rank;
-      Int32[] retVal = null;
-      for ( var i = 0; i < rank; ++i )
-      {
-         var lobo = array.GetLowerBound( i );
-         if ( lobo != 0 )
-         {
-            if ( retVal == null )
-            {
-               retVal = new Int32[rank];
-            }
-            retVal[i] = lobo;
-         }
-      }
-
-      return retVal;
-   }
-
-   internal static Int32[] GetLengths( this Array array )
-   {
-      var rank = array.Rank;
-      var retVal = new Int32[rank];
-      for ( var i = 0; i < rank; ++i )
-      {
-         retVal[i] = array.GetLength( i );
-      }
-
-      return retVal;
-   }
-}

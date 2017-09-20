@@ -243,7 +243,7 @@ public static partial class E_CBAM
    /// <exception cref="NullReferenceException">If this <see cref="AsyncEnumerator{T}"/> is <c>null</c>.</exception>
    public static ValueTask<Int64> EnumerateSQLRowsAsync( this AsyncEnumerator<SQLStatementExecutionResult> enumerator, Func<SQLDataRow, Task> callback )
    {
-      return enumerator.EnumerateAsync( callback == null ? (Func<SQLStatementExecutionResult, Task>) null : item =>
+      return enumerator.EnumerateSequentiallyAsync( callback == null ? (Func<SQLStatementExecutionResult, Task>) null : item =>
       {
          if ( item is SQLDataRow sqlRow )
          {
@@ -557,9 +557,9 @@ public static partial class E_CBAM
                var stmtInfo = enumerator.Metadata;
                try
                {
-                  await enumerator.EnumerateAsync( res =>
+                  await enumerator.EnumerateSequentiallyAsync( res =>
                   {
-                     connection.ProcessStatementResultPassively( reader, stmtInfo, enumerator.Current );
+                     connection.ProcessStatementResultPassively( reader, stmtInfo, res );
                   } );
                }
                catch ( SQLException sqle )

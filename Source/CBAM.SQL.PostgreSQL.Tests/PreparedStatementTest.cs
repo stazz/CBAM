@@ -46,18 +46,20 @@ namespace CBAM.SQL.PostgreSQL.Tests
             stmt.SetParameterInt32( 2, THIRD );
 
             var iArgs = conn.PrepareStatementForExecution( stmt );
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenFirst = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Int64? tkn;
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenSecond = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenThird = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsFalse( await iArgs.MoveNextAsync() );
+            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
 
-            await AssertThatConnectionIsStillUseable( conn );
+
+            await AssertThatConnectionIsStillUseable( conn, iArgs );
 
             return (seenFirst, seenSecond, seenThird);
          } );
@@ -87,18 +89,19 @@ namespace CBAM.SQL.PostgreSQL.Tests
             stmt.SetParameterString( 2, THIRD );
 
             var iArgs = conn.PrepareStatementForExecution( stmt );
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenFirst = await iArgs.GetDataRow().GetValueAsync<String>( 0 );
+            Int64? tkn;
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenSecond = await iArgs.GetDataRow().GetValueAsync<String>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenThird = await iArgs.GetDataRow().GetValueAsync<String>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
 
-            Assert.IsFalse( await iArgs.MoveNextAsync() );
+            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
 
-            await AssertThatConnectionIsStillUseable( conn );
+            await AssertThatConnectionIsStillUseable( conn, iArgs );
 
             return (seenFirst, seenSecond, seenThird);
          } );

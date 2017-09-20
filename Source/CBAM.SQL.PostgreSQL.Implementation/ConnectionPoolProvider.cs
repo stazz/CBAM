@@ -35,7 +35,7 @@ namespace CBAM.SQL.PostgreSQL
    /// The <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/> and <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/> are the most commonly used methods.
    /// This class also (explicitly) implements <see cref="AsyncResourcePoolProvider{TResource}"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
    /// </remarks>
-   public sealed class PgSQLConnectionPoolProvider : AsyncResourcePoolProvider<PgSQLConnection>
+   public sealed class PgSQLConnectionPoolProvider : AbstractAsyncResourceFactoryProvider<PgSQLConnectionCreationInfo>
    {
       private static readonly IEncodingInfo Encoding;
 
@@ -53,50 +53,17 @@ namespace CBAM.SQL.PostgreSQL
       /// <value>The default instance of this class.</value>
       public static PgSQLConnectionPoolProvider Instance { get; }
 
-      /// <summary>
-      /// This property implements <see cref="AsyncResourcePoolProvider{TResource}.DefaultTypeForCreationParameter"/> and returns the type of the default connection creation parameter.
-      /// </summary>
-      /// <value>The type of the default connection creation parameter.</value>
-      /// <remarks>
-      /// Note that this returns <see cref="PgSQLConnectionCreationInfoData"/>, and not <see cref="PgSQLConnectionCreationInfo"/>.
-      /// </remarks>
-      public Type DefaultTypeForCreationParameter => typeof( PgSQLConnectionCreationInfoData );
-
-      /// <summary>
-      /// Explicitly implements <see cref="AsyncResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/> to call <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/>.
-      /// </summary>
-      /// <param name="creationParameters">The creation parameters, which should be of type <see cref="PgSQLConnectionCreationInfoData"/>.</param>
-      /// <returns>A new instance of <see cref="AsyncResourcePoolObservable{TResource}"/>.</returns>
-      /// <seealso cref="AsyncResourcePoolProvider{TResource}.CreateOneTimeUseResourcePool(object)"/>
-      /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
-      /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
-      /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
-      AsyncResourcePoolObservable<PgSQLConnection> AsyncResourcePoolProvider<PgSQLConnection>.CreateOneTimeUseResourcePool( Object creationParameters )
+      public PgSQLConnectionPoolProvider()
+         : base( typeof( PgSQLConnectionImpl ), typeof( PgSQLConnectionCreationInfoData ) )
       {
-#if NETSTANDARD1_0
-         throw new NotSupportedException( "This method is not supported for this platform." );
-#else
-         return this.CreateOneTimeUseResourcePool( CheckCreationParameters( creationParameters ) );
-#endif
       }
 
-      /// <summary>
-      /// Explicitly implements <see cref="AsyncResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/> to call <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/>.
-      /// </summary>
-      /// <param name="creationParameters">The creation parameters, which should be of type <see cref="PgSQLConnectionCreationInfoData"/>.</param>
-      /// <returns>A new instance of <see cref="AsyncResourcePool{TResource, TCleanUpParameters}"/>.</returns>
-      /// <seealso cref="AsyncResourcePoolProvider{TResource}.CreateTimeoutingResourcePool(object)"/>
-      /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
-      /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not of type <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
-      /// <exception cref="NotSupportedException">On .NET Standard pre-1.3 platforms, *always*.</exception>
-      AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> AsyncResourcePoolProvider<PgSQLConnection>.CreateTimeoutingResourcePool( Object creationParameters )
-      {
-#if NETSTANDARD1_0
-         throw new NotSupportedException( "This method is not supported for this platform." );
-#else
-         return this.CreateTimeoutingResourcePool( CheckCreationParameters( creationParameters ) );
-#endif
-      }
+      protected override PgSQLConnectionCreationInfo TransformFactoryParameters( Object untyped )
+         => CheckCreationParameters( untyped );
+
+      protected override Object CreateFactory( PgSQLConnectionCreationInfo transformedCreationParameters )
+         => new PgSQLConnectionFactory( Encoding, transformedCreationParameters );
+
 
       /// <summary>
       /// This method will create a one-time-usage resource pool (which will close connection after each call to <see cref="AsyncResourcePool{TResource}.UseResourceAsync"/>) with given <see cref="PgSQLConnectionCreationInfo"/>.
@@ -108,14 +75,9 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfo creationInfo
          )
       {
-         ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
-
-         return new OneTimeUseAsyncResourcePool<PgSQLConnectionImpl, PgSQLConnectionAcquireInfo, PgSQLConnectionCreationInfo>(
-            new PgSQLConnectionFactory( Encoding, creationInfo ),
-            creationInfo,
-            acquire => acquire,
-            acquire => (PgSQLConnectionAcquireInfo) acquire
-            );
+         return new PgSQLConnectionFactory( Encoding, creationInfo )
+            .CreateOneTimeUseResourcePool( creationInfo )
+            .WithoutExplicitAPI();
       }
 
       /// <summary>
@@ -128,12 +90,19 @@ namespace CBAM.SQL.PostgreSQL
          PgSQLConnectionCreationInfo creationInfo
          )
       {
-         ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
+         return new PgSQLConnectionFactory( Encoding, creationInfo )
+            .CreateTimeoutingResourcePool( creationInfo )
+            .WithoutExplicitAPI();
+      }
 
-         return new CachingAsyncResourcePoolWithTimeout<PgSQLConnectionImpl, PgSQLConnectionCreationInfo>(
-            new PgSQLConnectionFactory( Encoding, creationInfo ),
-            creationInfo
-            );
+      public AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> CreateTimeoutingAndLimitedResourcePool(
+         PgSQLConnectionCreationInfo creationInfo,
+         Func<Int32> maxConcurrentConnections
+         )
+      {
+         return new PgSQLConnectionFactory( Encoding, creationInfo )
+            .CreateTimeoutingAndLimitedResourcePool( creationInfo, maxConcurrentConnections )
+            .WithoutExplicitAPI();
       }
 
       private static PgSQLConnectionCreationInfo CheckCreationParameters( Object creationParameters )
@@ -147,5 +116,7 @@ namespace CBAM.SQL.PostgreSQL
 
          return new PgSQLConnectionCreationInfo( creationData );
       }
+
+
    }
 }

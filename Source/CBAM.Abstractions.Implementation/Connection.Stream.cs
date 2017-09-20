@@ -51,7 +51,11 @@ namespace CBAM.Abstractions.Implementation
          public static readonly NotInUse Instance = new NotInUse();
       }
 
-      private static readonly ReservedForStatement _NoStatement = new ReservedForStatement();
+      private static readonly ReservedForStatement _NoStatement = new ReservedForStatement(
+#if DEBUG
+         null
+#endif
+         );
 
       private ConnectionStreamUsageState _currentlyExecutingStatement;
 
@@ -66,7 +70,39 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Overrides the <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.InitialMoveNext(TStatementInformation, CancellationToken)"/> so that it marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
+      /// Implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CreateEnumerator"/> by creating sequential observable enumerator (<see cref="AsyncEnumeratorFactory.CreateSequentialObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>.
+      /// The <see cref="InitialMoveNext(TStatementInformation, CancellationToken)"/> method will be used as callback for the enumerator.
+      /// </summary>
+      /// <param name="metadata">The statement information.</param>
+      /// <param name="getGlobalBeforeEnumerationExecutionStart">Callback to get global before enumeration start -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionStart">Callback to get global after enumeration start -event.</param>
+      /// <param name="getGlobalBeforeEnumerationExecutionEnd">Callback to get global before enumeration end -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionEnd">Callback to get global after enumeration end -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionItemEncountered">Callback to get global enumeration encountered -event.</param>
+      /// <returns>The <see cref="AsyncEnumerator{T, TMetadata}"/> that can sequentially enumerate items from underlying stream.</returns>
+      /// <seealso cref="AsyncEnumeratorFactory.CreateSequentialObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>
+      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateEnumerator(
+         TStatementInformation metadata,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
+         )
+      {
+         return AsyncEnumeratorFactory.CreateSequentialObservableEnumerator(
+            token => this.InitialMoveNext( metadata, token ),
+            metadata,
+            getGlobalBeforeEnumerationExecutionStart,
+            getGlobalAfterEnumerationExecutionStart,
+            getGlobalBeforeEnumerationExecutionEnd,
+            getGlobalAfterEnumerationExecutionEnd,
+            getGlobalAfterEnumerationExecutionItemEncountered
+            );
+      }
+
+      /// <summary>
+      /// Marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
       /// </summary>
       /// <param name="statement">The read-only statement information.</param>
       /// <param name="token">The <see cref="CancellationToken"/> passed to initial call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
@@ -78,7 +114,7 @@ namespace CBAM.Abstractions.Implementation
       /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
       /// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
       /// <seealso cref="AsyncEnumerator{T}"/>
-      protected override async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, DisposeAsyncDelegate)> InitialMoveNext(
+      protected async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, EnumerationEndedDelegate)> InitialMoveNext(
          TStatementInformation statement,
          CancellationToken token
          )
@@ -89,7 +125,7 @@ namespace CBAM.Abstractions.Implementation
             reserved,
             false
             );
-         return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( tkn ) => await this.DisposeStatementAsync( reserved ));
+         return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( moveNextEnded, tkn ) => await this.DisposeStatementAsync( moveNextEnded, reserved ));
       }
 
       /// <summary>
@@ -238,11 +274,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      private async Task DisposeStatementAsync( ReservedForStatement reservationObject )
+      private async Task DisposeStatementAsync( Boolean moveNextEnded, ReservedForStatement reservationObject )
       {
          try
          {
-            await this.UseStreamWithinStatementAsync( reservationObject, () => this.PerformDisposeStatementAsync( reservationObject ) );
+            await this.UseStreamWithinStatementAsync( reservationObject, () => this.PerformDisposeStatementAsync( moveNextEnded, reservationObject ) );
          }
          finally
          {
@@ -253,9 +289,10 @@ namespace CBAM.Abstractions.Implementation
       /// <summary>
       /// Derived classes should override this abstract method to implement custom dispose functionality when the statement represented by given <see cref="ReservedForStatement"/> is being disposed.
       /// </summary>
+      /// <param name="moveNextEnded">Whether enumeration seen <see cref="AsyncEnumerator{T}.MoveNextAsync"/> return <c>null</c>.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> identifying the statement.</param>
       /// <returns>The task which will complete when the dispose procedure has been completed.</returns>
-      protected abstract Task PerformDisposeStatementAsync( ReservedForStatement reservationObject );
+      protected abstract Task PerformDisposeStatementAsync( Boolean moveNextEnded, ReservedForStatement reservationObject );
 
       /// <summary>
       /// This property implements <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
@@ -282,11 +319,24 @@ namespace CBAM.Abstractions.Implementation
       /// <summary>
       /// Creates a new instance of <see cref="ReservedForStatement"/> and also new instance of <see cref="CurrentlyInUse"/> for <see cref="UsageState"/>.
       /// </summary>
-      public ReservedForStatement()
+      public ReservedForStatement(
+#if DEBUG
+         Object statement
+#endif
+         )
       {
-         this.UsageState = new CurrentlyInUse();
+#if DEBUG
+         this.Statement = statement;
+#endif
+         this.UsageState = new CurrentlyInUse(
+#if DEBUG
+            statement
+#endif
+            );
       }
-
+#if DEBUG
+      public Object Statement { get; }
+#endif
       /// <summary>
       /// Gets the <see cref="CurrentlyInUse"/> object used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as using underlying connection for communicating with remote resource.
       /// </summary>
@@ -302,9 +352,19 @@ namespace CBAM.Abstractions.Implementation
    /// </remarks>
    public sealed class CurrentlyInUse : ConnectionStreamUsageState
    {
-      internal CurrentlyInUse()
+      internal CurrentlyInUse(
+#if DEBUG
+         Object statement
+#endif
+         )
       {
-
+#if DEBUG
+         this.Statement = statement;
+#endif
       }
+
+#if DEBUG
+      public Object Statement { get; }
+#endif
    }
 }

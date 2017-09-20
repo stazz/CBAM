@@ -111,7 +111,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override ReservedForStatement CreateReservationObject( SQLStatementBuilderInformation stmt )
       {
-         return new PgReservedForStatement( stmt.IsSimple(), stmt.HasBatchParameters() ? "cbam_statement" : null );
+         return new PgReservedForStatement(
+#if DEBUG
+            stmt,
+#endif
+            stmt.IsSimple(),
+            stmt.HasBatchParameters() ? "cbam_statement" : null
+            );
       }
 
       protected override void ValidateStatementOrThrow( SQLStatementBuilderInformation statement )
@@ -602,6 +608,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //}
 
       protected override async Task PerformDisposeStatementAsync(
+         Boolean moveNextEnded,
          ReservedForStatement reservationObject
          )
       {
@@ -621,6 +628,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          }
 
+         // TODO The new moveNextEnded parameter could tell that instead of RFQEncountered property, investigate that
          if ( !pgReserved.RFQEncountered )
          {
             // Then wait for RFQ
@@ -790,7 +798,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
             // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
             enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-            await enumerator.EnumerateAsync( null );
+            await enumerator.EnumerateSequentiallyAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -826,172 +834,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       }
 
-#if !NETSTANDARD1_0
-      internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
-         PgSQLConnectionVendorFunctionality vendorFunctionality,
-         PgSQLConnectionCreationInfo creationParameters,
-         IPAddress remoteAddress,
-         IEncodingInfo encoding,
-         BinaryStringPool stringPool,
-         CancellationToken token
-         )
-      {
-
-         var creationData = creationParameters.CreationData;
-         var connectionConfig = creationData?.Connection ?? throw new ArgumentException( "Please specify connection configuration." );
-         var remoteHost = connectionConfig?.Host ?? throw new ArgumentException( "Please specify remote host in connection configuration." );
-         if ( remoteAddress == null )
-         {
-            throw new InvalidOperationException( "No remote address supplied, either via host property, or via selection callback." );
-         }
-
-         var remoteEP = new IPEndPoint( remoteAddress, connectionConfig?.Port ?? throw new ArgumentException( "Please specify remote port in connection configuration." ) );
-
-         Socket CreateSocket()
-         {
-            return new Socket(
-            remoteAddress.AddressFamily,
-            SocketType.Stream,
-            ProtocolType.Tcp
-            );
-         }
-         var localEP = creationParameters.SelectLocalIPEndPoint?.Invoke( remoteEP );
-
-         async Task<Stream> InitNetworkStream( Socket thisSocket )
-         {
-            if ( localEP != null )
-            {
-               thisSocket.Bind( localEP );
-            }
-
-            await thisSocket.ConnectAsync( remoteEP );
-            return new NetworkStream( thisSocket, true );
-         }
-
-         var socket = CreateSocket();
-         var errorOccurred = false;
-         Stream stream = null;
-         try
-         {
-            stream = await InitNetworkStream( socket );
-
-            var msgArgs = new BackendABIHelper( encoding, stringPool );
-            var buffer = new ResizableArray<Byte>( initialSize: 8, exponentialResize: true );
-            var connectionMode = connectionConfig.ConnectionSSLMode;
-            var isSSLRequired = connectionMode == ConnectionSSLMode.Required;
-            if ( isSSLRequired || connectionMode == ConnectionSSLMode.Preferred )
-            {
-               await SSLRequestMessage.INSTANCE.SendMessageAsync( (msgArgs, stream, token, buffer) );
-
-               var response = await stream.ReadByte( buffer, token );
-               if ( response == (Byte) 'S' )
-               {
-                  // Start SSL session
-                  Stream sslStream = null;
-                  try
-                  {
-                     var provideSSLStream = creationParameters.ProvideSSLStream;
-                     if ( provideSSLStream != null )
-                     {
-                        var clientCerts = new System.Security.Cryptography.X509Certificates.X509CertificateCollection();
-                        creationParameters.ProvideClientCertificates?.Invoke( clientCerts );
-                        sslStream = provideSSLStream( stream, false, creationParameters.ValidateServerCertificate, creationParameters.SelectLocalCertificate, out AuthenticateAsClientAsync authenticateAsClient );
-                        if ( isSSLRequired )
-                        {
-                           if ( sslStream == null )
-                           {
-                              throw new PgSQLException( "SSL stream creation callback returned null." );
-                           }
-                           else if ( authenticateAsClient == null )
-                           {
-                              throw new PgSQLException( "Authentication callback given by SSL stream creation callback was null." );
-                           }
-                        }
-                        if ( sslStream != null && authenticateAsClient != null )
-                        {
-                           await authenticateAsClient( sslStream, remoteHost, clientCerts, connectionConfig.SSLProtocols, true );
-                           stream = sslStream;
-                        }
-                     }
-                     else if ( isSSLRequired )
-                     {
-                        throw new PgSQLException( "Server accepted SSL request, but the creation parameters did not have callback to create SSL stream" );
-                     }
-                  }
-                  catch ( Exception exc )
-                  {
-                     if ( !isSSLRequired )
-                     {
-                        // We close SSL stream in case authentication failed.
-                        // Closing SSL stream will close underlying stream, which will close the socket...
-                        // So we have to reconnect afterwards.
-                        ( sslStream ?? stream ).DisposeSafely();
-                        // ... so re-create it
-                        socket = CreateSocket();
-                        stream = await InitNetworkStream( socket );
-                     }
-                     else
-                     {
-                        throw new PgSQLException( "Unable to start SSL client.", exc );
-                     }
-                  }
-               }
-               else if ( isSSLRequired )
-               {
-                  // SSL session start was unsuccessful, and it is required -> can not continue
-                  throw new PgSQLException( "Server does not support SSL." );
-               }
-            }
-            return await PerformStartup(
-               vendorFunctionality,
-               creationData.Initialization,
-               token,
-               stream,
-               msgArgs,
-               buffer,
-               socket
-               );
-
-         }
-         catch
-         {
-            errorOccurred = true;
-            throw;
-         }
-         finally
-         {
-            if ( errorOccurred )
-            {
-               stream.DisposeSafely();
-            }
-         }
-      }
-
-#endif
-
-      internal static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
-         PgSQLConnectionVendorFunctionality vendorFunctionality,
-         PgSQLInitializationConfiguration initData,
-         IEncodingInfo encoding,
-         BinaryStringPool stringPool,
-         CancellationToken token,
-         Stream stream
-         )
-      {
-         return await PerformStartup(
-            vendorFunctionality,
-            initData,
-            token,
-            ArgumentValidator.ValidateNotNull( nameof( stream ), stream ),
-            new BackendABIHelper( encoding, stringPool ),
-            new ResizableArray<Byte>( initialSize: 8, exponentialResize: true )
-#if !NETSTANDARD1_0
-            , null
-#endif
-            );
-      }
-
-      private static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
+      public static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
          PgSQLInitializationConfiguration initData,
          CancellationToken token,
@@ -1193,9 +1036,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private Int32 _rfqEncountered;
 
       public PgReservedForStatement(
+#if DEBUG
+         Object statement,
+#endif
          Boolean isSimple,
          String statementName
          )
+#if DEBUG
+         : base( statement )
+#endif
       {
          this.IsSimple = isSimple;
          this.StatementName = statementName;
@@ -1214,24 +1063,4 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
    }
 
-#if NET40 || NET45
-
-   // No SocketTaskExtensions in .NET 4.5...
-   // TODO move to UtilPack.
-   internal static class SocketTaskextensions
-   {
-      public static Task ConnectAsync( this Socket socket, EndPoint remoteEndPoint )
-      {
-         //token.ThrowIfCancellationRequested();
-         var connectArgs = (socket, remoteEndPoint);
-         return Task.Factory.FromAsync(
-           ( cArgs, cb, state ) => cArgs.Item1.BeginConnect( cArgs.Item2, cb, state ),
-           ( result ) => ( (Socket) result.AsyncState ).EndConnect( result ),
-           connectArgs,
-           socket
-           );
-      }
-   }
-
-#endif
 }

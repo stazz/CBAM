@@ -453,7 +453,7 @@ namespace CBAM.Abstractions.Implementation
       public TVendor VendorFunctionality { get; }
 
       /// <summary>
-      /// Validates the statement by calling <see cref="ValidateStatementOrThrow(TStatementInformation)"/> and then creates a new <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> using <see cref="AsyncEnumeratorFactory.CreateObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/> and passing <see cref="InitialMoveNext(TStatementInformation, CancellationToken)"/> as callback and result of <see cref="GetInformationFromStatement(TStatement)"/> as metadata.
+      /// Validates the statement by calling <see cref="ValidateStatementOrThrow(TStatementInformation)"/> and then creates a new <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> by calling <see cref="CreateEnumerator"/>.
       /// </summary>
       /// <param name="statement">The statement which describes how to manipulate/query remote resource.</param>
       /// <returns>The <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> which can be used to execute the <paramref name="statement"/> statement and iterate the possible results.</returns>
@@ -461,8 +461,7 @@ namespace CBAM.Abstractions.Implementation
       {
          var info = statement is TStatement stmt ? this.GetInformationFromStatement( stmt ) : statement;
          this.ValidateStatementOrThrow( info );
-         return AsyncEnumeratorFactory.CreateObservableEnumerator(
-            token => this.InitialMoveNext( info, token ),
+         return this.CreateEnumerator(
             info,
             () => this.BeforeEnumerationStart,
             () => this.AfterEnumerationStart,
@@ -480,15 +479,26 @@ namespace CBAM.Abstractions.Implementation
       protected abstract TStatementInformation GetInformationFromStatement( TStatement statement );
 
       /// <summary>
-      /// Derived classes should override this abstract method in order to implement the functionality to send the statement to remote resource and iterate the results.
-      /// This can be thought as the core functionality for any CBAM project.
+      /// This method should create actual <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> from given parameters.
       /// </summary>
-      /// <param name="statement">The read-only information about the statement.</param>
-      /// <param name="token">The <see cref="CancellationToken"/> passed to the initial call to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
-      /// <returns>The information about the statement execution and enumeration.</returns>
-      /// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
-      /// <seealso cref="AsyncEnumerator{T}"/>
-      protected abstract ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, DisposeAsyncDelegate)> InitialMoveNext( TStatementInformation statement, CancellationToken token );
+      /// <param name="metadata">The statement information.</param>
+      /// <param name="getGlobalBeforeEnumerationExecutionStart">Callback to get global before enumeration start -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionStart">Callback to get global after enumeration start -event.</param>
+      /// <param name="getGlobalBeforeEnumerationExecutionEnd">Callback to get global before enumeration end -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionEnd">Callback to get global after enumeration end -event.</param>
+      /// <param name="getGlobalAfterEnumerationExecutionItemEncountered">Callback to get global enumeration encountered -event.</param>
+      /// <returns>The <see cref="AsyncEnumeratorObservable{T, TMetadata}"/> used to asynchronously enumerate over the results of statement execution.</returns>
+      /// <seealso cref="AsyncEnumeratorFactory.CreateSequentialObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>
+      /// <seealso cref="AsyncEnumeratorFactory.CreateParallelObservableEnumerator{T, TMoveNext, TMetadata}(SynchronousMoveNextDelegate{TMoveNext}, GetNextItemAsyncDelegate{T, TMoveNext}, EnumerationEndedDelegate, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>
+      protected abstract AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateEnumerator(
+         TStatementInformation metadata,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
+         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
+         );
+
 
       /// <summary>
       /// This method should validate the given read-only information about a statement.

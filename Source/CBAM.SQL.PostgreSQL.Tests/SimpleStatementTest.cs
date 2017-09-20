@@ -47,16 +47,18 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var tuple = await pool.UseResourceAsync( async conn =>
          {
             var iArgs = conn.PrepareStatementForExecution( $"SELECT * FROM( VALUES( {first} ), ( {second} ), ( {third} ) ) AS tmp" );
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenFirst = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Int64? tkn;
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenSecond = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            var seenThird = await iArgs.GetDataRow().GetValueAsync<Int32>( 0 );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
 
-            Assert.IsFalse( await iArgs.MoveNextAsync() );
+            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            await iArgs.EnumerationEnded();
             return (seenFirst, seenSecond, seenThird);
          } );
 
@@ -72,19 +74,21 @@ namespace CBAM.SQL.PostgreSQL.Tests
          await pool.UseResourceAsync( async conn =>
          {
             var iArgs = conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" );
+            Int64? tkn;
             // First read is partial read
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            Assert.AreEqual( 1, await iArgs.GetDataRow().GetValueAsync<Int32>( 0 ) );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( 1, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
 
             // Second read just ignores columns
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
 
             // Third read reads in opposite order
-            Assert.IsTrue( await iArgs.MoveNextAsync() );
-            Assert.AreEqual( 6, await iArgs.GetDataRow().GetValueAsync<Int32>( 1 ) );
-            Assert.AreEqual( 5, await iArgs.GetDataRow().GetValueAsync<Int32>( 0 ) );
+            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( 6, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 1 ) );
+            Assert.AreEqual( 5, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
 
-            Assert.IsFalse( await iArgs.MoveNextAsync() );
+            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
+            await iArgs.EnumerationEnded();
          } );
       }
 
@@ -121,16 +125,40 @@ namespace CBAM.SQL.PostgreSQL.Tests
          String connectionConfigFileLocation
          )
       {
+         const Int32 FIRST = 1;
+         const Int32 SECOND = 2;
          await PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
          {
-            var enumerator = conn.PrepareStatementForExecution( "SELECT 1; SELECT 2;" );
-            Assert.IsTrue( await enumerator.MoveNextAsync() );
-            Assert.AreEqual( await enumerator.GetDataRow().GetValueAsync<Int32>( 0 ), 1 );
-            Assert.IsTrue( await enumerator.MoveNextAsync() );
-            Assert.AreEqual( await enumerator.GetDataRow().GetValueAsync<Int32>( 0 ), 2 );
+            var enumerator = conn.PrepareStatementForExecution( "SELECT " + FIRST + "; SELECT " + SECOND + ";" );
+            Int64? tkn;
+            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( FIRST, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
+            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( SECOND, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
          } );
       }
 
-
+      [DataTestMethod,
+         DataRow(
+         DEFAULT_CONFIG_FILE_LOCATION
+         ),
+         Timeout( DEFAULT_TIMEOUT )
+         ]
+      public async Task TestMultipleHeterogenousSimpleStatements(
+         String connectionConfigFileLocation
+         )
+      {
+         const Int32 TEST_INT = 1;
+         const String TEST_STRING = "testString";
+         await PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
+         {
+            var enumerator = conn.PrepareStatementForExecution( "SELECT " + TEST_INT + "; SELECT '" + TEST_STRING + "';" );
+            Int64? tkn;
+            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( 1, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
+            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
+            Assert.AreEqual( TEST_STRING, await enumerator.GetDataRow( tkn ).GetValueAsync<String>( 0 ) );
+         } );
+      }
    }
 }

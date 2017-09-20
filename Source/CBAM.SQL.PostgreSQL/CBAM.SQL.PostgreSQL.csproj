@@ -23,7 +23,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -54,7 +54,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Added documentation. Notification events are now fired only during call of CheckNotificationsAsync method of PgSQLConnection interface.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking the newer release of dependant packages.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL API</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

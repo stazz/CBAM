@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UtilPack;
 using UtilPack.AsyncEnumeration;
 
 namespace CBAM.Abstractions
@@ -122,8 +123,51 @@ public static partial class E_CBAM
       return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
    }
 
+   // For some reason the implicit cast of UtilPack.EitherOr struct is not always picked up by compiler, so these two methods exist
+
    /// <summary>
-   /// This is shortcut method to prepare statement and execute it while ignoring any possibly returned results of (values of <see cref="AsyncEnumerator{T}.Current"/> when encountered during <see cref="M:E_UtilPack.EnumerateAsync{T}(UtilPack.AsyncEnumeration.AsyncEnumerator{T},System.Func{T, System.Threading.Tasks.Task})"/> method).
+   /// This is shortcut method to directly prepare statement from its starting parameters without using builder.
+   /// </summary>
+   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   /// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
+   /// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
+   /// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</param>
+   /// <param name="creationArgs">The statement builder creation parameters.</param>
+   /// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> is <c>null</c>.</exception>
+   public static AsyncEnumerator<TEnumerableItem, TStatementInformation> PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality> connection, T1 creationArgs )
+      where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
+      where TStatement : TStatementInformation
+   {
+      return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
+   }
+
+   /// <summary>
+   /// This is shortcut method to directly prepare statement from its starting parameters without using builder.
+   /// </summary>
+   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   /// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
+   /// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
+   /// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</param>
+   /// <param name="creationArgs">The statement builder creation parameters.</param>
+   /// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> is <c>null</c>.</exception>
+   public static AsyncEnumerator<TEnumerableItem, TStatementInformation> PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality> connection, T2 creationArgs )
+      where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
+      where TStatement : TStatementInformation
+   {
+      return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
+   }
+
+
+   /// <summary>
+   /// This is shortcut method to prepare statement and execute it while ignoring any possibly returned results of (return values of <see cref="AsyncEnumerator{T}.OneTimeRetrieve"/> when encountered during <see cref="M:E_UtilPack.EnumerateAsync{T}(UtilPack.AsyncEnumeration.AsyncEnumerator{T},System.Func{T, System.Threading.Tasks.Task})"/> method).
    /// </summary>
    /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
    /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
@@ -144,11 +188,11 @@ public static partial class E_CBAM
       {
          enumerator.BeforeEnumerationEnd += ( args ) => action();
       }
-      return enumerator.EnumerateAsync( null );
+      return enumerator.EnumeratePreferParallel( (Action<TEnumerableItem>) null );
    }
 
    /// <summary>
-   /// This is shortcut method to create statement builder from creation parameters, prepare statement builder for execution, and execute it while ignoring any possibly returned results of (values of <see cref="AsyncEnumerator{T}.Current"/> when encountered during <see cref="M:E_UtilPack.EnumerateAsync{T}(UtilPack.AsyncEnumeration.AsyncEnumerator{T},System.Func{T, System.Threading.Tasks.Task})"/> method).
+   /// This is shortcut method to create statement builder from creation parameters, prepare statement builder for execution, and execute it while ignoring any possibly returned results of (return values of <see cref="AsyncEnumerator{T}.OneTimeRetrieve"/> when encountered during <see cref="M:E_UtilPack.EnumerateAsync{T}(UtilPack.AsyncEnumeration.AsyncEnumerator{T},System.Func{T, System.Threading.Tasks.Task})"/> method).
    /// </summary>
    /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
    /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
