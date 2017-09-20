@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- The BufferedStream only appears in 1.5 ... -->
+    <!-- SSL Stream only appears in 2.0... -->
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>7.1</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
+    <ProjectReference Include="..\CBAM.HTTP\CBAM.HTTP.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC1" />
+  </ItemGroup>
+
+</Project>
