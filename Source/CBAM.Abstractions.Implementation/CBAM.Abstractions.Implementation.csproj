@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC4" />
+    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC5" />
   </ItemGroup>
   
   <PropertyGroup>

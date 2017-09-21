@@ -84,12 +84,13 @@ namespace CBAM.HTTP.Tests
       public async Task TestHTTPRequestSending( String host, Int32 port, Boolean isSecure, String path )
       {
          var httpConnection = new NetworkStreamFactory()
-            .CreateOneTimeUseResourcePool( new HTTPConnectionEndPointConfigurationData()
+            .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
             {
                Host = host,
                Port = port,
                IsSecure = isSecure
             }.CreateNetworkStreamFactoryConfiguration() )
+            .CreateOneTimeUseResourcePool()
             .CreateNewHTTPConnection();
 
          var responses = new ConcurrentBag<HTTPResponseInfo>();
@@ -111,12 +112,13 @@ namespace CBAM.HTTP.Tests
       public async Task TestHTTPRequestSendingInParallel( String host, Int32 port, Boolean isSecure, String path, Int32 requestCount )
       {
          var httpConnection = new NetworkStreamFactory()
-            .CreateOneTimeUseResourcePool( new HTTPConnectionEndPointConfigurationData()
+            .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
             {
                Host = host,
                Port = port,
                IsSecure = isSecure
             }.CreateNetworkStreamFactoryConfiguration() )
+            .CreateOneTimeUseResourcePool()
             .CreateNewHTTPConnection();
 
          var responses = new ConcurrentBag<HTTPResponseInfo>();

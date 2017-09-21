@@ -34,7 +34,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var creationInfo = GetConnectionCreationInfo( connectionConfigFileLocation );
          // Since server needs to be configured for SSL mode as well, a separate config file is most generic option (in case SSL-enabled server is in different end-point than normal server used in tests)
          creationInfo.CreationData.Connection.ConnectionSSLMode = ConnectionSSLMode.Required;
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( creationInfo );
+         var pool = GetPool( creationInfo );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );
       }

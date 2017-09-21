@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling.MSBuild" Version="1.0.0-RC2" />
+    <PackageReference Include="UtilPack.ResourcePooling.MSBuild" Version="1.0.0-RC3" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="15.1.1012" />
   </ItemGroup>
 

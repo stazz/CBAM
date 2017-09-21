@@ -58,13 +58,22 @@ public static partial class E_HTTP
    {
       var host = httpEndPointConfiguration.Data.Host;
       var remoteAddress = host.CreateAddressOrHostNameResolvingLazy( null );
+      var data = httpEndPointConfiguration.Data;
       return new NetworkStreamFactoryConfiguration()
       {
-         ConnectionSSLMode = () => httpEndPointConfiguration.Data.IsSecure ? ConnectionSSLMode.Required : ConnectionSSLMode.NotRequired,
+         ConnectionSSLMode = () => data.IsSecure ? ConnectionSSLMode.Required : ConnectionSSLMode.NotRequired,
          IsSSLPossible = () => true,
          ProvideSSLHost = () => host,
          RemoteAddress = async ( token ) => await remoteAddress,
-         RemotePort = addr => httpEndPointConfiguration.Data.Port
+         RemotePort = addr =>
+         {
+            var port = data.Port;
+            if ( port <= 0 )
+            {
+               port = data.IsSecure ? 443 : 80;
+            }
+            return port;
+         }
       };
    }
 }

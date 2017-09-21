@@ -542,6 +542,11 @@ public static partial class E_HTTP
          }
       } while ( !endEncountered );
 
+      if ( cur == 0 )
+      {
+         throw new EndOfStreamException();
+      }
+
       return cur;
    }
 

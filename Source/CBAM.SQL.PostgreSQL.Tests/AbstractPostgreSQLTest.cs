@@ -25,6 +25,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UtilPack;
 using UtilPack.AsyncEnumeration;
+using UtilPack.ResourcePooling;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -49,6 +50,12 @@ namespace CBAM.SQL.PostgreSQL.Tests
          )
       {
          return new PgSQLConnectionCreationInfo( GetConnectionCreationInfoData( connectionConfigFileLocation ) );
+      }
+
+
+      protected static AsyncResourcePoolObservable<PgSQLConnection> GetPool( PgSQLConnectionCreationInfo info )
+      {
+         return PgSQLConnectionPoolProvider.Factory.BindCreationParameters( info ).CreateOneTimeUseResourcePool().WithoutExplicitAPI();
       }
 
       protected interface SimpleArrayDataGenerator
@@ -104,8 +111,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
          disabled.Initialization.Protocol.DisableBinaryProtocolReceive = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
+            GetPool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
+            GetPool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
             );
       }
 
@@ -121,8 +128,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
          disabled.Initialization.Protocol.DisableBinaryProtocolSend = true;
 
          await Task.WhenAll(
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
-            PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
+            GetPool( new PgSQLConnectionCreationInfo( enabled ) ).UseResourceAsync( performTest ),
+            GetPool( new PgSQLConnectionCreationInfo( disabled ) ).UseResourceAsync( performTest )
             );
       }
 

@@ -337,7 +337,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
    }
 
-   internal sealed class PgSQLConnectionFactory : ConnectionFactorySU<PgSQLConnectionImpl, PgSQLConnectionCreationInfo, PostgreSQLProtocol>
+   internal sealed class PgSQLConnectionFactory : ConnectionFactorySU<PgSQLConnection, PgSQLConnectionImpl, PgSQLConnectionCreationInfo, PostgreSQLProtocol>
    {
       private readonly BinaryStringPool _stringPool;
 
@@ -347,9 +347,9 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 #endif
 
       public PgSQLConnectionFactory(
-         IEncodingInfo encoding,
-         PgSQLConnectionCreationInfo creationInfo
-         )
+         PgSQLConnectionCreationInfo creationInfo,
+         IEncodingInfo encoding
+         ) : base( creationInfo )
       {
          this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
          ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
@@ -442,10 +442,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected override async ValueTask<PostgreSQLProtocol> CreateConnectionFunctionality(
-         PgSQLConnectionCreationInfo parameters,
          CancellationToken token
          )
       {
+         var parameters = this.CreationParameters;
          var streamFactory = parameters.StreamFactory;
 
 #if !NETSTANDARD1_0

@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC1" />
+    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC2" />
   </ItemGroup>
 
 </Project>

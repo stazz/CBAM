@@ -30,7 +30,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       public async Task TestNotificationCheck( String connectionConfigFileLocation )
       {
          const String NOTIFICATION_NAME = "testing";
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseResourceAsync( async conn =>
          {
             NotificationEventArgs notificationArgs = null;

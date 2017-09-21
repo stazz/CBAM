@@ -31,7 +31,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
       public async Task TestSelect1( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );
       }
@@ -42,7 +42,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var first = 1;
          var second = 2;
          var third = 3;
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
          var tuple = await pool.UseResourceAsync( async conn =>
          {
@@ -70,7 +70,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
       public async Task TestNotReadingAllColumns( String connectionConfigFileLocation )
       {
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseResourceAsync( async conn =>
          {
             var iArgs = conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" );
@@ -105,7 +105,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          )
       {
          var generator = (SimpleArrayDataGenerator) Activator.CreateInstance( arrayGenerator );
-         var pool = PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseResourceAsync( async conn =>
          {
             foreach ( var arrayInfo in generator.GenerateArrays() )
@@ -127,7 +127,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
-         await PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
+         await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
          {
             var enumerator = conn.PrepareStatementForExecution( "SELECT " + FIRST + "; SELECT " + SECOND + ";" );
             Int64? tkn;
@@ -150,7 +150,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          const Int32 TEST_INT = 1;
          const String TEST_STRING = "testString";
-         await PgSQLConnectionPoolProvider.Instance.CreateOneTimeUseResourcePool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
+         await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
          {
             var enumerator = conn.PrepareStatementForExecution( "SELECT " + TEST_INT + "; SELECT '" + TEST_STRING + "';" );
             Int64? tkn;

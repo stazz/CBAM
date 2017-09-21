@@ -1,9 +1,77 @@
 # CBAM
-Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with e.g. SQL or LDAP backend processes.
+Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with remote resources, e.g. SQL, HTTP, LDAP servers, etc.
+
+The [CBAM.SQL.PostgreSQL.Implementation](#cbam.sql.postgresql.implementation) project allows one to do this:
+```csharp
+using Microsoft.Extensions.Configuration; // For configuration
+using CBAM.SQL.PostgreSQL; // For CBAM PostgreSQL types
+
+var configData = new ConfigurationBuilder() // This line requires reference to Microsoft.Extensions.Configuration NuGet package
+  .AddJsonFile( System.IO.Path.GetFullPath( "path/to/config/jsonfile" ) ) // This line requires reference to Microsoft.Extensions.Configuration.Json NuGet package
+  .Build()
+  .Get<PgSQLConnectionCreationInfoData>(); // This line requires reference to Microsoft.Extensions.Configuration.Binder NuGet package
+
+// Create connection pool
+using ( var pool = PgSQLConnectionPoolProvider.Factory
+  .BindCreationParameters( new PgSQLConnectionCreationInfo( configData ) )
+  .CreateTimeoutingResourcePool()
+  )
+{
+
+  // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
+  await pool.UseResourceAsync( async pgConnection => await pgConnection
+    .PrepareStatementForExecution( "SELECT 1" )
+    .EnumerateSQLRowsAsync( async row => Console.WriteLine( await row.GetValueAsync<Int32>( 0 ) ) )
+    );
+
+}
+
+// Elsewhere, e.g. maybe in a separate background thread/loop:
+// This will close all connections that has been idle in a pool for over one minute
+await pool.CleanUpAsync( TimeSpan.FromMinutes( 1 ) );
+```
+
+While the [CBAM.HTTP.Implementation](#cbam.http.implementation) project allows one to do this:
+```csharp
+using System.Collections.Concurrent;
+using UtilPack; // For "CreateRepeater" extension method
+using UtilPack.ResourcePooling.NetworkStream; // For NetworkStreamFactory
+using CBAM.HTTP; // For HTTP-related
+
+// Store all responses as strings for this simple example
+var responseTexts = new ConcurrentBag<String>();
+using ( var pool = new NetworkStreamFactory()
+  .BindCreationParameters(
+    new HTTPConnectionEndPointConfigurationData()
+    {
+      Host = "www.google.com",
+      IsSecure = true
+    }.CreateNetworkStreamFactoryConfiguration()
+  ).CreateTimeoutingAndLimitedResourcePool( 10 ) // Cache streams and their idle time, and limit maximum concurrent connections to 10
+  )
+{
+  // Create CBAM HTTP connection
+  var httpConnection = pool.CreateNewHTTPConnection();
+
+  // Send 20 requests to "/" in parallel and process each response
+  // Note that only 10 connections will be opened, since the pool is limited to 10 concurrent connections
+  await httpConnection
+    .PrepareStatementForExecution( HTTPMessageFactory
+      .CreateGETRequest( "/" )
+      .CreateRepeater( 20 ) // Repeat same request 20 times
+    ).EnumerateInParallelAsync( async response =>
+    {
+      // Read whole response content into byte array and get string from it (assume UTF-8 encoding for this simple example)
+      responseTexts.Add( Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
+    } );
+}
+
+// Now the responseTexts bag will contain 20 response texts.
+```
 
 ## Projects
-Currently there are 11 projects, and only SQL version of CBAM.Abstractions project exists.
-The most interesting projects, from end-user point of view, are most likely CBAM.SQL.PostgreSQL.Implementation and CBAM.SQL.MSBuild.
+Currently there are 14 projects, and only SQL version of CBAM.Abstractions project exists.
+The most interesting projects, from end-user point of view, are most likely CBAM.SQL.PostgreSQL.Implementation, CBAM.SQL.MSBuild, and CBAM.HTTP.Implementation.
 
 ### CBAM.SQL.PostgreSQL.Implementation
 
