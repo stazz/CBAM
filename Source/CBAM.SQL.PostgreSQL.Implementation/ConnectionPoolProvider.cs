@@ -29,44 +29,50 @@ namespace CBAM.SQL.PostgreSQL
 {
    /// <summary>
    /// This is the entrypoint-class for using PostgreSQL connections.
-   /// This class implements has methods to create <see cref="AsyncResourcePool{TResource}"/> that exposes API to use <see cref="PgSQLConnection"/>s.
-   /// Use <see cref="Instance"/> to access the API of this class: this class has not state, and constructor is public *only* to enable generic load scenarios required by <see cref="AsyncResourcePoolProvider{TResource}"/> interface.
+   /// Use <see cref="Factory"/> static property to acquire <see cref="AsyncResourceFactory{TResource, TParams}"/> for <see cref="PgSQLConnection"/>, and then use <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> to obtain <see cref="AsyncResourceFactory{TResource}"/>.
+   /// This <see cref="AsyncResourceFactory{TResource}"/> with one generic type parameter then has a number of extension methods which create various <see cref="AsyncResourcePool{TResource}"/>s, those pools then provide effective mechanism to actually use <see cref="PgSQLConnection"/>s.
    /// </summary>
    /// <remarks>
-   /// The <see cref="CreateTimeoutingResourcePool(PgSQLConnectionCreationInfo)"/> and <see cref="CreateOneTimeUseResourcePool(PgSQLConnectionCreationInfo)"/> are the most commonly used methods.
-   /// This class also (explicitly) implements <see cref="AsyncResourcePoolProvider{TResource}"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
+   /// This class also (explicitly) implements <see cref="AsyncResourceFactoryProvider"/> interface in order to provide dynamic creation of <see cref="AsyncResourcePool{TResource}"/>s, but this is used in generic scenarios (e.g. MSBuild task, where this class can be given as parameter, and the task dynamically loads this type).
    /// </remarks>
    public sealed class PgSQLConnectionPoolProvider : AbstractAsyncResourceFactoryProvider<PgSQLConnection, PgSQLConnectionCreationInfo>
    {
-      //private static readonly IEncodingInfo Encoding;
 
       static PgSQLConnectionPoolProvider()
       {
          var encoding = new UTF8EncodingInfo();
-         //Instance = new PgSQLConnectionPoolProvider();
          Factory = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config => new PgSQLConnectionFactory( config, encoding ) );
       }
 
-      ///// <summary>
-      ///// Gets the default instance of this class.
-      ///// This is preferred way of getting this class, since it has no state on its own.
-      ///// The constructor is public only to enable dynamic load scenarios related to <see cref="AsyncResourcePoolProvider{TResource}"/> interface.
-      ///// </summary>
-      ///// <value>The default instance of this class.</value>
-      //public static PgSQLConnectionPoolProvider Instance { get; }
 
+      /// <summary>
+      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.
+      /// </summary>
+      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.</value>
+      /// <remarks>
+      /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
+      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
+      /// </remarks>
       public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; }
 
+      /// <summary>
+      /// Creates a new instance of <see cref="PgSQLConnectionPoolProvider"/>.
+      /// </summary>
+      /// <remarks>
+      /// This constructor is not intended to be used directly, but a generic scenarios like MSBuild task dynamically loading this type.
+      /// </remarks>
       public PgSQLConnectionPoolProvider()
          : base( typeof( PgSQLConnectionCreationInfoData ) )
       {
       }
 
       /// <summary>
-      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TCreationParameters}.TransformFactoryParameters"/> method, 
+      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TFactoryResource, TCreationParameters}.TransformFactoryParameters"/> method, by checking that given object is <see cref="PgSQLConnectionCreationInfo"/>  or <see cref="PgSQLConnectionCreationInfoData"/>.
       /// </summary>
-      /// <param name="untyped"></param>
-      /// <returns></returns>
+      /// <param name="creationParameters">The untyped creation parameters.</param>
+      /// <returns>The <see cref="PgSQLConnectionCreationInfo"/>.</returns>
+      /// <exception cref="ArgumentNullException">If <paramref name="creationParameters"/> is <c>null</c>.</exception>
+      /// <exception cref="ArgumentException">If <paramref name="creationParameters"/> is not <see cref="PgSQLConnectionCreationInfo"/> or <see cref="PgSQLConnectionCreationInfoData"/>.</exception>
       protected override PgSQLConnectionCreationInfo TransformFactoryParameters( Object creationParameters )
       {
          ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
@@ -89,6 +95,10 @@ namespace CBAM.SQL.PostgreSQL
          return retVal;
       }
 
+      /// <summary>
+      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TFactoryResource, TCreationParameters}.CreateFactory"/> by returning static property <see cref="Factory"/>.
+      /// </summary>
+      /// <returns>The value of <see cref="Factory"/> static property.</returns>
       protected override AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> CreateFactory()
          => Factory;
 

@@ -125,9 +125,9 @@ namespace CBAM.SQL.PostgreSQL
       //public Int32 LocalPort { get; set; }
 
       /// <summary>
-      /// Gets or sets the <see cref="PostgreSQL.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.
+      /// Gets or sets the <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.
       /// </summary>
-      /// <value>The <see cref="PostgreSQL.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.</value>
+      /// <value>The <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.</value>
       public ConnectionSSLMode ConnectionSSLMode { get; set; }
 
       /// <summary>
@@ -135,7 +135,7 @@ namespace CBAM.SQL.PostgreSQL
       /// </summary>
       /// <value>The <see cref="System.Security.Authentication.SslProtocols"/> controlling what kind of SSL encryption will be used for the socket connection.</value>
       /// <remarks>
-      /// This field will only be used of <see cref="ConnectionSSLMode"/> property will be something else than <see cref="PostgreSQL.ConnectionSSLMode.NotRequired"/>
+      /// This field will only be used of <see cref="ConnectionSSLMode"/> property will be something else than <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode.NotRequired"/>
       /// </remarks>
       public System.Security.Authentication.SslProtocols SSLProtocols { get; set; }
    }
