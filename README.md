@@ -53,9 +53,8 @@ using ( var pool = new NetworkStreamFactory().BindCreationParameters(
 
   // Send 20 requests to "/" in parallel and process each response
   // Note that only 10 connections will be opened, since the pool is limited to 10 concurrent connections
-  await httpConnection.PrepareStatementForExecution( HTTPMessageFactory
-      .CreateGETRequest( "/" )
-      .CreateRepeater( 20 ) // Repeat same request 20 times
+  await httpConnection.PrepareStatementForExecution( 
+    HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( 20 ) // Repeat same request 20 times
     ).EnumerateInParallelAsync( async response =>
     {
       // Read whole response content into byte array and get string from it (assume UTF-8 encoding for this simple example)
