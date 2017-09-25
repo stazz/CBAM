@@ -1,7 +1,7 @@
 # CBAM
 Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with remote resources, e.g. SQL, HTTP, LDAP servers, etc.
 
-The [CBAM.SQL.PostgreSQL.Implementation](#cbam.sql.postgresql.implementation) project allows one to do this:
+The [CBAM.SQL.PostgreSQL.Implementation](#cbamsqlpostgresqlimplementation) project allows one to do this:
 ```csharp
 using Microsoft.Extensions.Configuration; // For configuration
 using CBAM.SQL.PostgreSQL; // For CBAM PostgreSQL types
@@ -31,7 +31,7 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
 await pool.CleanUpAsync( TimeSpan.FromMinutes( 1 ) );
 ```
 
-While the [CBAM.HTTP.Implementation](#cbam.http.implementation) project allows one to do this:
+While the [CBAM.HTTP.Implementation](#cbamhttpimplementation) project allows one to do this:
 ```csharp
 using System.Collections.Concurrent;
 using UtilPack; // For "CreateRepeater" extension method
@@ -123,6 +123,16 @@ This project extends the data column class in [UtilPack.TabularData](https://git
 This project provides skeleton implementations for interfaces in CBAM.SQL and uses the skeleton implementations provided in CBAM.Tabular.Implementation.
 
 [Read more ->](./Source/CBAM.SQL.Implementation)
+
+### CBAM.HTTP
+This project provides API for HTTP-oriented Connection from CBAM.Abstractions, along with minimalistic HTTP API.
+
+[Read more ->](./Source/CBAM.HTTP)
+
+### CBAM.HTTP.Implementation
+This project provides implementation for CBAM types in CBAM.HTTP, along with factory extension method to create HTTP CBAM connections.
+
+[Read more ->](./Source/CBAM.HTTP.Implementation)
 
 ## Portability
 CBAM projects aim to be as portable as possible.
