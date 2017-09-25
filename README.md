@@ -40,23 +40,20 @@ using CBAM.HTTP; // For HTTP-related
 
 // Store all responses as strings in this simple example
 var responseTexts = new ConcurrentBag<String>();
-using ( var pool = new NetworkStreamFactory()
-  .BindCreationParameters(
+using ( var pool = new NetworkStreamFactory().BindCreationParameters(
     new HTTPConnectionEndPointConfigurationData()
     {
       Host = "www.google.com",
       IsSecure = true
     }.CreateNetworkStreamFactoryConfiguration()
-  ).CreateTimeoutingAndLimitedResourcePool( 10 ) // Cache streams and their idle time, and limit maximum concurrent connections to 10
-  )
+  ).CreateTimeoutingAndLimitedResourcePool( 10 ) ) // Cache streams and their idle time, and limit maximum concurrent connections to 10
 {
   // Create CBAM HTTP connection
   var httpConnection = pool.CreateNewHTTPConnection();
 
   // Send 20 requests to "/" in parallel and process each response
   // Note that only 10 connections will be opened, since the pool is limited to 10 concurrent connections
-  await httpConnection
-    .PrepareStatementForExecution( HTTPMessageFactory
+  await httpConnection.PrepareStatementForExecution( HTTPMessageFactory
       .CreateGETRequest( "/" )
       .CreateRepeater( 20 ) // Repeat same request 20 times
     ).EnumerateInParallelAsync( async response =>
