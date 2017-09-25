@@ -40,7 +40,7 @@ namespace CBAM.HTTP.Tests
          {
             this.Version = response.Version;
             this.StatusCode = response.StatusCode;
-            this.Message = response.Message;
+            this.Message = response.StatusCodeMessage;
             this.Headers = response.Headers;
             if ( content != null )
             {
@@ -132,5 +132,43 @@ namespace CBAM.HTTP.Tests
          Assert.AreEqual( requestCount, responses.Count );
       }
 
+      [DataTestMethod,
+         DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "", 20, 10 ),
+         Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestHTTPWithLimitedPool(
+         String host, Int32 port, Boolean isSecure, String path, Int32 requestCount, Int32 poolLimit
+         )
+      {
+         var responseTexts = new ConcurrentBag<String>();
+         Int32 streamsAcquired = 0;
+         using ( var pool = new NetworkStreamFactory()
+            .BindCreationParameters(
+               new HTTPConnectionEndPointConfigurationData()
+               {
+                  Host = host,
+                  Port = port,
+                  IsSecure = isSecure
+               }.CreateNetworkStreamFactoryConfiguration()
+               )
+            .CreateTimeoutingAndLimitedResourcePool( poolLimit )
+            )
+         {
+            pool.AfterResourceCreationEvent += ( argz ) => Interlocked.Increment( ref streamsAcquired );
+            var httpConnection = pool.CreateNewHTTPConnection();
+
+            // Send 20 requests in parallel and process each response
+            await httpConnection
+               .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( requestCount ) )
+               .EnumerateInParallelAsync( async response =>
+               {
+                  // Read whole response content into byte array and get string from it
+                  responseTexts.Add( Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
+               } );
+
+         }
+
+         Assert.AreEqual( requestCount, responseTexts.Count );
+         Assert.AreEqual( poolLimit, streamsAcquired );
+      }
    }
 }

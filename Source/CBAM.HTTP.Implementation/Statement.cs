@@ -17,7 +17,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using UtilPack;
@@ -77,6 +76,6 @@ namespace CBAM.HTTP.Implementation
 
       public HTTPStatementInformation Information { get; }
 
-      Func<HTTPRequest> HTTPStatementInformation.MessageGenerator => this.MessageGenerator;
+      //Func<HTTPRequest> HTTPStatementInformation.MessageGenerator => this.MessageGenerator;
    }
 }

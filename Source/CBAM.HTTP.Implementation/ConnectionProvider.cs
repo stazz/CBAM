@@ -28,14 +28,24 @@ using UtilPack;
 
 namespace CBAM.HTTP
 {
+   /// <summary>
+   /// This class contains extension methods for types defined in other assemblies than this assembly.
+   /// </summary>
    public static partial class HTTPExtensions
    {
+      /// <summary>
+      /// This method will create a new instance of <see cref="HTTPConnection"/> which will use this <see cref="ExplicitAsyncResourcePool{TResource}"/> when sending and receiving <see cref="HTTPMessage{TContent}"/>s.
+      /// </summary>
+      /// <param name="streamPool">This <see cref="ExplicitAsyncResourcePool{TResource}"/>.</param>
+      /// <param name="configuration">The optional <see cref="HTTPConnectionConfiguration"/> to use.</param>
+      /// <returns>A new instance of <see cref="HTTPConnection"/> that represents connection to remote endpoint and can be used to send and receive <see cref="HTTPMessage{TContent}"/>s via <see cref="CBAM.Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/>.</returns>
+      /// <exception cref="NullReferenceException">If this <see cref="ExplicitAsyncResourcePool{TResource}"/> is <c>null</c>.</exception>
       public static HTTPConnection CreateNewHTTPConnection( this ExplicitAsyncResourcePool<Stream> streamPool, HTTPConnectionConfiguration configuration = null )
       {
          return new HTTPConnectionImpl(
             new HTTPConnectionFunctionalityImpl(
                HTTPConnectionVendorImpl.Instance,
-               streamPool,
+               ArgumentValidator.ValidateNotNullReference( streamPool ),
                configuration?.Data?.MaxReadBufferSize,
                configuration?.Data?.MaxWriteBufferSize
                )
@@ -46,34 +56,49 @@ namespace CBAM.HTTP
 
 }
 
+/// <summary>
+/// This class contains extension methods for types defined in this assembly.
+/// </summary>
 public static partial class E_HTTP
 {
+   /// <summary>
+   /// Creates a new <see cref="NetworkStreamFactoryConfiguration"/> from this <see cref="HTTPConnectionEndPointConfigurationData"/>.
+   /// The returned <see cref="NetworkStreamFactoryConfiguration"/> can be used to e.g. invoke <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> method of <see cref="NetworkStreamFactory"/>, or directly call static <see cref="NetworkStreamFactory.AcquireNetworkStreamFromConfiguration"/>.
+   /// </summary>
+   /// <param name="httpEndPointConfigurationData">This <see cref="HTTPConnectionEndPointConfigurationData"/>.</param>
+   /// <returns>A instance of <see cref="NetworkStreamFactoryConfiguration"/> which will use this <see cref="HTTPConnectionEndPointConfigurationData"/> in its callbacks.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPConnectionEndPointConfigurationData"/> is <c>null</c>.</exception>
    public static NetworkStreamFactoryConfiguration CreateNetworkStreamFactoryConfiguration( this HTTPConnectionEndPointConfigurationData httpEndPointConfigurationData )
    {
-      return new HTTPConnectionEndPointConfiguration( ArgumentValidator.ValidateNotNullReference( httpEndPointConfigurationData ) )
-         .CreateNetworkStreamFactoryConfiguration();
-   }
-
-   public static NetworkStreamFactoryConfiguration CreateNetworkStreamFactoryConfiguration( this HTTPConnectionEndPointConfiguration httpEndPointConfiguration )
-   {
-      var host = httpEndPointConfiguration.Data.Host;
+      var host = httpEndPointConfigurationData.Host;
       var remoteAddress = host.CreateAddressOrHostNameResolvingLazy( null );
-      var data = httpEndPointConfiguration.Data;
       return new NetworkStreamFactoryConfiguration()
       {
-         ConnectionSSLMode = () => data.IsSecure ? ConnectionSSLMode.Required : ConnectionSSLMode.NotRequired,
+         ConnectionSSLMode = () => httpEndPointConfigurationData.IsSecure ? ConnectionSSLMode.Required : ConnectionSSLMode.NotRequired,
          IsSSLPossible = () => true,
          ProvideSSLHost = () => host,
          RemoteAddress = async ( token ) => await remoteAddress,
          RemotePort = addr =>
          {
-            var port = data.Port;
+            var port = httpEndPointConfigurationData.Port;
             if ( port <= 0 )
             {
-               port = data.IsSecure ? 443 : 80;
+               port = httpEndPointConfigurationData.IsSecure ? 443 : 80;
             }
             return port;
          }
       };
+   }
+
+   /// <summary>
+   /// Creates a new <see cref="NetworkStreamFactoryConfiguration"/> from this <see cref="HTTPConnectionEndPointConfiguration"/>.
+   /// The returned <see cref="NetworkStreamFactoryConfiguration"/> can be used to e.g. invoke <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> method of <see cref="NetworkStreamFactory"/>, or directly call static <see cref="NetworkStreamFactory.AcquireNetworkStreamFromConfiguration"/>.
+   /// </summary>
+   /// <param name="httpEndPointConfiguration">This <see cref="HTTPConnectionEndPointConfiguration"/>.</param>
+   /// <returns>A instance of <see cref="NetworkStreamFactoryConfiguration"/> which will use this <see cref="HTTPConnectionEndPointConfiguration"/> in its callbacks.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPConnectionEndPointConfiguration"/> is <c>null</c>.</exception>
+   public static NetworkStreamFactoryConfiguration CreateNetworkStreamFactoryConfiguration( this HTTPConnectionEndPointConfiguration httpEndPointConfiguration )
+   {
+      return httpEndPointConfiguration.Data.CreateNetworkStreamFactoryConfiguration();
    }
 }

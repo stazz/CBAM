@@ -15,23 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-
 using CBAM.Abstractions;
-using UtilPack;
 
 using TCreationParameter = UtilPack.EitherOr<CBAM.HTTP.HTTPRequest, System.Func<CBAM.HTTP.HTTPRequest>>;
 
 namespace CBAM.HTTP
 {
-
+   /// <summary>
+   /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to client.
+   /// </summary>
    public interface HTTPConnection : Connection<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality>
    {
 
    }
 
+   /// <summary>
+   /// This interface extends <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/> to provide any HTTP-specific functionality which does not need a connection.
+   /// </summary>
    public interface HTTPConnectionVendorFunctionality : ConnectionVendorFunctionality<HTTPStatement, TCreationParameter>
    {
 

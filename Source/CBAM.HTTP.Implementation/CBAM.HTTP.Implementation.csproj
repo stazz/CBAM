@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <!-- The BufferedStream only appears in 1.5 ... -->
-    <!-- SSL Stream only appears in 2.0... -->
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard1.5;netstandard2.0;netcoreapp1.1;net45;net40</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -21,5 +20,45 @@
   <ItemGroup>
     <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC2" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Authors>Stanislav Muhametsin</Authors>
+    <Company>Cometa Solutions Ltd</Company>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Product>CBAM</Product>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) HTTP.Implementation package contains API create instances of types defined in CBAM.HTTP package.</Description>
+    <Copyright>Stanislav Muhametsin</Copyright>
+    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
+  </PropertyGroup>
+
+  <!-- Assembly signing stuff -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
+    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+
+  <!-- Disable all debug information in release mode-->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>False</DebugSymbols>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection http client request api</PackageTags>
+    <Title>CBAM HTTP Client Implementation</Title>
+    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
+    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+  </PropertyGroup>
 
 </Project>

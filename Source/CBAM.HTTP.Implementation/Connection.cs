@@ -16,7 +16,6 @@
  * limitations under the License. 
  */
 using System;
-using System.Net.Http;
 
 using CBAM.Abstractions.Implementation;
 using UtilPack;
@@ -32,8 +31,6 @@ using CBAM.HTTP;
 using System.Text;
 using CBAM.HTTP.Implementation;
 using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Net;
 
 namespace CBAM.HTTP.Implementation
 {
@@ -87,11 +84,11 @@ namespace CBAM.HTTP.Implementation
          )
       {
          var list = new List<ExplicitResourceAcquireInfo<Stream>>();
-
+         var generator = ( (HTTPStatementInformationImpl) metadata ).MessageGenerator;
          return AsyncEnumeratorFactory.CreateParallelObservableEnumerator(
             () =>
             {
-               var request = metadata.MessageGenerator();
+               var request = generator();
                return (request != null, request);
             },
             async ( request, token ) =>
@@ -135,7 +132,7 @@ namespace CBAM.HTTP.Implementation
                   throw;
                }
             },
-            async ( moveNextEnded, token ) =>
+            ( moveNextEnded, token ) =>
             {
                var streamPool = this._streamPool;
                ExplicitResourceAcquireInfo<Stream>[] array;
@@ -147,15 +144,13 @@ namespace CBAM.HTTP.Implementation
 
                foreach ( var stream in array )
                {
-                  try
-                  {
-                     await this._streamPool.ReturnResource( stream );
-                  }
-                  catch
-                  {
-
-                  }
+                  // If any stream is opened at this point, the content was not read till the end -> we are in inconsistent state (mid-transport of content).
+                  // Just close the stream (TODO in future, see if we know the content size of the stream, and read it till the end instead of closing (if feasible))
+                  // TODO for streams with unknown size, and which are left opened after all data sent, we need some mechanism to explicitly signal that the user of the HTTPResponseContent has reached the end of stream.
+                  stream.Resource.DisposeSafely();
                }
+
+               return TaskUtils.CompletedTask;
             },
             metadata,
             getGlobalBeforeEnumerationExecutionStart,
@@ -255,7 +250,7 @@ public static partial class E_HTTP
             buffer.CurrentMaxCapacity = Math.Min( buffer.MaximumSize, strByteCount );
          }
 
-         retVal = HTTPRequestContentFromString.WriteToStream( writer, encoding, str, strByteCount, bufferIndex );
+         retVal = writer.WriteToStreamAsync( encoding, str, strByteCount, bufferIndex );
       }
       else
       {
@@ -384,7 +379,7 @@ public static partial class E_HTTP
       {
          var reader = new BufferedStream( stream, 1024 ); // StreamFactory.CreateUnlimitedReader( stream, token, buffer: buffer );
          // Read first line
-         var bytesRead = await reader.ReadUntilCRLF( buffer );
+         var bytesRead = await reader.ReadUntilCRLF( buffer, token );
          var array = buffer.Array;
          var idx = Array.IndexOf( array, SPACE );
          var version = UnescapeHTTPComponentString( encoding.GetString( array, 0, idx ) );
@@ -404,7 +399,7 @@ public static partial class E_HTTP
          // Read headers - one line at a time
          // TODO max header count limit (how many fieldname:fieldvalue lines)
          var headers = retVal.Headers;
-         while ( ( bytesRead = await reader.ReadUntilCRLF( buffer ) ) > 2 )
+         while ( ( bytesRead = await reader.ReadUntilCRLF( buffer, token ) ) > 2 )
          {
             array = buffer.Array;
             idx = Array.IndexOf( array, COLON );
@@ -463,7 +458,7 @@ public static partial class E_HTTP
                   allStreams.Add( streamAcquireInfo );
                }
 
-               retVal.Content = new HTTPResponseContentFromStream( reader, contentLength, () =>
+               retVal.Content = HTTPMessageFactory.CreateResponseContentFromStream( reader, contentLength, () =>
                {
                   ValueTask<Boolean> awaitable = default;
                   lock ( allStreams )
@@ -512,37 +507,44 @@ public static partial class E_HTTP
       return !( String.Equals( requestMethod, "HEAD" ) || ( statusCode >= 100 && statusCode < 200 ) || statusCode == 204 || statusCode == 304 );
    }
 
-   private static async ValueTask<Int32> ReadUntilCRLF( this BufferedStream stream, ResizableArray<Byte> buffer )
+   private static async ValueTask<Int32> ReadUntilCRLF( this BufferedStream stream, ResizableArray<Byte> buffer, CancellationToken token )
    {
+      const Int32 INITIAL = 0;
+      const Int32 CRLF_SEEN = 1;
+      const Int32 END_SEEN = 2;
       var cur = 0;
-      var endEncountered = false;
+      var endEncountered = INITIAL;
       do
       {
          buffer.CurrentMaxCapacity = cur + 1;
          // The implementation of BufferedStream is optimized to return cached task when reading from buffer using same count
-         if ( await stream.ReadAsync( buffer.Array, cur, 1 ) == 1 )
+         if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
          {
             ++cur;
             if ( buffer.Array[cur - 1] == CR )
             {
                buffer.CurrentMaxCapacity = cur + 1;
-               if ( await stream.ReadAsync( buffer.Array, cur, 1 ) == 1 )
+               if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
                {
                   ++cur;
                   if ( buffer.Array[cur - 1] == LF )
                   {
-                     endEncountered = true;
+                     endEncountered = CRLF_SEEN;
                   }
+               }
+               else
+               {
+                  endEncountered = END_SEEN;
                }
             }
          }
          else
          {
-            endEncountered = true;
+            endEncountered = END_SEEN;
          }
-      } while ( !endEncountered );
+      } while ( endEncountered == INITIAL );
 
-      if ( cur == 0 )
+      if ( endEncountered == END_SEEN )
       {
          throw new EndOfStreamException();
       }

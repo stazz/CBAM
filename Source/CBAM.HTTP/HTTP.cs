@@ -16,7 +16,6 @@
  * limitations under the License. 
  */
 using CBAM.HTTP;
-using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,253 +29,153 @@ namespace CBAM.HTTP
    // It would be nice to use System.Net.Http namespace, but it is old and outdated API, and HttpResponseMessage can be properly build only by HttpClient, and that is not suitable for this library at all.
    // Microsoft.AspNetCore.Http would be also nice, but that is server-oriented API, while this is client-oriented API, and therefore can't be used directly either (also it requires .NET Standard 2.0).
 
+   /// <summary>
+   /// This interface describes a HTTP request, which client sends to server, from client's point of view.
+   /// </summary>
+   /// <seealso cref="HTTPMessageFactory"/>
    public interface HTTPRequest : HTTPMessage<HTTPRequestContent>
    {
+      /// <summary>
+      /// Gets or sets the HTTP request method, as string.
+      /// </summary>
+      /// <value>The HTTP request method, as string.</value>
       String Method { get; set; }
+
+      /// <summary>
+      /// Gets or sets the HTTP request path, as string.
+      /// </summary>
+      /// <value>The HTTP request path, as string.</value>
       String Path { get; set; }
    }
 
+   /// <summary>
+   /// This interface describes a HTTP response, which server sends to the client, from client's point of view.
+   /// </summary>
+   /// <seealso cref="HTTPMessageFactory"/>
    public interface HTTPResponse : HTTPMessage<HTTPResponseContent>
    {
+      /// <summary>
+      /// Gets or sets the status code returned by the server.
+      /// </summary>
+      /// <value>The status code returned by the server.</value>
       Int32 StatusCode { get; set; }
-      String Message { get; set; }
+
+      /// <summary>
+      /// Gets or sets the status code message returned by the server.
+      /// </summary>
+      /// <value>The status code message returned by the server.</value>
+      String StatusCodeMessage { get; set; }
    }
 
+   /// <summary>
+   /// This is common interface for <see cref="HTTPRequest"/> and <see cref="HTTPResponse"/>.
+   /// </summary>
+   /// <typeparam name="TContent"></typeparam>
    public interface HTTPMessage<TContent>
       where TContent : HTTPMessageContent
    {
+      /// <summary>
+      /// Gets the HTTP headers of this HTTP message (request or response).
+      /// </summary>
+      /// <value>The HTTP headers of this HTTP message (request or response).</value>
       IDictionary<String, List<String>> Headers { get; }
+
+      /// <summary>
+      /// Gets or sets the HTTP version of this HTTP message (request or response).
+      /// </summary>
+      /// <value>The HTTP version of this HTTP message (request or response).</value>
       String Version { get; set; }
+
+      /// <summary>
+      /// Gets or sets the content of this HTTP message (request or response).
+      /// </summary>
+      /// <value>The content of this HTTP message (request or response).</value>
       TContent Content { get; set; }
    }
 
+   /// <summary>
+   /// This is common interface for <see cref="HTTPRequestContent"/> and <see cref="HTTPResponseContent"/>.
+   /// </summary>
    public interface HTTPMessageContent
    {
+      /// <summary>
+      /// Gets the amount of bytes this content takes, if the amount is known.
+      /// </summary>
+      /// <value>The amount of bytes this content takes, if the amount is known.</value>
       Int64? ByteCount { get; }
    }
 
+   /// <summary>
+   /// This is the content object for <see cref="HTTPRequest"/>.
+   /// </summary>
+   /// <seealso cref="HTTPMessageFactory"/>
    public interface HTTPRequestContent : HTTPMessageContent
    {
-      // Return amount of bytes written
+      /// <summary>
+      /// Writes the content bytes of this <see cref="HTTPRequestContent"/> to given <see cref="HTTPWriter"/>.
+      /// </summary>
+      /// <param name="writer">The <see cref="HTTPWriter"/>.</param>
+      /// <param name="seenByteCount">The byte count as returned by <see cref="HTTPMessageContent.ByteCount"/> property.</param>
+      /// <returns>Potentially asynchronously returns the amount of bytes written to <see cref="HTTPWriter"/>.</returns>
       ValueTask<Int64> WriteToStream( HTTPWriter writer, Int64? seenByteCount );
    }
 
+   /// <summary>
+   /// This is content object for <see cref="HTTPResponse"/>.
+   /// </summary>
+   /// <seealso cref="HTTPMessageFactory"/>
    public interface HTTPResponseContent : HTTPMessageContent
    {
+      /// <summary>
+      /// Gets the amount of bytes remaining in this content, if the content byte count is known.
+      /// </summary>
+      /// <value>The amount of bytes remaining in this content, if the content byte count is known.</value>
       Int64? BytesRemaining { get; }
 
+      /// <summary>
+      /// Potentially asynchronously reads the given amount of bytes to given array.
+      /// </summary>
+      /// <param name="array">The byte array to read to.</param>
+      /// <param name="offset">The offset in <paramref name="array"/> where to start writing bytes.</param>
+      /// <param name="count">The maximum amount of bytes to write.</param>
+      /// <param name="token">The optional <see cref="CancellationToken"/> to use.</param>
+      /// <returns>Potentially asynchronously returns amount of bytes read. The return value of <c>0</c> means that end of content has been reached.</returns>
       ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token = default );
    }
 
+   /// <summary>
+   /// This interface is used by <see cref="HTTPRequestContent.WriteToStream"/> method to write the content to HTTP server.
+   /// </summary>
    public interface HTTPWriter
    {
+      /// <summary>
+      /// The buffer to use.
+      /// It may be large enough to fit the whole contents.
+      /// </summary>
+      /// <value>The buffer to write content to.</value>
       Byte[] Buffer { get; }
+
+      /// <summary>
+      /// This method will flush whatever is written to <see cref="Buffer"/> of this <see cref="HTTPWriter"/> to underlying stream.
+      /// </summary>
+      /// <param name="offset">The offset in <see cref="Buffer"/> where to start reading data.</param>
+      /// <param name="count">The amount of bytes in <see cref="Buffer"/> to read.</param>
+      /// <returns>Potentially asynchronously returns amount of bytes flushed.</returns>
       ValueTask<Int64> FlushBufferContents( Int32 offset, Int32 count );
    }
 
-   public class HTTPMessageImpl<TContent> : HTTPMessage<TContent>
-      where TContent : HTTPMessageContent
-   {
-      protected HTTPMessageImpl()
-      {
-         this.Headers = new Dictionary<String, List<String>>( StringComparer.OrdinalIgnoreCase );
-      }
-
-      public IDictionary<String, List<String>> Headers { get; }
-
-      public String Version { get; set; }
-      public TContent Content { get; set; }
-   }
-
-   public class HTTPRequestImpl : HTTPMessageImpl<HTTPRequestContent>, HTTPRequest
-   {
-      public String Method { get; set; }
-      public String Path { get; set; }
-   }
-
-   public class HTTPResponseImpl : HTTPMessageImpl<HTTPResponseContent>, HTTPResponse
-   {
-      public Int32 StatusCode { get; set; }
-      public String Message { get; set; }
-   }
-
-   public class HTTPRequestContentFromString : HTTPRequestContent
-   {
-      public HTTPRequestContentFromString( String str )
-      {
-         this.StringContent = str ?? String.Empty;
-         this.Encoding = System.Text.Encoding.UTF8;
-      }
-
-      public Int64? ByteCount => this.Encoding.GetByteCount( this.StringContent );
-
-      public ValueTask<Int64> WriteToStream( HTTPWriter writer, Int64? seenByteCount )
-      {
-         return WriteToStream( writer, this.Encoding, this.StringContent, seenByteCount.HasValue ? (Int32?) seenByteCount.Value : null );
-      }
-
-      public static ValueTask<Int64> WriteToStream(
-         HTTPWriter writer,
-         Encoding encoding,
-         String str,
-         Int32? strByteCount,
-         Int32 bufferIndex = 0
-         )
-      {
-         var buffer = writer.Buffer;
-         var bufferLen = buffer.Length;
-
-         var byteCount = strByteCount ?? encoding.GetByteCount( str );
-
-         ValueTask<Int64> retVal;
-         if ( bufferLen >= byteCount )
-         {
-            // Can just write it directly
-            retVal = writer.FlushBufferContents( bufferIndex + encoding.GetBytes( str, 0, str.Length, buffer, bufferIndex ) );
-         }
-         else
-         {
-            retVal = WriteToStreamAsync( writer, encoding, str, byteCount, bufferIndex );
-         }
-
-         return retVal;
-      }
-
-      private static async ValueTask<Int64> WriteToStreamAsync(
-         HTTPWriter writer,
-         Encoding encoding,
-         String text,
-         Int32 seenByteCount,
-         Int32 bufferIndex
-         )
-      {
-         var buffer = writer.Buffer;
-         var bufferLen = buffer.Length;
-
-         // Make sure there is always room for max size (4) char
-         if ( bufferLen - bufferIndex <= 4 )
-         {
-            throw new InvalidOperationException( "Too small buffer" );
-         }
-
-         bufferLen -= 4;
-
-         var cur = 0;
-         var textLen = text.Length;
-         do
-         {
-            while ( cur < textLen && bufferIndex < bufferLen )
-            {
-               Int32 count;
-               if ( Char.IsLowSurrogate( text[cur] ) && cur < textLen - 1 && Char.IsHighSurrogate( text[cur + 1] ) )
-               {
-                  count = 2;
-               }
-               else
-               {
-                  count = 1;
-               }
-               bufferIndex += encoding.GetBytes( text, cur, count, buffer, bufferIndex );
-               cur += count;
-            }
-            await writer.FlushBufferContents( bufferIndex );
-            bufferIndex = 0;
-         } while ( cur < textLen );
-
-         return seenByteCount;
-      }
-
-      public Encoding Encoding { get; set; }
-
-      public String StringContent { get; }
-   }
-
-   public class HTTPResponseContentFromStream : HTTPResponseContent
-   {
-      private const Int32 INITIAL = 0;
-      private const Int32 READING = 1;
-
-      private readonly Stream _stream;
-      private Int64 _bytesRemaining;
-      private Int32 _state;
-      private readonly Func<ValueTask<Boolean>> _onEnd;
-      private Int32 _onEndCalled;
 
 
-      public HTTPResponseContentFromStream(
-         Stream stream,
-         Int64? byteCount,
-         Func<ValueTask<Boolean>> onEnd
-         )
-      {
-         this._stream = ArgumentValidator.ValidateNotNull( nameof( stream ), stream );
-         this.ByteCount = byteCount;
-         this._bytesRemaining = byteCount ?? -1;
-         this._onEnd = onEnd;
-      }
-
-      public Int64? ByteCount { get; }
-
-      public Int64? BytesRemaining => this._bytesRemaining < 0 ? default : Interlocked.Read( ref this._bytesRemaining );
-
-      public async ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token )
-      {
-         if ( Interlocked.CompareExchange( ref this._state, READING, INITIAL ) == INITIAL )
-         {
-            // TODO support for multi-part form stuff
-            try
-            {
-               var remaining = this._bytesRemaining;
-
-               Int32 bytesRead;
-               if ( remaining < 0 )
-               {
-                  // Unknown byte size
-                  bytesRead = await this._stream.ReadAsync( array, offset, count, token );
-               }
-               else if ( remaining > 0 )
-               {
-                  // Known byte size, read only what can be read
-                  count = (Int32) Math.Min( count, remaining );
-                  bytesRead = await this._stream.ReadAsync( array, offset, count, token );
-                  Interlocked.Exchange( ref this._bytesRemaining, remaining - count );
-               }
-               else
-               {
-                  // No more bytes left
-                  bytesRead = 0;
-               }
-
-               // No need to use CEX since we are inside CEX-mutex
-               if ( ( bytesRead <= 0 || this._bytesRemaining == 0 ) && this._onEndCalled == 0 )
-               {
-                  Interlocked.Exchange( ref this._onEndCalled, 1 );
-                  try
-                  {
-                     await ( this._onEnd?.Invoke() ?? default );
-                  }
-                  catch
-                  {
-                     // Ignore
-                  }
-               }
-
-               return bytesRead;
-            }
-            finally
-            {
-               Interlocked.Exchange( ref this._state, INITIAL );
-            }
-         }
-         else
-         {
-            throw new InvalidOperationException( "Concurrent access" );
-         }
-      }
-   }
-
+   /// <summary>
+   /// This class implements <see cref="HTTPResponseContent"/> when the content is of size <c>0</c>.
+   /// </summary>
+   /// <seealso cref="Instance"/>
    public class EmptyHTTPResponseContent : HTTPResponseContent
    {
+      /// <summary>
+      /// Gets the instance of <see cref="EmptyHTTPResponseContent"/>.
+      /// </summary>
+      /// <value>The instance of <see cref="EmptyHTTPResponseContent"/>.</value>
       public static EmptyHTTPResponseContent Instance { get; } = new EmptyHTTPResponseContent();
 
       private EmptyHTTPResponseContent()
@@ -284,11 +183,27 @@ namespace CBAM.HTTP
 
       }
 
+      /// <summary>
+      /// Implements <see cref="HTTPMessageContent.ByteCount"/> and always returns <c>0</c>.
+      /// </summary>
+      /// <value>Always returns <c>0</c>.</value>
       public Int64? ByteCount => 0;
 
+      /// <summary>
+      /// Implements <see cref="HTTPResponseContent.BytesRemaining"/> and always returns <c>0</c>.
+      /// </summary>
+      /// <value>Always returns <c>0</c>.</value>
       public Int64? BytesRemaining => 0;
 
-      public ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token = default )
+      /// <summary>
+      /// Implements <see cref="HTTPResponseContent.ReadToBuffer"/> and always returns synchronously <c>0</c>.
+      /// </summary>
+      /// <param name="array">The byte array.</param>
+      /// <param name="offset">The offset in byte array, ignored.</param>
+      /// <param name="count">The maximum amount of bytes to read, ignored.</param>
+      /// <param name="token">The <see cref="CancellationToken"/>, ignored.</param>
+      /// <returns>Always returns <c>0</c> synchronously.</returns>
+      public ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token )
       {
          array.CheckArrayArguments( offset, count, false );
          return new ValueTask<Int32>( 0 );
@@ -296,7 +211,9 @@ namespace CBAM.HTTP
    }
 
 
-
+   /// <summary>
+   /// This static class provides methods to create instances of <see cref="HTTPRequest"/>, <see cref="HTTPResponse"/>, <see cref="HTTPRequestContent"/>, and <see cref="HTTPResponseContent"/> types.
+   /// </summary>
    public static class HTTPMessageFactory
    {
       private const String HTTP1_1 = "HTTP/1.1";
@@ -304,56 +221,94 @@ namespace CBAM.HTTP
       private const String METHOD_GET = "GET";
       private const String METHOD_POST = "POST";
 
-      public static Func<HTTPRequest> RepeatRequest( HTTPRequest request, Int32 count )
+      private static String DefaultIfNullOrEmpty( this String str, String defaultString )
       {
-         return () =>
-         {
-            var createRequest = count > 0 && Interlocked.Decrement( ref count ) >= 0;
-            return createRequest ?
-               request :
-               null;
-         };
+         return String.IsNullOrEmpty( str ) ? defaultString : str;
       }
 
-      public static Func<HTTPRequest> GenerateRequest( Func<Int32, HTTPRequest> generator, Int32 count )
-      {
-         var amount = count;
-         return () =>
-         {
-            HTTPRequest retVal = null;
-            Int32 decremented;
-            if ( count > 0 && ( decremented = Interlocked.Decrement( ref count ) ) >= 0 )
-            {
-               retVal = generator( amount - decremented - 1 );
-            }
+      /// <summary>
+      /// Creates a <see cref="HTTPRequest"/> with <c>"GET"</c> method and given path and version.
+      /// </summary>
+      /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
+      public static HTTPRequest CreateGETRequest(
+         String path,
+         String version = HTTP1_1
+         ) => CreateRequest( path, method: METHOD_GET, version: version, content: null );
 
-            return retVal;
-         };
-      }
+      /// <summary>
+      /// Creates a <see cref="HTTPRequest"/> with <c>"POST"</c> method and given path, content, and version.
+      /// </summary>
+      /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/>.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
+      public static HTTPRequest CreatePOSTRequest(
+         String path,
+         HTTPRequestContent content,
+         String version = HTTP1_1
+         ) => CreateRequest( path, method: METHOD_POST, version: version, content: content );
 
-      public static HTTPRequest CreateGETRequest( String path )
+      /// <summary>
+      /// Creates a <see cref="HTTPRequest"/> with <c>"POST"</c> method and given path, textual content, and version.
+      /// </summary>
+      ///<param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
+      /// <param name="textualContent">The content for <see cref="HTTPMessage{TContent}.Content"/> as string.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <param name="encoding">The optional <see cref="Encoding"/> to use when sending <paramref name="textualContent"/>, is <see cref="Encoding.UTF8"/> by default.</param>
+      /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
+      public static HTTPRequest CreatePOSTRequest(
+         String path,
+         String textualContent,
+         String version = HTTP1_1,
+         Encoding encoding = null
+         ) => CreateRequest( path, METHOD_POST, CreateRequestContentFromString( textualContent, encoding ), version: version );
+
+      /// <summary>
+      /// Generic method to create <see cref="HTTPRequest"/> with given properties.
+      /// </summary>
+      /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
+      /// <param name="method">The value for <see cref="HTTPRequest.Method"/>.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/>.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
+      public static HTTPRequest CreateRequest(
+         String path,
+         String method,
+         HTTPRequestContent content,
+         String version = HTTP1_1
+         )
       {
          return new HTTPRequestImpl()
          {
-            Version = HTTP1_1,
+            Version = DefaultIfNullOrEmpty( version, HTTP1_1 ),
             Method = METHOD_GET,
-            Path = path
-         };
-      }
-
-      public static HTTPRequest CreatePOSTRequest( String path, HTTPRequestContent content )
-      {
-         return new HTTPRequestImpl()
-         {
-            Version = HTTP1_1,
-            Method = METHOD_POST,
             Path = path,
             Content = content
          };
       }
 
-      public static HTTPRequest CreatePOSTRequest( String path, String textualContent ) => CreatePOSTRequest( path, new HTTPRequestContentFromString( textualContent ) );
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPRequestContent"/> which has given <see cref="String"/> as content.
+      /// </summary>
+      /// <param name="textualContent">The string for the content.</param>
+      /// <param name="encoding">The optional <see cref="Encoding"/> to use when sending <paramref name="textualContent"/>, is <see cref="Encoding.UTF8"/> by default.</param>
+      /// <returns>A new instance of <see cref="HTTPRequestContent"/> which will use <paramref name="textualContent"/> as contents to send to server.</returns>
+      public static HTTPRequestContent CreateRequestContentFromString(
+         String textualContent,
+         Encoding encoding = null
+         ) => new HTTPRequestContentFromString( textualContent, encoding );
 
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPResponse"/> with given parameters.
+      /// </summary>
+      /// <param name="version">The value for <see cref="HTTPMessage{TContent}.Version"/> property.</param>
+      /// <param name="statusCode">The value for <see cref="HTTPResponse.StatusCode"/> property.</param>
+      /// <param name="statusMessage">The value for <see cref="HTTPResponse.StatusCodeMessage"/> property.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/> property.</param>
+      /// <returns>A new instance of <see cref="HTTPResponse"/> with no headers and properties set to given values.</returns>
       public static HTTPResponse CreateResponse(
          String version,
          Int32 statusCode,
@@ -365,21 +320,56 @@ namespace CBAM.HTTP
          {
             Version = version,
             StatusCode = statusCode,
-            Message = statusMessage,
+            StatusCodeMessage = statusMessage,
             Content = content
          };
       }
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPResponseContent"/> which operates on <see cref="Stream"/> to read data from. It assumes that data begins at stream's current position.
+      /// </summary>
+      /// <param name="stream">The stream to read data from.</param>
+      /// <param name="byteCount">The amount of data, if known.</param>
+      /// <param name="onEnd">The callback to run when end of data is encountered.</param>
+      /// <returns>A new instance of<see cref="HTTPResponseContent"/> which redirects read actions to underlying <see cref="Stream"/>.</returns>
+      /// <exception cref="ArgumentNullException">If <paramref name="stream"/> is <c>null</c>.</exception>
+      public static HTTPResponseContent CreateResponseContentFromStream(
+         Stream stream,
+         Int64? byteCount,
+         Func<ValueTask<Boolean>> onEnd
+         ) => new HTTPResponseContentFromStream( stream, byteCount, onEnd );
    }
 }
 
+/// <summary>
+/// This class contains extensions methods for types defined in this assembly.
+/// </summary>
 public static partial class E_HTTP
 {
+   /// <summary>
+   /// Helper method to invoke <see cref="HTTPWriter.FlushBufferContents"/> with <c>0</c> as first argument to offset.
+   /// </summary>
+   /// <param name="writer">This <see cref="HTTPWriter"/>.</param>
+   /// <param name="count">The amount of bytes from beginning of the <see cref="HTTPWriter.Buffer"/> to flush.</param>
+   /// <returns>The amount of bytes written.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPWriter"/> is <c>null</c>.</exception>
    public static ValueTask<Int64> FlushBufferContents( this HTTPWriter writer, Int32 count )
    {
       return writer.FlushBufferContents( 0, count );
    }
 
-   public static HTTPMessage<TContent> WithHeader<TContent>( this HTTPMessage<TContent> message, String headerName, String headerValue )
+   /// <summary>
+   /// Helper method to add header with given name and value to this <see cref="HTTPMessage{TContent}"/> and return it.
+   /// </summary>
+   /// <typeparam name="T">The type of this <see cref="HTTPMessage{TContent}"/></typeparam>
+   /// <typeparam name="TContent">The type of the <see cref="HTTPMessageContent"/>.</typeparam>
+   /// <param name="message">This <see cref="HTTPMessage{TContent}"/>.</param>
+   /// <param name="headerName">The name of the header.</param>
+   /// <param name="headerValue">The value of the header.</param>
+   /// <returns>This <see cref="HTTPMessage{TContent}"/>.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPMessage{TContent}"/> is <c>null</c>.</exception>
+   public static T WithHeader<T, TContent>( this T message, String headerName, String headerValue )
+      where T : HTTPMessage<TContent>
       where TContent : HTTPMessageContent
    {
       message.Headers
@@ -389,6 +379,14 @@ public static partial class E_HTTP
       return message;
    }
 
+   /// <summary>
+   /// Helper method to read all content of this <see cref="HTTPResponseContent"/> into single byte array, if the byte size of this <see cref="HTTPResponseContent"/> is known.
+   /// </summary>
+   /// <param name="content">This <see cref="HTTPResponseContent"/>.</param>
+   /// <param name="token">The <see cref="CancellationToken"/>.</param>
+   /// <returns>Potentially asynchronously returns a new byte array with the contents read from this <see cref="HTTPResponseContent"/>.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPResponseContent"/> is <c>null</c>.</exception>
+   /// <exception cref="InvalidOperationException">If this <see cref="HTTPResponseContent"/> does not know its byte size, that is, its <see cref="HTTPResponseContent.BytesRemaining"/> is <c>null</c>.</exception>
    public static async ValueTask<Byte[]> ReadAllContentIfKnownSizeAsync( this HTTPResponseContent content, CancellationToken token = default )
    {
       ArgumentValidator.ValidateNotNullReference( content );
@@ -409,5 +407,93 @@ public static partial class E_HTTP
       }
 
       return retVal;
+   }
+
+   /// <summary>
+   /// This is helper method to write a <see cref="String"/> to this <see cref="HTTPWriter"/> using given <see cref="Encoding"/>.
+   /// </summary>
+   /// <param name="writer">This <see cref="HTTPWriter"/>.</param>
+   /// <param name="encoding">The <see cref="Encoding"/> to use.</param>
+   /// <param name="str">The <see cref="String"/> to write.</param>
+   /// <param name="strByteCount">The string byte count, as returned by <see cref="Encoding.GetByteCount(string)"/>. May be <c>null</c>, then this method will call <see cref="Encoding.GetByteCount(string)"/>.</param>
+   /// <param name="bufferIndex">The index in <see cref="HTTPWriter.Buffer"/> where to start writing.</param>
+   /// <returns>Potentially asynchronously returns amount of bytes written.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPWriter"/> is <c>null</c>.</exception>
+   /// <exception cref="ArgumentNullException">If either of <paramref name="encoding"/> or <paramref name="str"/> is <c>null</c>.</exception>
+   /// <remarks>
+   /// This method also takes care of situation when the <paramref name="str"/> does not fit into <see cref="HTTPWriter.Buffer"/> at once.
+   /// </remarks>
+   public static ValueTask<Int64> WriteToStreamAsync(
+      this HTTPWriter writer,
+      Encoding encoding,
+      String str,
+      Int32? strByteCount,
+      Int32 bufferIndex = 0
+      )
+   {
+      ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
+      ArgumentValidator.ValidateNotNull( nameof( str ), str );
+
+      var buffer = writer.Buffer;
+      var bufferLen = buffer.Length;
+
+      var byteCount = strByteCount ?? encoding.GetByteCount( str );
+
+      ValueTask<Int64> retVal;
+      if ( bufferLen >= byteCount )
+      {
+         // Can just write it directly
+         retVal = writer.FlushBufferContents( bufferIndex + encoding.GetBytes( str, 0, str.Length, buffer, bufferIndex ) );
+      }
+      else
+      {
+         retVal = MultiPartWriteToStreamAsync( writer, encoding, str, byteCount, bufferIndex );
+      }
+
+      return retVal;
+   }
+
+   private static async ValueTask<Int64> MultiPartWriteToStreamAsync(
+      HTTPWriter writer,
+      Encoding encoding,
+      String text,
+      Int32 seenByteCount,
+      Int32 bufferIndex
+      )
+   {
+      var buffer = writer.Buffer;
+      var bufferLen = buffer.Length;
+
+      // Make sure there is always room for max size (4) char
+      if ( bufferLen - bufferIndex <= 4 )
+      {
+         throw new InvalidOperationException( "Too small buffer" );
+      }
+
+      bufferLen -= 4;
+
+      var cur = 0;
+      var textLen = text.Length;
+      do
+      {
+         while ( cur < textLen && bufferIndex < bufferLen )
+         {
+            Int32 count;
+            if ( Char.IsLowSurrogate( text[cur] ) && cur < textLen - 1 && Char.IsHighSurrogate( text[cur + 1] ) )
+            {
+               count = 2;
+            }
+            else
+            {
+               count = 1;
+            }
+            bufferIndex += encoding.GetBytes( text, cur, count, buffer, bufferIndex );
+            cur += count;
+         }
+         await writer.FlushBufferContents( bufferIndex );
+         bufferIndex = 0;
+      } while ( cur < textLen );
+
+      return seenByteCount;
    }
 }

@@ -21,7 +21,7 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
   // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
   await pool.UseResourceAsync( async pgConnection => await pgConnection
     .PrepareStatementForExecution( "SELECT 1" )
-    .EnumerateSQLRowsAsync( async row => Console.WriteLine( await row.GetValueAsync<Int32>( 0 ) ) )
+    .EnumerateSequentiallyAsync( async execInfo => Console.WriteLine( await (execInfo as SQLDataRow).GetValueAsync<Int32>( 0 ) ) )
     );
 
 }
@@ -38,7 +38,7 @@ using UtilPack; // For "CreateRepeater" extension method
 using UtilPack.ResourcePooling.NetworkStream; // For NetworkStreamFactory
 using CBAM.HTTP; // For HTTP-related
 
-// Store all responses as strings for this simple example
+// Store all responses as strings in this simple example
 var responseTexts = new ConcurrentBag<String>();
 using ( var pool = new NetworkStreamFactory()
   .BindCreationParameters(
