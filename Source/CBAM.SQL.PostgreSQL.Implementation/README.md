@@ -28,7 +28,7 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
         .PrepareStatementForExecution( "SELECT 1" )
         .IncludeDataRowsOnly()
         .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
-        .ToArray();
+        .ToArrayAsync();
   } );
 
 }
