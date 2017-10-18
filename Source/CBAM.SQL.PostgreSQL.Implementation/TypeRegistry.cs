@@ -12,7 +12,7 @@ using CBAM.SQL.Implementation;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   using SQLConnectionFunctionality = Abstractions.Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>;
+   using SQLConnectionFunctionality = Func<String, IAsyncEnumerable<SQLStatementExecutionResult>>; // Abstractions.Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, IAsyncEnumerable<SQLStatementExecutionResult>>;
 
    internal class TypeRegistryImpl : TypeRegistry
    {
@@ -104,7 +104,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          var types = new Dictionary<String, PgSQLTypeDatabaseData>();
-         await this._connectionFunctionality.PrepareStatementForExecution(
+         await this._connectionFunctionality(
                "SELECT typname, oid, typdelim, typelem\n" +
                "FROM pg_type\n" +
                "WHERE typname IN (" + String.Join( ", ", typeNames.Select( typename =>
@@ -112,7 +112,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   typename = this._vendorFunctionality.EscapeLiteral( typename );
                   return "'" + typename + "', '" + ARRAY_PREFIX + typename + "'";
                } ) ) + ")\n"
-            ).EnumerateSQLRowsAsync( async row =>
+            ).IncludeDataRowsOnly()
+            .EnumerateSequentiallyAsync( async row =>
               {
                  // We need to get all values as strings, since we might not have type mapping yet (we might be building it right here)
                  var typeName = await row.GetValueAsync<String>( 0 );

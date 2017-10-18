@@ -15,11 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC5" />
+    <PackageReference Include="UtilPack.ResourcePooling" Version="1.0.0-RC6" />
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.3.0</VersionPrefix>
+    <VersionPrefix>0.4.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>

@@ -12,18 +12,20 @@ var configData = new ConfigurationBuilder() // This line requires reference to M
   .Get<PgSQLConnectionCreationInfoData>(); // This line requires reference to Microsoft.Extensions.Configuration.Binder NuGet package
 
 // Create connection pool
+Int32[] integers;
 using ( var pool = PgSQLConnectionPoolProvider.Factory
   .BindCreationParameters( new PgSQLConnectionCreationInfo( configData ) )
-  .CreateTimeoutingResourcePool()
-  )
+  .CreateTimeoutingResourcePool()) 
 {
-
   // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
-  await pool.UseResourceAsync( async pgConnection => await pgConnection
-    .PrepareStatementForExecution( "SELECT 1" )
-    .EnumerateSequentiallyAsync( async execInfo => Console.WriteLine( await (execInfo as SQLDataRow).GetValueAsync<Int32>( 0 ) ) )
-    );
-
+  integers = await pool.UseResourceAsync( async pgConnection =>
+  {
+     return await pgConnection
+        .PrepareStatementForExecution( "SELECT 1" )
+        .IncludeDataRowsOnly()
+        .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+        .ToArray();
+  } );
 }
 
 // Elsewhere, e.g. maybe in a separate background thread/loop:
@@ -39,7 +41,7 @@ using UtilPack.ResourcePooling.NetworkStream; // For NetworkStreamFactory
 using CBAM.HTTP; // For HTTP-related
 
 // Store all responses as strings in this simple example
-var responseTexts = new ConcurrentBag<String>();
+ConcurrentBag<String> responseTexts;
 using ( var pool = new NetworkStreamFactory().BindCreationParameters(
     new HTTPConnectionEndPointConfigurationData()
     {
@@ -53,12 +55,12 @@ using ( var pool = new NetworkStreamFactory().BindCreationParameters(
 
   // Send 20 requests to "/" in parallel and process each response
   // Note that only 10 connections will be opened, since the pool is limited to 10 concurrent connections
-  await httpConnection.PrepareStatementForExecution( 
+  responseTexts = await httpConnection.PrepareStatementForExecution( 
     HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( 20 ) // Repeat same request 20 times
-    ).EnumerateInParallelAsync( async response =>
+    ).ToConcurrentBagAsync( async response =>
     {
       // Read whole response content into byte array and get string from it (assume UTF-8 encoding for this simple example)
-      responseTexts.Add( Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
+      return Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() );
     } );
 }
 

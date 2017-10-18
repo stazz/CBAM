@@ -83,7 +83,7 @@ namespace CBAM.HTTP.Tests
       ]
       public async Task TestHTTPRequestSending( String host, Int32 port, Boolean isSecure, String path )
       {
-         var httpConnection = new NetworkStreamFactory()
+         var httpConnection = NetworkStreamFactory.Instance
             .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
             {
                Host = host,
@@ -93,13 +93,9 @@ namespace CBAM.HTTP.Tests
             .CreateOneTimeUseResourcePool()
             .CreateNewHTTPConnection();
 
-         var responses = new ConcurrentBag<HTTPResponseInfo>();
-         await httpConnection
+         var responses = await httpConnection
             .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ) )
-            .EnumerateInParallelAsync( async response =>
-            {
-               responses.Add( await HTTPResponseInfo.CreateInfoAsync( response, default ) );
-            } );
+            .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response, default ) );
 
          Assert.AreEqual( 1, responses.Count );
       }
@@ -111,7 +107,7 @@ namespace CBAM.HTTP.Tests
       ]
       public async Task TestHTTPRequestSendingInParallel( String host, Int32 port, Boolean isSecure, String path, Int32 requestCount )
       {
-         var httpConnection = new NetworkStreamFactory()
+         var httpConnection = NetworkStreamFactory.Instance
             .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
             {
                Host = host,
@@ -121,13 +117,9 @@ namespace CBAM.HTTP.Tests
             .CreateOneTimeUseResourcePool()
             .CreateNewHTTPConnection();
 
-         var responses = new ConcurrentBag<HTTPResponseInfo>();
-         await httpConnection
+         var responses = await httpConnection
             .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ).CreateRepeater( requestCount ) )
-            .EnumerateInParallelAsync( async response =>
-            {
-               responses.Add( await HTTPResponseInfo.CreateInfoAsync( response, default ) );
-            } );
+            .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response, default ) );
 
          Assert.AreEqual( requestCount, responses.Count );
       }
@@ -139,9 +131,9 @@ namespace CBAM.HTTP.Tests
          String host, Int32 port, Boolean isSecure, String path, Int32 requestCount, Int32 poolLimit
          )
       {
-         var responseTexts = new ConcurrentBag<String>();
+         ConcurrentBag<String> responseTexts;
          Int32 streamsAcquired = 0;
-         using ( var pool = new NetworkStreamFactory()
+         using ( var pool = NetworkStreamFactory.Instance
             .BindCreationParameters(
                new HTTPConnectionEndPointConfigurationData()
                {
@@ -157,13 +149,9 @@ namespace CBAM.HTTP.Tests
             var httpConnection = pool.CreateNewHTTPConnection();
 
             // Send 20 requests in parallel and process each response
-            await httpConnection
+            responseTexts = await httpConnection
                .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( requestCount ) )
-               .EnumerateInParallelAsync( async response =>
-               {
-                  // Read whole response content into byte array and get string from it
-                  responseTexts.Add( Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
-               } );
+               .ToConcurrentBagAsync( async response => Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
 
          }
 

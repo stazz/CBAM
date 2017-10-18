@@ -492,7 +492,7 @@ public static partial class E_CBAM
    /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the schema information from the database.</returns>
    /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
-   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareSchemaSearch( this SQLConnection connection, String schemaNamePattern = null )
+   public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareSchemaSearch( this SQLConnection connection, String schemaNamePattern = null )
    {
       return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateSchemaSearch( schemaNamePattern ) );
    }
@@ -508,7 +508,7 @@ public static partial class E_CBAM
    /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
    /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
    /// <seealso cref="TableType"/>
-   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareTableSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
+   public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareTableSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
    {
       return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateTableSearch( schemaNamePattern, tableNamePattern, tableTypes ) );
    }
@@ -524,7 +524,7 @@ public static partial class E_CBAM
    /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
    /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
-   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareColumnSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
+   public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareColumnSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
    {
       return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ) );
    }
@@ -539,7 +539,7 @@ public static partial class E_CBAM
    /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
    /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
-   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PreparePrimaryKeySearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
+   public static IAsyncEnumerable<SQLStatementExecutionResult> PreparePrimaryKeySearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
    {
       return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreatePrimaryKeySearch( schemaNamePattern, tableNamePattern ) );
    }
@@ -558,7 +558,7 @@ public static partial class E_CBAM
    /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
    /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
-   public static AsyncEnumerator<SQLStatementExecutionResult, SQLStatementBuilderInformation> PrepareForeignKeySearch( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
+   public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareForeignKeySearch( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
    {
       return connection.PrepareStatementForExecution( connection.DatabaseMetadata.CreateForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ) );
    }

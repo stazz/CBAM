@@ -9,12 +9,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling.MSBuild" Version="1.0.0-RC3" />
+    <PackageReference Include="UtilPack.ResourcePooling.MSBuild" Version="1.0.0-RC4" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="15.1.1012" />
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.3.0</VersionPrefix>
+    <VersionPrefix>0.4.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -45,7 +45,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling.MSBuild.</PackageReleaseNotes>
+    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling.MSBuild and tracking releases of dependant packages.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
     <Title>SQL-Oriented MSBuild Tasks</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

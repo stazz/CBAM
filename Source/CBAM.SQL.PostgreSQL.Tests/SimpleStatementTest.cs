@@ -21,6 +21,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UtilPack;
 using System.Reflection;
+using UtilPack.AsyncEnumeration.LINQ;
+using System.Threading;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -43,53 +45,47 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var second = 2;
          var third = 3;
          var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
-
-         var tuple = await pool.UseResourceAsync( async conn =>
-         {
-            var iArgs = conn.PrepareStatementForExecution( $"SELECT * FROM( VALUES( {first} ), ( {second} ), ( {third} ) ) AS tmp" );
-            Int64? tkn;
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            await iArgs.EnumerationEnded();
-            return (seenFirst, seenSecond, seenThird);
-         } );
-
-         Assert.AreEqual( first, tuple.Item1 );
-         Assert.AreEqual( second, tuple.Item2 );
-         Assert.AreEqual( third, tuple.Item3 );
+         var integers = await pool.UseResourceAsync( async conn =>
+            {
+               return await conn.PrepareStatementForExecution( $"SELECT * FROM( VALUES( {first} ), ( {second} ), ( {third} ) ) AS tmp" )
+                  .IncludeDataRowsOnly()
+                  .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+                  .ToArrayAsync();
+            }
+         );
+         Assert.IsTrue( ArrayEqualityComparer<Int32>.ArrayEquality( new[] { first, second, third }, integers ) );
       }
 
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
       public async Task TestNotReadingAllColumns( String connectionConfigFileLocation )
       {
          var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var rowsSeen = 0;
          await pool.UseResourceAsync( async conn =>
          {
-            var iArgs = conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" );
-            Int64? tkn;
-            // First read is partial read
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( 1, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
-
-            // Second read just ignores columns
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-
-            // Third read reads in opposite order
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( 6, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 1 ) );
-            Assert.AreEqual( 5, await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
-
-            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            await iArgs.EnumerationEnded();
+            await conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" )
+            .IncludeDataRowsOnly()
+            .EnumerateSequentiallyAsync( async row =>
+               {
+                  switch ( Interlocked.Increment( ref rowsSeen ) )
+                  {
+                     case 1:
+                        // First read is partial read
+                        Assert.AreEqual( 1, await row.GetValueAsync<Int32>( 0 ) );
+                        break;
+                     case 2:
+                        // Second read just ignores columns
+                        break;
+                     case 3:
+                        // Third read reads in opposite order
+                        Assert.AreEqual( 6, await row.GetValueAsync<Int32>( 1 ) );
+                        Assert.AreEqual( 5, await row.GetValueAsync<Int32>( 0 ) );
+                        break;
+                  }
+               } );
          } );
+
+         Assert.AreEqual( 3, rowsSeen );
       }
 
       [DataTestMethod,
@@ -127,15 +123,15 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
-         await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
+         var integers = await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) )
+            .UseResourceAsync( async conn =>
          {
-            var enumerator = conn.PrepareStatementForExecution( "SELECT " + FIRST + "; SELECT " + SECOND + ";" );
-            Int64? tkn;
-            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( FIRST, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
-            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( SECOND, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
+            return await conn.PrepareStatementForExecution( "SELECT " + FIRST + "; SELECT " + SECOND + ";" )
+               .IncludeDataRowsOnly()
+               .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+               .ToArrayAsync();
          } );
+         Assert.IsTrue( ArrayEqualityComparer<Int32>.ArrayEquality( new[] { FIRST, SECOND }, integers ) );
       }
 
       [DataTestMethod,
@@ -150,15 +146,15 @@ namespace CBAM.SQL.PostgreSQL.Tests
       {
          const Int32 TEST_INT = 1;
          const String TEST_STRING = "testString";
-         await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) ).UseResourceAsync( async conn =>
+         var objects = await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) )
+            .UseResourceAsync( async conn =>
          {
-            var enumerator = conn.PrepareStatementForExecution( "SELECT " + TEST_INT + "; SELECT '" + TEST_STRING + "';" );
-            Int64? tkn;
-            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( 1, await enumerator.GetDataRow( tkn ).GetValueAsync<Int32>( 0 ) );
-            Assert.IsTrue( ( tkn = await enumerator.MoveNextAsync() ).HasValue );
-            Assert.AreEqual( TEST_STRING, await enumerator.GetDataRow( tkn ).GetValueAsync<String>( 0 ) );
+            return await conn.PrepareStatementForExecution( "SELECT " + TEST_INT + "; SELECT '" + TEST_STRING + "';" )
+               .IncludeDataRowsOnly()
+               .Select( async row => await row.GetValueAsObjectAsync( 0 ) )
+               .ToArrayAsync();
          } );
+         Assert.IsTrue( ArrayEqualityComparer<Object>.ArrayEquality( new Object[] { TEST_INT, TEST_STRING }, objects ) );
       }
    }
 }

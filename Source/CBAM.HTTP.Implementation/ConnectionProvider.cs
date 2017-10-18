@@ -38,7 +38,7 @@ namespace CBAM.HTTP
       /// </summary>
       /// <param name="streamPool">This <see cref="ExplicitAsyncResourcePool{TResource}"/>.</param>
       /// <param name="configuration">The optional <see cref="HTTPConnectionConfiguration"/> to use.</param>
-      /// <returns>A new instance of <see cref="HTTPConnection"/> that represents connection to remote endpoint and can be used to send and receive <see cref="HTTPMessage{TContent}"/>s via <see cref="CBAM.Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/>.</returns>
+      /// <returns>A new instance of <see cref="HTTPConnection"/> that represents connection to remote endpoint and can be used to send and receive <see cref="HTTPMessage{TContent}"/>s via <see cref="CBAM.Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</returns>
       /// <exception cref="NullReferenceException">If this <see cref="ExplicitAsyncResourcePool{TResource}"/> is <c>null</c>.</exception>
       public static HTTPConnection CreateNewHTTPConnection( this ExplicitAsyncResourcePool<Stream> streamPool, HTTPConnectionConfiguration configuration = null )
       {

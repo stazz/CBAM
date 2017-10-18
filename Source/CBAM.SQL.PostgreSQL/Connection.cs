@@ -31,7 +31,7 @@ namespace CBAM.SQL.PostgreSQL
    /// This interface extends <see cref="SQLConnection"/> to provide PostgreSQL-specific API.
    /// </summary>
    /// <remarks>
-   /// The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of this connection will always return object which is castable to <see cref="PgSQLConnectionVendorFunctionality"/>.
+   /// The <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.VendorFunctionality"/> property of this connection will always return object which is castable to <see cref="PgSQLConnectionVendorFunctionality"/>.
    /// Also, the <see cref="UtilPack.TabularData.AsyncDataColumnMetaData"/> objects of <see cref="SQLDataRow"/>s returned by this connection are of type <see cref="PgSQLDataColumnMetaData"/>.
    /// The PostgreSQL-specific <see cref="SQLException"/> type is <see cref="PgSQLException"/>.
    /// </remarks>
@@ -79,7 +79,7 @@ namespace CBAM.SQL.PostgreSQL
 
    /// <summary>
    /// This interface extends <see cref="SQLConnectionVendorFunctionality"/> to provide PostgreSQL-specific vendor functionality.
-   /// Instances of this class are obtaineable from <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.VendorFunctionality"/> property of <see cref="PgSQLConnection"/>.
+   /// Instances of this class are obtaineable from <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.VendorFunctionality"/> property of <see cref="PgSQLConnection"/>.
    /// </summary>
    public interface PgSQLConnectionVendorFunctionality : SQLConnectionVendorFunctionality
    {

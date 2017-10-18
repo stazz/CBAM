@@ -15,7 +15,7 @@ using UtilPack.ResourcePooling.NetworkStream; // For NetworkStreamFactory
 using CBAM.HTTP; // For HTTP-related
 
 // Store all responses as strings in this simple example
-var responseTexts = new ConcurrentBag<String>();
+ConcurrentBag<String> responseTexts;
 using ( var pool = new NetworkStreamFactory()
   .BindCreationParameters(
     new HTTPConnectionEndPointConfigurationData()
@@ -31,15 +31,13 @@ using ( var pool = new NetworkStreamFactory()
 
   // Send 20 requests to "/" path in parallel and process each response
   // Note that only 10 connections will be opened, since the pool is limited to 10 concurrent connections
-  await httpConnection
+  responseTexts = await httpConnection
     .PrepareStatementForExecution( HTTPMessageFactory
-      .CreateGETRequest( "/" )
+      .CreateGETRequest( "/" ) // Fetch top-level resource
       .CreateRepeater( 20 ) // Repeat same request 20 times
-    ).EnumerateInParallelAsync( async response =>
-    {
-      // Read whole response content into byte array and get string from it (assume UTF-8 encoding for this simple example)
-      responseTexts.Add( Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
-    } );
+    )
+    // Read whole response content into byte array and get string from it (assume UTF-8 encoding for this simple example)
+    .ToConcurrentBagAsync( async response => Encoding.UTF8.GetString( await response.Content.ReadAllContentIfKnownSizeAsync() ) );
 }
 
 // Now the responseTexts bag will contain 20 HTTP responses as text.

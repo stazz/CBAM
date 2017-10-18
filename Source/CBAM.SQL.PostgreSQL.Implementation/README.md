@@ -14,6 +14,7 @@ var configData = new ConfigurationBuilder() // This line requires reference to M
   .Get<PgSQLConnectionCreationInfoData>(); // This line requires reference to Microsoft.Extensions.Configuration.Binder NuGet package
 
 // Create connection pool
+Int32[] integers;
 using ( var pool = PgSQLConnectionPoolProvider.Factory
   .BindCreationParameters( new PgSQLConnectionCreationInfo( configData ) )
   .CreateTimeoutingResourcePool()
@@ -21,10 +22,14 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
 {
 
   // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
-  await pool.UseResourceAsync( async pgConnection => await pgConnection
-    .PrepareStatementForExecution( "SELECT 1" )
-    .EnumerateSQLRowsAsync( async row => Console.WriteLine( await row.GetValueAsync<Int32>( 0 ) ) )
-    );
+  integers = await pool.UseResourceAsync( async pgConnection =>
+  {
+     return await pgConnection
+        .PrepareStatementForExecution( "SELECT 1" )
+        .IncludeDataRowsOnly()
+        .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+        .ToArray();
+  } );
 
 }
 

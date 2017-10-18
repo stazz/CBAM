@@ -16,12 +16,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="UtilPack" Version="1.2.0" />
-    <PackageReference Include="UtilPack.AsyncEnumeration" Version="1.0.0-RC4" />
+    <PackageReference Include="UtilPack.AsyncEnumeration" Version="1.0.0-RC5" />
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.3.0</VersionPrefix>
+    <VersionPrefix>0.4.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -52,7 +51,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to newer version of UtilPack.AsyncEnumeration.</PackageReleaseNotes>
+    <PackageReleaseNotes>Updating to newer version of UtilPack.AsyncEnumeration. Made observability configurable. Removed CurrentCancellationToken property, which does not apply for non-poolable connections.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection</PackageTags>
     <Title>Common CBAM Abstractions</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

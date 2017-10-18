@@ -34,16 +34,21 @@ using System.Collections.Generic;
 
 namespace CBAM.HTTP.Implementation
 {
-   internal sealed class HTTPConnectionImpl : ConnectionImpl<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality, HTTPConnectionVendorImpl, HTTPConnectionFunctionalityImpl>, HTTPConnection
+   internal sealed class HTTPConnectionImpl : ConnectionImpl<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality, IAsyncConcurrentEnumerable<HTTPResponse>, IAsyncConcurrentEnumerableObservable<HTTPResponse, HTTPStatementInformation>, HTTPConnectionVendorImpl, HTTPConnectionFunctionalityImpl>, HTTPConnection
    {
       public HTTPConnectionImpl(
          HTTPConnectionFunctionalityImpl functionality
          ) : base( functionality )
       {
       }
+
+      protected override IAsyncConcurrentEnumerableObservable<HTTPResponse, HTTPStatementInformation> CreateObservable( IAsyncConcurrentEnumerable<HTTPResponse> enumerable, HTTPStatementInformation info )
+      {
+         return enumerable.AsObservable( info );
+      }
    }
 
-   internal sealed class HTTPConnectionFunctionalityImpl : DefaultConnectionFunctionality<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorImpl>
+   internal sealed class HTTPConnectionFunctionalityImpl : DefaultConnectionFunctionality<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPConnectionVendorImpl, IAsyncConcurrentEnumerable<HTTPResponse>>
    {
       private const Int32 MIN_BUFFER_SIZE = 1024;
 
@@ -72,29 +77,21 @@ namespace CBAM.HTTP.Implementation
          //this._encoding = encoding;
       }
 
-      public override Boolean CanBeReturnedToPool => true;
-
-      protected override AsyncEnumeratorObservable<HTTPResponse, HTTPStatementInformation> CreateEnumerator(
-         HTTPStatementInformation metadata,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<HTTPStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<HTTPStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<HTTPStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<HTTPStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<HTTPResponse, HTTPStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
+      protected override IAsyncConcurrentEnumerable<HTTPResponse> CreateEnumerable(
+         HTTPStatementInformation metadata
          )
       {
          var list = new List<ExplicitResourceAcquireInfo<Stream>>();
          var generator = ( (HTTPStatementInformationImpl) metadata ).MessageGenerator;
-         return AsyncEnumeratorFactory.CreateParallelObservableEnumerator(
+         return AsyncEnumerationFactory.CreateConcurrentEnumerable( () => AsyncEnumerationFactory.CreateConcurrentStartInfo(
             () =>
             {
                var request = generator();
                return (request != null, request);
             },
-            async ( request, token ) =>
+            async ( request ) =>
             {
-               // TODO - we must unsafely get stream from pool and return the stream back explicitly in our dispose callback
-               // This requires modification of UtilPack.ResourcePooling in order to add "UnsafeGetResource" method
+               var token = default( CancellationToken ); // this.CurrentCancellationToken; TODO get token from HTTPStatementInformation (since we are not pooled)
 
                var streamInstance = await this._streamPool.TakeResourceAsync( token );
                try
@@ -132,7 +129,7 @@ namespace CBAM.HTTP.Implementation
                   throw;
                }
             },
-            ( moveNextEnded, token ) =>
+            () =>
             {
                var streamPool = this._streamPool;
                ExplicitResourceAcquireInfo<Stream>[] array;
@@ -151,14 +148,7 @@ namespace CBAM.HTTP.Implementation
                }
 
                return TaskUtils.CompletedTask;
-            },
-            metadata,
-            getGlobalBeforeEnumerationExecutionStart,
-            getGlobalAfterEnumerationExecutionStart,
-            getGlobalBeforeEnumerationExecutionEnd,
-            getGlobalAfterEnumerationExecutionEnd,
-            getGlobalAfterEnumerationExecutionItemEncountered
-            );
+            } ) );
       }
 
       protected override HTTPStatementInformation GetInformationFromStatement( HTTPStatement statement )

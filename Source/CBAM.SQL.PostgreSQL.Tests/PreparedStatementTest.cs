@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using UtilPack;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -38,35 +39,20 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const Int32 THIRD = 3;
          var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
 
-         var tuple = await pool.UseResourceAsync( async conn =>
+         var integers = await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
             stmt.SetParameterInt32( 0, FIRST );
             stmt.SetParameterInt32( 1, SECOND );
             stmt.SetParameterInt32( 2, THIRD );
 
-            var iArgs = conn.PrepareStatementForExecution( stmt );
-            Int64? tkn;
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<Int32>( 0 );
-
-            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-
-
-            await AssertThatConnectionIsStillUseable( conn, iArgs );
-
-            return (seenFirst, seenSecond, seenThird);
+            return await conn.PrepareStatementForExecution( stmt )
+            .IncludeDataRowsOnly()
+            .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+            .ToArrayAsync();
          } );
 
-         Assert.AreEqual( FIRST, tuple.Item1 );
-         Assert.AreEqual( SECOND, tuple.Item2 );
-         Assert.AreEqual( THIRD, tuple.Item3 );
+         Assert.IsTrue( ArrayEqualityComparer<Int32>.ArrayEquality( new[] { FIRST, SECOND, THIRD }, integers ) );
       }
 
       [
@@ -80,35 +66,21 @@ namespace CBAM.SQL.PostgreSQL.Tests
          const String SECOND = "second";
          const String THIRD = "third";
          var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
-
-         var tuple = await pool.UseResourceAsync( async conn =>
+         var strings = await pool.UseResourceAsync( async conn =>
          {
-            var stmt = conn.CreateStatementBuilder( "SELECT * FROM ( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
+            var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
             stmt.SetParameterString( 0, FIRST );
             stmt.SetParameterString( 1, SECOND );
             stmt.SetParameterString( 2, THIRD );
 
-            var iArgs = conn.PrepareStatementForExecution( stmt );
-            Int64? tkn;
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenFirst = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenSecond = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
-
-            Assert.IsTrue( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-            var seenThird = await iArgs.GetDataRow( tkn ).GetValueAsync<String>( 0 );
-
-            Assert.IsFalse( ( tkn = await iArgs.MoveNextAsync() ).HasValue );
-
-            await AssertThatConnectionIsStillUseable( conn, iArgs );
-
-            return (seenFirst, seenSecond, seenThird);
+            return await conn.PrepareStatementForExecution( stmt )
+            .IncludeDataRowsOnly()
+            .Select( async row => await row.GetValueAsync<String>( 0 ) )
+            .ToArrayAsync();
          } );
 
-         Assert.AreEqual( FIRST, tuple.Item1 );
-         Assert.AreEqual( SECOND, tuple.Item2 );
-         Assert.AreEqual( THIRD, tuple.Item3 );
+         Assert.IsTrue( ArrayEqualityComparer<String>.ArrayEquality( new[] { FIRST, SECOND, THIRD }, strings ) );
+
       }
 
 

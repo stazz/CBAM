@@ -36,7 +36,7 @@ namespace CBAM.HTTP
    public interface HTTPStatement : HTTPStatementInformation
    {
       /// <summary>
-      /// Gets or sets single <see cref="HTTPRequest"/> that will be sent when enumerating result of <see cref="CBAM.Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution"/>.
+      /// Gets or sets single <see cref="HTTPRequest"/> that will be sent when enumerating result of <see cref="CBAM.Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.
       /// </summary>
       /// <value>The single <see cref="HTTPRequest"/> that will be sent.</value>
       /// <remarks>
@@ -45,7 +45,7 @@ namespace CBAM.HTTP
       HTTPRequest StaticMessage { get; set; }
 
       /// <summary>
-      /// Gets or sets the callback to return <see cref="HTTPRequest"/> that will be sent when enumerating result of <see cref="Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution"/>.
+      /// Gets or sets the callback to return <see cref="HTTPRequest"/> that will be sent when enumerating result of <see cref="Abstractions.Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.
       /// By returning <c>null</c>, the enumeration will stop.
       /// </summary>
       /// <value>The callback to return <see cref="HTTPRequest"/> that will be sent until the callback returns <c>null</c>.</value>

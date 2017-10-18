@@ -16,15 +16,15 @@
  * limitations under the License. 
  */
 using CBAM.Abstractions;
+using UtilPack.AsyncEnumeration;
 
 using TCreationParameter = UtilPack.EitherOr<CBAM.HTTP.HTTPRequest, System.Func<CBAM.HTTP.HTTPRequest>>;
-
 namespace CBAM.HTTP
 {
    /// <summary>
-   /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to client.
+   /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to client.
    /// </summary>
-   public interface HTTPConnection : Connection<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality>
+   public interface HTTPConnection : Connection<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality, IAsyncConcurrentEnumerable<HTTPResponse>>
    {
 
    }

@@ -28,7 +28,32 @@ namespace CBAM.Abstractions.Implementation
 {
 
    /// <summary>
-   /// This class extends <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> in order to provide specialized implementation for situations when unseekable stream (SU) (e.g. <see cref="T:System.Net.Sockets.NetworkStream"/>) is used to communicate with remote resource.
+   /// This interface provides a way to execute some code with checks that the connection is still useable, using <see cref="ReservedForStatement"/> as token.
+   /// This is typically desireable when connection uses unseekable stream (SU) as its communication channel to remote endpoint.
+   /// </summary>
+   public interface ConnectionFunctionalitySU
+   {
+      /// <summary>
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
+      /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
+      /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action );
+
+      /// <summary>
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
+      /// <param name="func">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
+      /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      ValueTask<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func );
+   }
+
+   /// <summary>
+   /// This class extends <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> in order to provide specialized implementation for situations when unseekable stream (SU) (e.g. <see cref="T:System.Net.Sockets.NetworkStream"/>) is used to communicate with remote resource.
    /// In such scenarios, the whole stream is typically reserved for execution of single statement at a time.
    /// </summary>
    /// <typeparam name="TStatement">The type of statement to modify/query remote resource.</typeparam>
@@ -36,7 +61,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TStatementCreationArgs">The type of arguments to create a new statement.</typeparam>
    /// <typeparam name="TEnumerableItem">The type of items enumerated by statement.</typeparam>
    /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
-   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor>
+   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : PooledConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, IAsyncEnumerable<TEnumerableItem>>, ConnectionFunctionalitySU
       where TStatement : TStatementInformation
       where TEnumerableItem : class
       where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
@@ -70,76 +95,104 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// Implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CreateEnumerator"/> by creating sequential observable enumerator (<see cref="AsyncEnumeratorFactory.CreateSequentialObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>.
-      /// The <see cref="InitialMoveNext(TStatementInformation, CancellationToken)"/> method will be used as callback for the enumerator.
+      /// Implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CreateEnumerable"/> by creating sequential exclusive enumerator (<see cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T})"/>).
+      /// The <see cref="ExecuteStatement(TStatementInformation, ReservedForStatement)"/> method will be used to perform initial execution, after which the callback returned by the method will be used.
       /// </summary>
       /// <param name="metadata">The statement information.</param>
-      /// <param name="getGlobalBeforeEnumerationExecutionStart">Callback to get global before enumeration start -event.</param>
-      /// <param name="getGlobalAfterEnumerationExecutionStart">Callback to get global after enumeration start -event.</param>
-      /// <param name="getGlobalBeforeEnumerationExecutionEnd">Callback to get global before enumeration end -event.</param>
-      /// <param name="getGlobalAfterEnumerationExecutionEnd">Callback to get global after enumeration end -event.</param>
-      /// <param name="getGlobalAfterEnumerationExecutionItemEncountered">Callback to get global enumeration encountered -event.</param>
-      /// <returns>The <see cref="AsyncEnumerator{T, TMetadata}"/> that can sequentially enumerate items from underlying stream.</returns>
-      /// <seealso cref="AsyncEnumeratorFactory.CreateSequentialObservableEnumerator{T, TMetadata}(InitialMoveNextAsyncDelegate{T}, TMetadata, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationStartedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationEndedEventArgs{TMetadata}}}, Func{GenericEventHandler{EnumerationItemEventArgs{T, TMetadata}}})"/>
-      protected override AsyncEnumeratorObservable<TEnumerableItem, TStatementInformation> CreateEnumerator(
-         TStatementInformation metadata,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
-         Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
-         Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
-         Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
+      /// <returns>The <see cref="IAsyncEnumerable{T}"/> that can sequentially enumerate items from underlying stream.</returns>
+      /// <seealso cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T})"/>
+      protected override IAsyncEnumerable<TEnumerableItem> CreateEnumerable(
+         TStatementInformation metadata
+         //Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
+         //Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
+         //Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
+         //Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
+         //Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
          )
       {
-         return AsyncEnumeratorFactory.CreateSequentialObservableEnumerator(
-            token => this.InitialMoveNext( metadata, token ),
-            metadata,
-            getGlobalBeforeEnumerationExecutionStart,
-            getGlobalAfterEnumerationExecutionStart,
-            getGlobalBeforeEnumerationExecutionEnd,
-            getGlobalAfterEnumerationExecutionEnd,
-            getGlobalAfterEnumerationExecutionItemEncountered
-            );
+         ReservedForStatement reservation = null;
+         Func<ValueTask<(Boolean, TEnumerableItem)>> moveNext = null;
+
+         return AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable( AsyncEnumerationFactory.CreateSequentialStartInfo(
+               async () =>
+               {
+                  TEnumerableItem item;
+
+                  if ( reservation == null && Interlocked.CompareExchange( ref reservation, this.CreateReservationObject( metadata ), null ) == null )
+                  {
+                     (item, moveNext) = await this.UseStreamOutsideStatementAsync(
+                        async () => await this.ExecuteStatement( metadata, reservation ),
+                        reservation,
+                        false
+                        );
+                  }
+                  else
+                  {
+                     if ( moveNext == null )
+                     {
+                        item = null;
+                     }
+                     else
+                     {
+                        Boolean success;
+                        (success, item) = await this.UseStreamWithinStatementAsync( reservation, moveNext );
+                        if ( !success )
+                        {
+                           item = null;
+                        }
+                     }
+                  }
+
+                  return (item != null, item);
+               },
+               () =>
+               {
+                  var seenReservation = reservation;
+
+                  Interlocked.Exchange( ref reservation, null );
+                  Interlocked.Exchange( ref moveNext, null );
+
+                  return this.DisposeStatementAsync( seenReservation );
+               } ) );
+
       }
 
-      /// <summary>
-      /// Marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
-      /// </summary>
-      /// <param name="statement">The read-only statement information.</param>
-      /// <param name="token">The <see cref="CancellationToken"/> passed to initial call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
-      /// <returns>The information about the statement execution and enumeration.</returns>
-      /// <remarks>
-      /// In order to mark this connection as reserved, a new instance of <see cref="ReservedForStatement"/> is created by calling <see cref="CreateReservationObject(TStatementInformation)"/> method.
-      /// Then <see cref="UseStreamOutsideStatementAsync(Func{Task}, ReservedForStatement, bool)"/> is called such that it would call <see cref="ExecuteStatement(CancellationToken, TStatementInformation, ReservedForStatement)"/> if current connection is not markeda s reserved by other statement.
-      /// </remarks>
-      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      /// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
-      /// <seealso cref="AsyncEnumerator{T}"/>
-      protected async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, EnumerationEndedDelegate)> InitialMoveNext(
-         TStatementInformation statement,
-         CancellationToken token
-         )
-      {
-         var reserved = this.CreateReservationObject( statement );
-         var simpleTuple = await this.UseStreamOutsideStatementAsync(
-            async () => await this.ExecuteStatement( token, statement, reserved ),
-            reserved,
-            false
-            );
-         return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( moveNextEnded, tkn ) => await this.DisposeStatementAsync( moveNextEnded, reserved ));
-      }
+      ///// <summary>
+      ///// Marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
+      ///// </summary>
+      ///// <param name="statement">The read-only statement information.</param>
+      ///// <param name="token">The <see cref="CancellationToken"/> passed to initial call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
+      ///// <returns>The information about the statement execution and enumeration.</returns>
+      ///// <remarks>
+      ///// In order to mark this connection as reserved, a new instance of <see cref="ReservedForStatement"/> is created by calling <see cref="CreateReservationObject(TStatementInformation)"/> method.
+      ///// Then <see cref="UseStreamOutsideStatementAsync(Func{Task}, ReservedForStatement, bool)"/> is called such that it would call <see cref="ExecuteStatement(CancellationToken, TStatementInformation, ReservedForStatement)"/> if current connection is not markeda s reserved by other statement.
+      ///// </remarks>
+      ///// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
+      ///// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
+      ///// <seealso cref="AsyncEnumerator{T}"/>
+      //protected async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, EnumerationEndedDelegate)> InitialMoveNext(
+      //   TStatementInformation statement
+      //   )
+      //{
+      //   var reserved = this.CreateReservationObject( statement );
+      //   var simpleTuple = await this.UseStreamOutsideStatementAsync(
+      //      async () => await this.ExecuteStatement( token, statement, reserved ),
+      //      reserved,
+      //      false
+      //      );
+      //   return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( moveNextEnded, tkn ) => await this.DisposeStatementAsync( moveNextEnded, reserved ));
+      //}
 
       /// <summary>
       /// Derived classes should override this abstract method to provide custom execution logic for statement.
       /// </summary>
-      /// <param name="token">The <see cref="CancellationToken"/> passed to <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
       /// <param name="stmt">The read-only information about statement being executed.</param>
       /// <param name="reservationObject">The reservation object created by <see cref="CreateReservationObject(TStatementInformation)"/>.</param>
       /// <returns>Information about the backend result and how to enumerate more results.</returns>
-      /// <seealso cref="InitialMoveNext(TStatementInformation, CancellationToken)"/>
       /// <remarks>
       /// The connection will be marked as reserved to the statement before this method is called.
       /// </remarks>
-      protected abstract ValueTask<(TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>)> ExecuteStatement( CancellationToken token, TStatementInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<(TEnumerableItem, Func<ValueTask<(Boolean, TEnumerableItem)>>)> ExecuteStatement( TStatementInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should override this abstract method to create custom <see cref="ReservedForStatement"/> objects.
@@ -274,11 +327,11 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      private async Task DisposeStatementAsync( Boolean moveNextEnded, ReservedForStatement reservationObject )
+      private async Task DisposeStatementAsync( ReservedForStatement reservationObject )
       {
          try
          {
-            await this.UseStreamWithinStatementAsync( reservationObject, () => this.PerformDisposeStatementAsync( moveNextEnded, reservationObject ) );
+            await this.UseStreamWithinStatementAsync( reservationObject, () => this.PerformDisposeStatementAsync( reservationObject ) );
          }
          finally
          {
@@ -289,13 +342,12 @@ namespace CBAM.Abstractions.Implementation
       /// <summary>
       /// Derived classes should override this abstract method to implement custom dispose functionality when the statement represented by given <see cref="ReservedForStatement"/> is being disposed.
       /// </summary>
-      /// <param name="moveNextEnded">Whether enumeration seen <see cref="AsyncEnumerator{T}.MoveNextAsync"/> return <c>null</c>.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> identifying the statement.</param>
       /// <returns>The task which will complete when the dispose procedure has been completed.</returns>
-      protected abstract Task PerformDisposeStatementAsync( Boolean moveNextEnded, ReservedForStatement reservationObject );
+      protected abstract Task PerformDisposeStatementAsync( ReservedForStatement reservationObject );
 
       /// <summary>
-      /// This property implements <see cref="DefaultConnectionFunctionality.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
+      /// This property implements <see cref="PooledConnectionFunctionality.CanBeReturnedToPool"/> by checking that this connection is not reserved to any statement.
       /// </summary>
       /// <value>Will return <c>true</c> if this connection is not reserved for any statement.</value>
       public override Boolean CanBeReturnedToPool => ReferenceEquals( this._currentlyExecutingStatement, NotInUse.Instance );

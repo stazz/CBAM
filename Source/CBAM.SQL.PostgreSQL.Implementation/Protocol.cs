@@ -40,7 +40,7 @@ using System.Net.Sockets;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
+   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>>;
 
    internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU<PgSQLConnectionVendorFunctionality>
    {
@@ -77,7 +77,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this.DataRowColumnSizes = new ResizableArray<ResettableTransformable<Int32?, Int32>>( exponentialResize: false );
          this._serverParameters = ArgumentValidator.ValidateNotNull( nameof( serverParameters ), serverParameters );
          this.ServerParameters = new System.Collections.ObjectModel.ReadOnlyDictionary<String, String>( serverParameters );
-         this.TypeRegistry = new TypeRegistryImpl( vendorFunctionality, this );
+         this.TypeRegistry = new TypeRegistryImpl( vendorFunctionality, sql => this.PrepareStatementForExecution( vendorFunctionality.CreateStatementBuilder( sql ), out var dummy ) );
 
          if ( serverParameters.TryGetValue( "server_version", out var serverVersionString ) )
          {
@@ -182,7 +182,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsBatch(
-         CancellationToken token,
          SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
@@ -344,7 +343,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsPrepared(
-         CancellationToken token,
          SQLStatementBuilderInformation statement,
          ReservedForStatement reservedState
          )
@@ -371,7 +369,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          // Start receiving messages
          BackendMessageObject msg = null;
          SQLStatementExecutionResult current = null;
-         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = null;
+         Func<ValueTask<(Boolean, SQLStatementExecutionResult)>> moveNext = null;
          RowDescription seenRD = null;
          List<PgSQLError> notices = new List<PgSQLError>();
          while ( msg == null )
@@ -421,7 +419,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         warningsLazy
                         );
                   current = dataRowCurrent;
-                  moveNext = async ( innerToken ) => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
+                  moveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
                   break;
                case CommandComplete cc:
                   if ( seenRD == null )
@@ -442,7 +440,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected override async ValueTask<TStatementExecutionSimpleTaskParameter> ExecuteStatementAsSimple(
-         CancellationToken token,
          SQLStatementBuilderInformation stmt,
          ReservedForStatement reservedState
          )
@@ -452,16 +449,16 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          // Then wait for appropriate response
          List<PgSQLError> notices = new List<PgSQLError>();
-         MoveNextAsyncDelegate<SQLStatementExecutionResult> drMoveNext = null;
+         Func<ValueTask<(Boolean, SQLStatementExecutionResult)>> drMoveNext = null;
 
          // We have to always set moveNext, since we might be executing arbitrary amount of SQL statements in simple StatementBuilder.
-         MoveNextAsyncDelegate<SQLStatementExecutionResult> moveNext = async ( innerToken ) =>
+         Func<ValueTask<(Boolean, SQLStatementExecutionResult)>> moveNext = async () =>
          {
             SQLStatementExecutionResult current = null;
             if ( drMoveNext != null )
             {
                // We are iterating over some query result, check that first.
-               var drNext = await drMoveNext( innerToken );
+               var drNext = await drMoveNext();
                if ( drNext.Item1 )
                {
                   current = drNext.Item2;
@@ -526,7 +523,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                               warningsLazy
                               );
                         current = dataRowCurrent;
-                        drMoveNext = async ( innermostToken ) => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
+                        drMoveNext = async () => await this.MoveNextAsync( reservedState, streamArray, notices, dataRowCurrent, warningsLazy );
                         break;
                      case ReadyForQuery rfq:
                         ( (PgReservedForStatement) reservedState ).RFQSeen();
@@ -546,7 +543,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             return (current != null, current);
          };
 
-         var firstResult = await moveNext( default( CancellationToken ) );
+         var firstResult = await moveNext();
 
          return (firstResult.Item1 ? firstResult.Item2 : null, moveNext);
 
@@ -608,7 +605,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       //}
 
       protected override async Task PerformDisposeStatementAsync(
-         Boolean moveNextEnded,
          ReservedForStatement reservationObject
          )
       {
@@ -794,11 +790,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-            // Just do "SELECT 1"; to get any notifications
-            var enumerator = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ) );
-            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
-            enumerator.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-            await enumerator.EnumerateSequentiallyAsync( null );
+         // Just do "SELECT 1"; to get any notifications
+         var enumerable = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ), out var dummy )
+            .AsObservable();
+         // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+         enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+         await enumerable.EnumerateSequentiallyAsync( null );
 #if !NETSTANDARD1_0
          }
          else

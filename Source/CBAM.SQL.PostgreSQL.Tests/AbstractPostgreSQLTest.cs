@@ -63,12 +63,12 @@ namespace CBAM.SQL.PostgreSQL.Tests
          IEnumerable<(String ArraySpec, Array Array)> GenerateArrays();
       }
 
-      protected static async Task AssertThatConnectionIsStillUseable( PgSQLConnection connection, AsyncEnumerator<SQLStatementExecutionResult> enumerator )
+      protected static async Task AssertThatConnectionIsStillUseable( PgSQLConnection connection ) //, AsyncEnumerator<SQLStatementExecutionResult> enumerator )
       {
-         if ( enumerator != null )
-         {
-            await enumerator.EnumerationEnded();
-         }
+         //if ( enumerator != null )
+         //{
+         //   await enumerator.EnumerationEnded();
+         //}
          var selectResult = await connection.GetFirstOrDefaultAsync<Int32>( "SELECT 1" );
          Assert.AreEqual( 1, selectResult );
       }
@@ -190,8 +190,8 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
 public static partial class E_CBAM
 {
-   public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args, Int64? token )
-   {
-      return (SQLDataRow) args.OneTimeRetrieve( token.Value );
-   }
+   //public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args, Int64? token )
+   //{
+   //   return (SQLDataRow) args.OneTimeRetrieve( token.Value );
+   //}
 }

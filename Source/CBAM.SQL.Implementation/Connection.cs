@@ -31,12 +31,12 @@ using UtilPack.TabularData;
 namespace CBAM.SQL.Implementation
 {
    /// <summary>
-   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
+   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
    /// </summary>
    /// <typeparam name="TConnectionFunctionality">The type of object actually implementing the functionality for this facade.</typeparam>
    /// <typeparam name="TVendor">The actual type of vendor.</typeparam>
-   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TVendor, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : class, Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, TVendor>
+   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, IAsyncEnumerable<SQLStatementExecutionResult>, IAsyncEnumerableObservable<SQLStatementExecutionResult, SQLStatementBuilderInformation>, TVendor, TConnectionFunctionality>, SQLConnection
+      where TConnectionFunctionality : DefaultConnectionFunctionality<SQLStatementBuilder, SQLStatementBuilderInformation, String, TVendor, IAsyncEnumerable<SQLStatementExecutionResult>>
       where TVendor : SQLConnectionVendorFunctionality
    {
       private Object _isReadOnly;
@@ -45,7 +45,7 @@ namespace CBAM.SQL.Implementation
       /// <summary>
       /// Creates a new instance of <see cref="SQLConnectionImpl{TConnectionFunctionality, TVendor}"/> with given parameters.
       /// </summary>
-      /// <param name="connectionFunctionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> implementation.</param>
+      /// <param name="connectionFunctionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> implementation.</param>
       /// <param name="metaData">The <see cref="SQL.DatabaseMetadata"/> object containing metadata functionality.</param>
       /// <exception cref="ArgumentNullException">If either of <paramref name="connectionFunctionality"/> or <paramref name="metaData"/> is <c>null</c>.</exception>
       public SQLConnectionImpl(
@@ -54,6 +54,17 @@ namespace CBAM.SQL.Implementation
          ) : base( connectionFunctionality )
       {
          this.DatabaseMetadata = ArgumentValidator.ValidateNotNull( nameof( metaData ), metaData );
+      }
+
+      /// <summary>
+      /// This method implements <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}.CreateObservable"/> by calling <see cref="M:E_UtilPack.AsObservable{T,TMetadata}(System.Collections.Generic.IAsyncEnumerable{T},TMetadata)"/>.
+      /// </summary>
+      /// <param name="enumerable">The <see cref="IAsyncEnumerable{T}"/>.</param>
+      /// <param name="info">The <see cref="SQLStatementBuilderInformation"/>.</param>
+      /// <returns>A new instance of <see cref="IAsyncEnumerableObservable{T, TMetadata}"/>.</returns>
+      protected override IAsyncEnumerableObservable<SQLStatementExecutionResult, SQLStatementBuilderInformation> CreateObservable( IAsyncEnumerable<SQLStatementExecutionResult> enumerable, SQLStatementBuilderInformation info )
+      {
+         return enumerable.AsObservable( info );
       }
 
       /// <summary>

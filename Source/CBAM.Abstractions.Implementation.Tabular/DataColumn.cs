@@ -23,25 +23,17 @@ using UtilPack.TabularData;
 namespace CBAM.Abstractions.Implementation.Tabular
 {
    /// <summary>
-   /// This class extends <see cref="DataColumnSUKS"/> to use <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> to reserve it when reading values.
+   /// This class extends <see cref="DataColumnSUKS"/> to use <see cref="ConnectionFunctionalitySU"/> to reserve it when reading values.
    /// </summary>
-   /// <typeparam name="TConnectionFunctionality">The real type of <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   /// <typeparam name="TStatement">The type of statements of related <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
-   /// <typeparam name="TStatementInformation">The type of read-only statement information of related <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
-   /// <typeparam name="TStatementCreationArgs">The type used to create <typeparamref name="TStatement"/>s.</typeparam>
-   /// <typeparam name="TEnumerationItem">The type that is enumerated by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
-   /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
-   /// <seealso cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.UseStreamWithinStatementAsync(ReservedForStatement, Func{Task})"/>
-   /// <seealso cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.UseStreamWithinStatementAsync{T}(ReservedForStatement, Func{ValueTask{T}})"/>
-   public abstract class DataColumnSUKSWithConnectionFunctionality<TConnectionFunctionality, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerationItem, TVendor> : DataColumnSUKS
-      where TStatement : TStatementInformation
-      where TConnectionFunctionality : ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerationItem, TVendor>
-      where TEnumerationItem : class
-      where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
+   /// <typeparam name="TConnectionFunctionality">The real type of <see cref="ConnectionFunctionalitySU"/>.</typeparam>
+   /// <seealso cref="ConnectionFunctionalitySU.UseStreamWithinStatementAsync(ReservedForStatement, Func{Task})"/>
+   /// <seealso cref="ConnectionFunctionalitySU.UseStreamWithinStatementAsync{T}(ReservedForStatement, Func{ValueTask{T}})"/>
+   public abstract class DataColumnSUKSWithConnectionFunctionality<TConnectionFunctionality> : DataColumnSUKS
+      where TConnectionFunctionality : class, ConnectionFunctionalitySU
    {
 
       /// <summary>
-      /// Creates new instance of <see cref="DataColumnSUKSWithConnectionFunctionality{TConnectionFunctionality, TStatement, TStatementInformation, TStatementCreationArgs, TEnumerationItem, TVendor}"/> with given parameters.
+      /// Creates new instance of <see cref="DataColumnSUKSWithConnectionFunctionality{TConnectionFunctionality}"/> with given parameters.
       /// </summary>
       /// <param name="metadata">The <see cref="DataColumnMetaData"/> of this data column.</param>
       /// <param name="columnIndex">The index of this column within the <see cref="AsyncDataRow"/>.</param>

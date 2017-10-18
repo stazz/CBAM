@@ -25,7 +25,7 @@ using UtilPack;
 
 namespace CBAM.SQL.Implementation
 {
-   using TStatementExecutionTaskParameter = System.ValueTuple<SQLStatementExecutionResult, UtilPack.AsyncEnumeration.MoveNextAsyncDelegate<SQLStatementExecutionResult>>;
+   using TStatementExecutionTaskParameter = System.ValueTuple<SQLStatementExecutionResult, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>>;
 
    /// <summary>
    /// This class extends <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> to provide SQL-related connection functionality which operates on non-seekable streams.
@@ -45,19 +45,18 @@ namespace CBAM.SQL.Implementation
       }
 
       /// <summary>
-      /// This method implements <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.ExecuteStatement(CancellationToken, TStatementInformation, ReservedForStatement)"/> to further delegate execution to <see cref="ExecuteStatementAsBatch(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/>, <see cref="ExecuteStatementAsPrepared(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/>, or <see cref="ExecuteStatementAsSimple(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/> methods.
+      /// This method implements <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.ExecuteStatement(TStatementInformation, ReservedForStatement)"/> to further delegate execution to <see cref="ExecuteStatementAsBatch(SQLStatementBuilderInformation, ReservedForStatement)"/>, <see cref="ExecuteStatementAsPrepared(SQLStatementBuilderInformation, ReservedForStatement)"/>, or <see cref="ExecuteStatementAsSimple(SQLStatementBuilderInformation, ReservedForStatement)"/> methods.
       /// </summary>
-      /// <param name="token">The cancellation token to use.</param>
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
-      /// <returns>The result of <see cref="ExecuteStatementAsBatch(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/>, if <paramref name="stmt"/> is a batched statement. Otherwise, if <paramref name="stmt"/> is prepared statement, returns result of <see cref="ExecuteStatementAsPrepared(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/>. Otherwise, returns result of <see cref="ExecuteStatementAsSimple(CancellationToken, SQLStatementBuilderInformation, ReservedForStatement)"/>.</returns>
-      protected override ValueTask<TStatementExecutionTaskParameter> ExecuteStatement( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject )
+      /// <returns>The result of <see cref="ExecuteStatementAsBatch(SQLStatementBuilderInformation, ReservedForStatement)"/>, if <paramref name="stmt"/> is a batched statement. Otherwise, if <paramref name="stmt"/> is prepared statement, returns result of <see cref="ExecuteStatementAsPrepared(SQLStatementBuilderInformation, ReservedForStatement)"/>. Otherwise, returns result of <see cref="ExecuteStatementAsSimple(SQLStatementBuilderInformation, ReservedForStatement)"/>.</returns>
+      protected override ValueTask<TStatementExecutionTaskParameter> ExecuteStatement( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject )
       {
          return stmt.HasBatchParameters() ?
-            this.ExecuteStatementAsBatch( token, stmt, reservationObject ) : (
+            this.ExecuteStatementAsBatch( stmt, reservationObject ) : (
                stmt.SQLParameterCount > 0 ?
-                  this.ExecuteStatementAsPrepared( token, stmt, reservationObject ) :
-                  this.ExecuteStatementAsSimple( token, stmt, reservationObject )
+                  this.ExecuteStatementAsPrepared( stmt, reservationObject ) :
+                  this.ExecuteStatementAsSimple( stmt, reservationObject )
             );
       }
 
@@ -74,29 +73,26 @@ namespace CBAM.SQL.Implementation
       /// <summary>
       /// Derived classes should implement this method in order to execute <see cref="SQLStatementBuilderInformation"/> as simple, non-prepared and non-batched statement.
       /// </summary>
-      /// <param name="token">The cancellation token to use.</param>
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsSimple( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsSimple( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should implement this method in order to execute <see cref="SQLStatementBuilderInformation"/> as prepared and non-batched statement.
       /// </summary>
-      /// <param name="token">The cancellation token to use.</param>
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsPrepared( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsPrepared( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should implement this method in order to execute <see cref="SQLStatementBuilderInformation"/> as batched statement, which is either simple or prepared.
       /// </summary>
-      /// <param name="token">The cancellation token to use.</param>
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>Asynchronously returns the tuple of <see cref="SQLStatementExecutionResult"/> resulted from executing statement, and optional <see cref="UtilPack.AsyncEnumeration.MoveNextAsyncDelegate{T}"/> to enumerate more results.</returns>
-      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsBatch( CancellationToken token, SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<TStatementExecutionTaskParameter> ExecuteStatementAsBatch( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject );
 
    }
 

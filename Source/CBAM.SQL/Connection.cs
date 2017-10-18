@@ -27,14 +27,15 @@ using CBAM.Abstractions;
 
 using UtilPack.AsyncEnumeration;
 using UtilPack.TabularData;
+using UtilPack.AsyncEnumeration.LINQ;
 
 namespace CBAM.SQL
 {
    /// <summary>
-   /// This interfaces extends the generic CBAM <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> interface to provide SQL-specific functionality in addition to generic functionality.
-   /// Furthermore, all generic type arguments of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> are bound to those that also provide SQL-specialization, and enables to use this interface for any SQL processing, regardless of vendor.
+   /// This interfaces extends the generic CBAM <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> interface to provide SQL-specific functionality in addition to generic functionality.
+   /// Furthermore, all generic type arguments of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> are bound to those that also provide SQL-specialization, and enables to use this interface for any SQL processing, regardless of vendor.
    /// </summary>
-   public interface SQLConnection : Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality>
+   public interface SQLConnection : Connection<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, IAsyncEnumerable<SQLStatementExecutionResult>>
    {
       /// <summary>
       /// Gets the <see cref="SQL.DatabaseMetadata"/> object describing the database this <see cref="SQLConnection"/> is connected to.
@@ -77,7 +78,7 @@ namespace CBAM.SQL
       /// </summary>
       /// <param name="reader">The source where SQL statement originated.</param>
       /// <param name="statementInformation">The <see cref="SQLStatementBuilderInformation"/> about current statement.</param>
-      /// <param name="executionResult">The <see cref="SQLStatementExecutionResult"/> encountered when enumerating <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/>.</param>
+      /// <param name="executionResult">The <see cref="SQLStatementExecutionResult"/> encountered when enumerating <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</param>
       /// <returns>A task which should return <c>true</c> on completion if anything was done to <paramref name="reader"/>.</returns>
       ValueTask<Boolean> ProcessStatementResultPassively( MemorizingPotentiallyAsyncReader<Char?, Char> reader, SQLStatementBuilderInformation statementInformation, SQLStatementExecutionResult executionResult );
 
@@ -146,7 +147,7 @@ namespace CBAM.SQL
    }
 
    /// <summary>
-   /// This is common interface for items enumerated by <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> method of <see cref="SQLConnection"/>.
+   /// This is common interface for items enumerated by <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/> method of <see cref="SQLConnection"/>.
    /// </summary>
    /// <seealso cref="SQLDataRow"/>
    /// <seealso cref="SingleCommandExecutionResult"/>
@@ -154,9 +155,9 @@ namespace CBAM.SQL
    public interface SQLStatementExecutionResult
    {
       /// <summary>
-      /// Gets the warnings issued by backend during last call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>.
+      /// Gets the warnings issued by backend during last call of <see cref="IAsyncEnumerator{T}.WaitForNextAsync"/>.
       /// </summary>
-      /// <value>The warnings issued by backend during last call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/>.</value>
+      /// <value>The warnings issued by backend during last call of <see cref="IAsyncEnumerator{T}.WaitForNextAsync"/>.</value>
       SQLException[] Warnings { get; }
    }
 
@@ -207,7 +208,7 @@ namespace CBAM.SQL
    }
 
    /// <summary>
-   /// This enumeration is used by <see cref="E_CBAM.ExecuteStatementsFromStreamAsync(SQLConnection, MemorizingPotentiallyAsyncReader{char?, char}, Func{SQLException, WhenExceptionInMultipleStatements})"/> and <see cref="E_CBAM.ExecuteStatementsFromStreamAsync(SQLConnection, System.IO.Stream, Encoding, int, int, Func{SQLException, WhenExceptionInMultipleStatements})"/> extension methods to control how the method behaves when an exception is occurred in statement result processing.
+   /// This enumeration is used by <see cref="E_CBAM.ExecuteStatementsFromStreamAsync(SQLConnection, MemorizingPotentiallyAsyncReader{char?, char}, Func{SQLException, WhenExceptionInMultipleStatements})"/> and <see cref="E_CBAM.ExecuteStatementsFromStreamAsync(SQLConnection, System.IO.Stream, Encoding, int, int, Func{SQLException, WhenExceptionInMultipleStatements}, CancellationToken)"/> extension methods to control how the method behaves when an exception is occurred in statement result processing.
    /// </summary>
    public enum WhenExceptionInMultipleStatements
    {
@@ -235,25 +236,14 @@ namespace CBAM.SQL
 public static partial class E_CBAM
 {
    /// <summary>
-   /// This task uses <see cref="M:E_UtilPack.EnumerateAsync{T}(UtilPack.AsyncEnumeration.AsyncEnumerator{T},System.Func{T,System.Threading.Tasks.Task})"/> method to enumrate this SQL <see cref="AsyncEnumerator{T}"/> and call given callback for all encountered items which are of type <see cref="SQLDataRow"/>.
+   /// This method is a shortcut of calling <see cref="M:E_UtilPack.OfType{T, U}(IAsyncEnumerable{T}, OfTypeInfo{U})"/> making this <see cref="IAsyncEnumerable{T}"/> of <see cref="SQLStatementExecutionResult"/> only return <see cref="SQLDataRow"/>s.
    /// </summary>
-   /// <param name="enumerator">This SQL <see cref="AsyncEnumerator{T}"/>.</param>
-   /// <param name="callback">The callback to invoke for all <see cref="SQLDataRow"/> items.</param>
-   /// <returns>Task which have enumerated this <see cref="AsyncEnumerator{T}"/> on completion.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="AsyncEnumerator{T}"/> is <c>null</c>.</exception>
-   public static ValueTask<Int64> EnumerateSQLRowsAsync( this AsyncEnumerator<SQLStatementExecutionResult> enumerator, Func<SQLDataRow, Task> callback )
+   /// <param name="enumerable">This SQL <see cref="IAsyncEnumerable{T}"/>.</param>
+   /// <returns>Asynchronous enumerable which only returns <see cref="SQLDataRow"/>s and filters out all other items.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="IAsyncEnumerable{T}"/> is <c>null</c>.</exception>
+   public static IAsyncEnumerable<SQLDataRow> IncludeDataRowsOnly( this IAsyncEnumerable<SQLStatementExecutionResult> enumerable )
    {
-      return enumerator.EnumerateSequentiallyAsync( callback == null ? (Func<SQLStatementExecutionResult, Task>) null : item =>
-      {
-         if ( item is SQLDataRow sqlRow )
-         {
-            return callback( sqlRow );
-         }
-         else
-         {
-            return null;
-         }
-      } );
+      return enumerable.OfType( OfTypeInfo<SQLDataRow>.Get() );
    }
 
 
@@ -263,7 +253,7 @@ public static partial class E_CBAM
    //}
 
    /// <summary>
-   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> for given <see cref="SQLStatementBuilder"/>.
+   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/> for given <see cref="SQLStatementBuilder"/>.
    /// </summary>
    /// <typeparam name="T">The type of the value to return.</typeparam>
    /// <param name="connection">This <see cref="SQLConnection"/>.</param>
@@ -278,7 +268,9 @@ public static partial class E_CBAM
       ArgumentValidator.ValidateNotNull( nameof( extractor ), extractor );
       var seenFirst = false;
       var retVal = default( T );
-      await connection.PrepareStatementForExecution( statement ).EnumerateSQLRowsAsync( async sqlRow =>
+      await connection.PrepareStatementForExecution( statement )
+         .IncludeDataRowsOnly()
+         .EnumerateSequentiallyAsync( async sqlRow =>
       {
          if ( !seenFirst )
          {
@@ -290,7 +282,7 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> for <see cref="SQLStatementBuilder"/> created with given SQL string.
+   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/> for <see cref="SQLStatementBuilder"/> created with given SQL string.
    /// </summary>
    /// <typeparam name="T">The type of the value to return.</typeparam>
    /// <param name="connection">This <see cref="SQLConnection"/>.</param>
@@ -305,7 +297,7 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> for given <see cref="SQLStatementBuilder"/>.
+   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/> for given <see cref="SQLStatementBuilder"/>.
    /// This method lets optionally specify a callback to extract value from single <see cref="AsyncDataColumn"/>, and also optionally specify a column index which will be used to get the <see cref="AsyncDataColumn"/> to extract value from.
    /// </summary>
    /// <typeparam name="T">The type of the value to return.</typeparam>
@@ -320,7 +312,10 @@ public static partial class E_CBAM
    {
       var seenFirst = false;
       var retVal = default( T );
-      await connection.PrepareStatementForExecution( statement ).EnumerateSQLRowsAsync( async sqlRow =>
+      await connection
+         .PrepareStatementForExecution( statement )
+         .IncludeDataRowsOnly()
+         .EnumerateSequentiallyAsync( async sqlRow =>
       {
          if ( !seenFirst )
          {
@@ -332,7 +327,7 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}.PrepareStatementForExecution(TStatementInformation)"/> for <see cref="SQLStatementBuilder"/> created with given SQL string.
+   /// Shortcut method to get some value from first seen <see cref="SQLDataRow"/> of <see cref="AsyncEnumerator{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/> for <see cref="SQLStatementBuilder"/> created with given SQL string.
    /// This method lets optionally specify a callback to extract value from single <see cref="AsyncDataColumn"/>, and also optionally specify a column index which will be used to get the <see cref="AsyncDataColumn"/> to extract value from.
    /// </summary>
    /// <typeparam name="T">The type of the value to return.</typeparam>
@@ -475,6 +470,7 @@ public static partial class E_CBAM
    /// <param name="streamMaxBufferCount">The amount of characters to read for one statement until the buffer is cleared. This does not mean the maximum size for statement, instead it indicates that if after processing a single SQL statement, if the buffer is higher than this number, then it will be cleared.</param>
    /// <param name="streamReadChunkCount">The amount bytes to read in one chunk from given <paramref name="stream"/>.</param>
    /// <param name="onException">Optional callback to react when <see cref="SQLException"/> occurs during passive processing of single SQL statement. It should return <see cref="WhenExceptionInMultipleStatements"/>, or be left out, in which case <see cref="WhenExceptionInMultipleStatements.Rethrow"/> behaviour pattern will be used.</param>
+   /// <param name="token">Optional <see cref="CancellationToken"/> to use when creating <see cref="StreamReaderWithResizableBuffer"/>.</param>
    /// <returns>A task which will on completion return amount of statements read.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
    /// <exception cref="ArgumentNullException">If <paramref name="stream"/> is <c>null</c>.</exception>
@@ -486,14 +482,15 @@ public static partial class E_CBAM
       Encoding encoding,
       Int32 streamMaxBufferCount = 1024,
       Int32 streamReadChunkCount = 1024,
-      Func<SQLException, WhenExceptionInMultipleStatements> onException = null
+      Func<SQLException, WhenExceptionInMultipleStatements> onException = null,
+      CancellationToken token = default
    )
    {
       ArgumentValidator.ValidateNotNullReference( connection );
 
       var streamReader = StreamFactory.CreateUnlimitedReader(
             stream,
-            token: connection.CurrentCancellationToken,
+            token: token,
             chunkSize: streamReadChunkCount
          );
       var charReader = ReaderFactory.NewNullableMemorizingValueReader(
@@ -502,7 +499,7 @@ public static partial class E_CBAM
          );
       using ( charReader.ClearStreamWhenStreamBufferTooBig( streamReader, streamMaxBufferCount ) )
       {
-         return await connection.ExecuteStatementsFromStreamAsync( charReader, onException );
+         return await connection.ExecuteStatementsFromStreamAsync( charReader, onException: onException );
       }
    }
 
@@ -516,7 +513,7 @@ public static partial class E_CBAM
    /// <returns>A task which will on completion return amount of statements read.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
    /// <exception cref="ArgumentNullException">If <paramref name="reader"/> is <c>null</c>.</exception>
-   /// <seealso cref="ExecuteStatementsFromStreamAsync(SQLConnection, System.IO.Stream, Encoding, int, int, Func{SQLException, WhenExceptionInMultipleStatements})"/>
+   /// <seealso cref="ExecuteStatementsFromStreamAsync(SQLConnection, System.IO.Stream, Encoding, int, int, Func{SQLException, WhenExceptionInMultipleStatements}, CancellationToken)"/>
    /// <seealso cref="WhenExceptionInMultipleStatements"/>
    /// <seealso cref="MemorizingPotentiallyAsyncReader{TValue, TBufferItem}"/>
    public static async ValueTask<Int64> ExecuteStatementsFromStreamAsync(
@@ -553,11 +550,12 @@ public static partial class E_CBAM
             if ( count > 0 )
             {
                WhenExceptionInMultipleStatements? whenException = null;
-               var enumerator = connection.PrepareStatementForExecution( new String( reader.Buffer, start, count ) );
-               var stmtInfo = enumerator.Metadata;
+               var stmt = connection.CreateStatementBuilder( new String( reader.Buffer, start, count ) );
+               var enumerable = connection.PrepareStatementForExecution( stmt );
+               var stmtInfo = stmt.StatementBuilderInformation;
                try
                {
-                  await enumerator.EnumerateSequentiallyAsync( res =>
+                  await enumerable.EnumerateSequentiallyAsync( res =>
                   {
                      connection.ProcessStatementResultPassively( reader, stmtInfo, res );
                   } );

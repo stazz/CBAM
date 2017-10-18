@@ -95,16 +95,16 @@ namespace CBAM.SQL.MSBuild
       protected override async System.Threading.Tasks.Task<Boolean> UseResource( SQLConnection connection )
       {
          var defaultEncoding = GetEncoding( this.DefaultFileEncoding ) ?? Encoding.UTF8;
-
-         connection.BeforeEnumerationStart += this.Connection_BeforeStatementExecutionStart;
-         connection.AfterEnumerationItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
-
-         using ( new UsingHelper( () =>
+         connection.DisableEnumerableObservability = false;
+         using ( var helper = new UsingHelper( () =>
+           {
+              connection.BeforeEnumerationStart -= this.Connection_BeforeStatementExecutionStart;
+              connection.AfterEnumerationItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
+           } ) )
          {
-            connection.BeforeEnumerationStart -= this.Connection_BeforeStatementExecutionStart;
-            connection.AfterEnumerationItemEncountered -= this.Connection_AfterStatementExecutionItemEncountered;
-         } ) )
-         {
+            connection.BeforeEnumerationStart += this.Connection_BeforeStatementExecutionStart;
+            connection.AfterEnumerationItemEncountered += this.Connection_AfterStatementExecutionItemEncountered;
+
             foreach ( var tuple in this.GetAllFilePaths() )
             {
                var path = tuple.Item2;
@@ -123,7 +123,8 @@ namespace CBAM.SQL.MSBuild
                            {
                               this.Log.LogError( exc.ToString() );
                               return WhenExceptionInMultipleStatements.Continue;
-                           }
+                           },
+                           token: this.CancellationToken
                         ),
                         path
                         );
@@ -135,7 +136,6 @@ namespace CBAM.SQL.MSBuild
                }
             }
          }
-
          return true;
       }
 
