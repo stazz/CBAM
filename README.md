@@ -1,6 +1,15 @@
 # CBAM
 Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with remote resources, e.g. SQL, HTTP, LDAP servers, etc.
 
+# Main Principles
+
+The [CBAM.Abstractions](#cbamabstractions) project defines an interface `Connection` which represents stateful or stateless connection to some kind of remote endpoint, e.g. SQL/HTTP server.
+The `Connection` interface allows to prepare a statement for execution: e.g. string containing SQL, an object which contains HTTP request, etc.
+This prepared statement is exposed as [`IAsyncEnumerable<T>`](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.AsyncEnumeration), which can be asynchronously enumerated using e.g. `EnumerateSequentiallyAsync` extension method.
+Each item encountered during enumeration may be e.g. SQL statement execution result (statement execution information, or data row), or HTTP response (with all headers read, but content not read).
+
+# Example
+
 The [CBAM.SQL.PostgreSQL.Implementation](#cbamsqlpostgresqlimplementation) project allows one to do this:
 ```csharp
 using Microsoft.Extensions.Configuration; // For configuration
@@ -18,6 +27,8 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
   .CreateTimeoutingResourcePool()) 
 {
   // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
+  // The prepared statements are also fully supported, but out of scope from this example
+  // The code below only requires CBAM.SQL.PostgreSQL project, the CBAM.SQL.PostgreSQL.Implementation is only for access of PgSQLConnectionPoolProvider.Factory
   integers = await pool.UseResourceAsync( async pgConnection =>
   {
      return await pgConnection
