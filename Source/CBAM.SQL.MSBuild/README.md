@@ -23,7 +23,7 @@ The `ExecuteSQLStatementsTask` has a number of required and optional parameters,
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="1.1.0"/>
+    <PackageReference Include="UtilPack.NuGet.MSBuild" Version="2.0.0"/>
   </ItemGroup>
   
   <UsingTask
@@ -35,7 +35,7 @@ The `ExecuteSQLStatementsTask` has a number of required and optional parameters,
     <Task>
       <NuGetTaskInfo>
         <PackageID>CBAM.SQL.MSBuild</PackageID>
-        <PackageVersion>0.2.0</PackageVersion>
+        <PackageVersion>0.3.0</PackageVersion>
       </NuGetTaskInfo>
     </Task>
   </UsingTask>
@@ -43,7 +43,7 @@ The `ExecuteSQLStatementsTask` has a number of required and optional parameters,
   <Target Name="ExecuteSQL">
     <CBAM.SQL.MSBuild.ExecuteSQLStatementsTask
       ResourcePoolProviderPackageID="CBAM.SQL.PostgreSQL.Implementation"
-      ResourcePoolProviderVersion="0.2.0"
+      ResourcePoolProviderVersion="0.3.0"
       ResourceConfigurationFilePath="my/path/to/database_config.json"
       SQLFilePaths="my/path/to/sql_file.sql"
     />
