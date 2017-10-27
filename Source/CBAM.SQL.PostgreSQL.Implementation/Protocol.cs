@@ -33,6 +33,9 @@ using CBAM.Abstractions;
 using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
 using CBAM.Abstractions.Implementation;
 using UtilPack.AsyncEnumeration;
+using UtilPack.Cryptography.Digest;
+using UtilPack.Cryptography.SASL;
+using UtilPack.Cryptography.SASL.SCRAM;
 
 #if !NETSTANDARD1_0
 using System.Net.Sockets;
@@ -41,6 +44,7 @@ using System.Net.Sockets;
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
    using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>>;
+   using TSASLAuthState = System.ValueTuple<SASLMechanism, SASLCredentialsSCRAMForClient, ResizableArray<Byte>, IEncodingInfo>;
 
    internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU<PgSQLConnectionVendorFunctionality>
    {
@@ -790,12 +794,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-         // Just do "SELECT 1"; to get any notifications
-         var enumerable = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ), out var dummy )
-            .AsObservable();
-         // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
-         enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-         await enumerable.EnumerateSequentiallyAsync( null );
+            // Just do "SELECT 1"; to get any notifications
+            var enumerable = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ), out var dummy )
+               .AsObservable();
+            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+            enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+            await enumerable.EnumerateSequentiallyAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -833,7 +837,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       public static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
          PgSQLConnectionVendorFunctionality vendorFunctionality,
-         PgSQLInitializationConfiguration initData,
+         PgSQLConnectionCreationInfo creationInfo,
          CancellationToken token,
          Stream stream,
          BackendABIHelper abiHelper,
@@ -843,11 +847,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 #endif
          )
       {
+         var initData = creationInfo?.CreationData?.Initialization ?? throw new PgSQLException( "Please specify initialization configuration." );
          var startupInfo = await DoConnectionInitialization(
-            initData?.Database ?? throw new ArgumentException( "Please specify database configuration." ),
+            creationInfo,
             (abiHelper, stream, token, buffer)
             );
-         var protoConfig = initData.Protocol;
+         var protoConfig = initData?.Protocol;
          var retVal = (
             new PostgreSQLProtocol(
                vendorFunctionality,
@@ -874,10 +879,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       internal const String SERVER_PARAMETER_DATABASE = "database";
 
       private static async Task<(IDictionary<String, String> ServerParameters, Int32? backendProcessID, Int32? backendKeyData, List<PgSQLError> Notices, TransactionStatus TransactionStatus)> DoConnectionInitialization(
-         PgSQLDatabaseConfiguration dbConfig,
+         PgSQLConnectionCreationInfo creationInfo,
          MessageIOArgs ioArgs
          )
       {
+         var dbConfig = creationInfo?.CreationData?.Initialization?.Database ?? throw new ArgumentException( "Please specify database configuration" );
 
          var encoding = ioArgs.Item1.Encoding.Encoding;
          var username = dbConfig.Username ?? throw new ArgumentException( "Please specify username in database configuration." );
@@ -903,161 +909,363 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          Int32? backendProcessID = null;
          Int32? backendKeyData = null;
          TransactionStatus tStatus = 0;
-         do
+         Object saslState = null;
+         try
          {
-            Int32 ignored;
-            (msg, ignored) = await BackendMessageObject.ReadBackendMessageAsync( ioArgs, null );
-            switch ( msg )
+            do
             {
-               case ParameterStatus ps:
-                  parameters[ps.Name] = ps.Value;
-                  break;
-               case AuthenticationResponse auth:
-                  await ProcessAuth(
-                     ioArgs,
-                     auth,
-                     username,
-                     String.Equals( PgSQLDatabaseConfiguration.PasswordByteEncoding.WebName, encoding.WebName ) ?
-                        dbConfig.PasswordBytes :
-                        encoding.GetBytes( dbConfig.Password )
-                     );
-                  break;
-               case PgSQLErrorObject error:
-                  if ( error.Code == BackendMessageCode.NoticeResponse )
-                  {
-                     if ( notices == null )
+               Int32 ignored;
+               (msg, ignored) = await BackendMessageObject.ReadBackendMessageAsync( ioArgs, null );
+               switch ( msg )
+               {
+                  case ParameterStatus ps:
+                     parameters[ps.Name] = ps.Value;
+                     break;
+                  case AuthenticationResponse auth:
+                     var newSaslState = await ProcessAuth(
+                        creationInfo,
+                        username,
+                        ioArgs,
+                        auth,
+                        saslState
+                        );
+                     if ( newSaslState != null )
                      {
-                        notices = new List<PgSQLError>();
+                        saslState = newSaslState;
                      }
-                     notices.Add( error.Error );
-                  }
-                  else
-                  {
-                     throw new PgSQLException( error.Error );
-                  }
-                  break;
-               case BackendKeyData key:
-                  backendProcessID = key.ProcessID;
-                  backendKeyData = key.Key;
-                  break;
-               case ReadyForQuery rfq:
-                  tStatus = rfq.Status;
-                  break;
-            }
-         } while ( msg.Code != BackendMessageCode.ReadyForQuery );
-
+                     break;
+                  case PgSQLErrorObject error:
+                     if ( error.Code == BackendMessageCode.NoticeResponse )
+                     {
+                        if ( notices == null )
+                        {
+                           notices = new List<PgSQLError>();
+                        }
+                        notices.Add( error.Error );
+                     }
+                     else
+                     {
+                        throw new PgSQLException( error.Error );
+                     }
+                     break;
+                  case BackendKeyData key:
+                     backendProcessID = key.ProcessID;
+                     backendKeyData = key.Key;
+                     break;
+                  case ReadyForQuery rfq:
+                     tStatus = rfq.Status;
+                     break;
+               }
+            } while ( msg.Code != BackendMessageCode.ReadyForQuery );
+         }
+         finally
+         {
+            DisposeSASLState( saslState );
+         }
          return (parameters, backendProcessID, backendKeyData, notices, tStatus);
       }
 
-      private static async Task ProcessAuth(
+      private static async Task<Object> ProcessAuth(
+         PgSQLConnectionCreationInfo creationInfo,
+         String username,
+         MessageIOArgs ioArgs,
+         AuthenticationResponse msg,
+         Object saslState
+         )
+      {
+         var authType = msg.RequestType;
+         var initData = creationInfo.CreationData.Initialization.Database;
+         switch ( authType )
+         {
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationClearTextPassword:
+               await new PasswordMessage( GetPasswordBytes( creationInfo, ioArgs ) ).SendMessageAsync( ioArgs );
+               break;
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationMD5Password:
+               await HandleMD5Authentication( ioArgs, msg, username, GetPasswordBytes( creationInfo, ioArgs ) ).SendMessageAsync( ioArgs );
+               break;
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationOk:
+               // Nothing to do
+               break;
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASL:
+               var saslResult = ( HandleSASLAuthentication_Start( creationInfo, ioArgs, username, msg ) );
+               saslState = saslResult.Item2;
+               await ( saslResult.Item1 ?? throw new PgSQLException( "Aauthentication failed." ) ).SendMessageAsync( ioArgs );
+               break;
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASLContinue:
+               await ( HandleSASLAuthentication_Continue( ioArgs, msg, saslState ) ?? throw new PgSQLException( "Aauthentication failed." ) ).SendMessageAsync( ioArgs );
+               break;
+            case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASLFinal:
+               HandleSASLAuthentication_Final( creationInfo, ioArgs, msg, saslState );
+               break;
+            default:
+               throw new PgSQLException( $"Authentication kind {authType} is not support." );
+         }
+
+         return saslState;
+      }
+
+      private static Byte[] GetPasswordBytes(
+         PgSQLConnectionCreationInfo creationInfo,
+         MessageIOArgs ioArgs
+         )
+      {
+         var dbConfig = creationInfo.CreationData.Initialization.Database;
+         var encoding = ioArgs.Item1.Encoding.Encoding;
+         return ( String.Equals( PgSQLDatabaseConfiguration.PasswordByteEncoding.WebName, encoding.WebName ) ?
+            dbConfig.PasswordBytes :
+            encoding.GetBytes( dbConfig.Password ) ) ?? throw new PgSQLException( "Backend requested password, but it was not supplied." );
+      }
+
+      // Having this in separate method also won't force load of UtilPack.Cryptography assemblies if other than MD5/SASL authentication mechanism is used
+      private static PasswordMessage HandleMD5Authentication(
          MessageIOArgs ioArgs,
          AuthenticationResponse msg,
          String username,
          Byte[] pw
          )
       {
-         var authType = msg.RequestType;
-         switch ( authType )
+         var buffer = ioArgs.Item4;
+         var helper = ioArgs.Item1;
+
+         if ( pw == null )
          {
-            case AuthenticationResponse.AuthenticationRequestType.AuthenticationClearTextPassword:
-               if ( pw == null )
-               {
-                  throw new PgSQLException( "Backend requested password, but it was not supplied." );
-               }
-               await new PasswordMessage( pw ).SendMessageAsync( ioArgs );
-               break;
-            case AuthenticationResponse.AuthenticationRequestType.AuthenticationMD5Password:
-               if ( pw == null )
-               {
-                  throw new PgSQLException( "Backend requested password, but it was not supplied." );
-               }
+            throw new PgSQLException( "Backend requested password, but it was not supplied." );
+         }
+         using ( var md5 = new UtilPack.Cryptography.Digest.MD5() )
+         {
+            // Extract server salt before using args.Buffer
 
-               var buffer = ioArgs.Item4;
-               using ( var md5 = new UtilPack.Cryptography.Digest.MD5() )
-               {
-                  // Extract server salt before using args.Buffer
-                  var args = ioArgs.Item1;
-                  var serverSalt = buffer.Array.CreateArrayCopy( msg.AdditionalDataInfo.offset, msg.AdditionalDataInfo.count );
+            var serverSalt = buffer.Array.CreateArrayCopy( msg.AdditionalDataInfo.offset, msg.AdditionalDataInfo.count );
 
-                  // Hash password with username as salt
-                  var prehashLength = args.Encoding.Encoding.GetByteCount( username ) + pw.Length;
-                  buffer.CurrentMaxCapacity = prehashLength;
-                  var idx = 0;
-                  pw.CopyTo( buffer.Array, ref idx, 0, pw.Length );
-                  args.Encoding.Encoding.GetBytes( username, 0, username.Length, buffer.Array, pw.Length );
-                  var hash = md5.ComputeDigest( buffer.Array, 0, prehashLength );
+            // Hash password with username as salt
+            var prehashLength = helper.Encoding.Encoding.GetByteCount( username ) + pw.Length;
+            buffer.CurrentMaxCapacity = prehashLength;
+            var idx = 0;
+            pw.CopyTo( buffer.Array, ref idx, 0, pw.Length );
+            helper.Encoding.Encoding.GetBytes( username, 0, username.Length, buffer.Array, pw.Length );
+            var hash = md5.ComputeDigest( buffer.Array, 0, prehashLength );
 
-                  // Write hash as hexadecimal string
-                  buffer.CurrentMaxCapacity = hash.Length * 2 * args.Encoding.BytesPerASCIICharacter;
-                  idx = 0;
-                  foreach ( var hashByte in hash )
-                  {
-                     args.Encoding.WriteHexDecimal( buffer.Array, ref idx, hashByte );
-                  }
+            // Write hash as hexadecimal string
+            buffer.CurrentMaxCapacity = hash.Length * 2 * helper.Encoding.BytesPerASCIICharacter;
+            idx = 0;
+            foreach ( var hashByte in hash )
+            {
+               helper.Encoding.WriteHexDecimal( buffer.Array, ref idx, hashByte );
+            }
 
-                  // Hash result again with server-provided salt
-                  buffer.CurrentMaxCapacity += serverSalt.Length;
-                  var dummy = 0;
-                  serverSalt.CopyTo( buffer.Array, ref dummy, idx, serverSalt.Length );
-                  hash = md5.ComputeDigest( buffer.Array, 0, idx + serverSalt.Length );
+            // Hash result again with server-provided salt
+            buffer.CurrentMaxCapacity += serverSalt.Length;
+            var dummy = 0;
+            serverSalt.CopyTo( buffer.Array, ref dummy, idx, serverSalt.Length );
+            hash = md5.ComputeDigest( buffer.Array, 0, idx + serverSalt.Length );
 
-                  // Send back string "md5" followed by hexadecimal hash value
-                  buffer.CurrentMaxCapacity = 3 * args.Encoding.BytesPerASCIICharacter + hash.Length * 2 * args.Encoding.BytesPerASCIICharacter;
-                  idx = 0;
-                  var array = buffer.Array;
-                  args.Encoding
-                     .WriteASCIIByte( array, ref idx, (Byte) 'm' )
-                     .WriteASCIIByte( array, ref idx, (Byte) 'd' )
-                     .WriteASCIIByte( array, ref idx, (Byte) '5' );
-                  foreach ( var hashByte in hash )
-                  {
-                     args.Encoding.WriteHexDecimal( array, ref idx, hashByte );
-                  }
+            // Send back string "md5" followed by hexadecimal hash value
+            buffer.CurrentMaxCapacity = 3 * helper.Encoding.BytesPerASCIICharacter + hash.Length * 2 * helper.Encoding.BytesPerASCIICharacter;
+            idx = 0;
+            var array = buffer.Array;
+            helper.Encoding
+               .WriteASCIIByte( array, ref idx, (Byte) 'm' )
+               .WriteASCIIByte( array, ref idx, (Byte) 'd' )
+               .WriteASCIIByte( array, ref idx, (Byte) '5' );
+            foreach ( var hashByte in hash )
+            {
+               helper.Encoding.WriteHexDecimal( array, ref idx, hashByte );
+            }
 
-                  await new PasswordMessage( array.CreateArrayCopy( idx ) ).SendMessageAsync( ioArgs );
-               }
-               break;
-            case AuthenticationResponse.AuthenticationRequestType.AuthenticationOk:
-               // Nothing to do
-               break;
-            default:
-               throw new PgSQLException( $"Authentication kind {authType} is not support." );
+            var retValArray = new Byte[idx + 1]; // Remember string-terminating zero
+            dummy = 0;
+            array.CopyTo( retValArray, ref dummy, 0, idx );
+            return new PasswordMessage( retValArray );
+         }
+
+
+      }
+
+      private static (PasswordMessage, Object) HandleSASLAuthentication_Start(
+         PgSQLConnectionCreationInfo creationInfo,
+         MessageIOArgs ioArgs,
+         String username,
+         AuthenticationResponse msg
+         )
+      {
+         var idx = msg.AdditionalDataInfo.offset;
+         var count = msg.AdditionalDataInfo.count;
+         var buffer = ioArgs.Item4;
+         while ( count > 0 && buffer.Array[idx + count - 1] == 0 )
+         {
+            --count;
+         }
+         var protocolEncoding = ioArgs.Item1.Encoding;
+         var authSchemes = protocolEncoding.Encoding.GetString( buffer.Array, idx, count );
+
+         var mechanismInfo = creationInfo.CreateSASLMechanism?.Invoke( authSchemes ) ?? throw new PgSQLException( "Failed to provide SASL mechanism information." );
+         var mechanism = mechanismInfo.Item1 ?? throw new PgSQLException( "Failed to provide SASL mechanism." );
+         var mechanismName = mechanismInfo.Item2 ?? throw new PgSQLException( "Failed to provide SASL mechanism name." );
+         var dbConfig = creationInfo.CreationData.Initialization.Database;
+         var pwDigest = dbConfig.PasswordDigest;
+         var credentials = pwDigest.IsNullOrEmpty() ?
+            new SASLCredentialsSCRAMForClient( username, dbConfig.Password ) :
+            new SASLCredentialsSCRAMForClient( username, pwDigest );
+         var writeBuffer = new ResizableArray<Byte>();
+         var saslEncoding = new UTF8Encoding( false, true ).CreateDefaultEncodingInfo();
+         var challengeResult = mechanism.Challenge( SASLAuthenticationArgumentsFactory.CreateClientArguments(
+            Empty<Byte>.Array,
+            -1,
+            -1,
+            writeBuffer,
+            0,
+            saslEncoding,
+            credentials
+            ) ).GetResultForceSynchronous();
+
+         (PasswordMessage, Object) retVal;
+         if ( challengeResult.IsSecond || challengeResult.First.Item2 != SASLChallengeResult.MoreToCome )
+         {
+            retVal = default;
+         }
+         else
+         {
+            // SASL initial response is: null-terminated string for mechanism name, length of initial response, and initial response as byte array
+            var challengeLength = challengeResult.First.Item1;
+            var pwArray = new Byte[
+               protocolEncoding.Encoding.GetByteCount( mechanismName ) + protocolEncoding.BytesPerASCIICharacter
+               + sizeof( Int32 )
+               + challengeLength
+               ];
+            idx = protocolEncoding.Encoding.GetBytes( mechanismName, 0, mechanismName.Length, pwArray, 0 ) + 1;
+            pwArray.WritePgInt32( ref idx, challengeLength );
+            var dummy = 0;
+            writeBuffer.Array.CopyTo( pwArray, ref dummy, idx, challengeLength );
+
+            retVal = (
+               new PasswordMessage( pwArray ),
+               new TSASLAuthState( mechanism, credentials, writeBuffer, saslEncoding )
+               );
+         }
+
+         return retVal;
+
+      }
+
+      private static PasswordMessage HandleSASLAuthentication_Continue(
+         MessageIOArgs ioArgs,
+         AuthenticationResponse msg,
+         Object state
+         )
+      {
+         var challengeResult = HandleSASLAuthentication_ContinueOrFinal( ioArgs, msg, state );
+         PasswordMessage retVal;
+         if ( challengeResult.IsSecond || challengeResult.First.Item2 != SASLChallengeResult.MoreToCome )
+         {
+            retVal = default;
+         }
+         else
+         {
+            // Responses are password messages with whole SASL message as content
+            retVal = new PasswordMessage( ( (TSASLAuthState) state ).Item3.Array.CreateArrayCopy( 0, challengeResult.First.Item1 ) );
+         }
+
+         return retVal;
+      }
+
+      private static void HandleSASLAuthentication_Final(
+         PgSQLConnectionCreationInfo creationInfo,
+         MessageIOArgs ioArgs,
+         AuthenticationResponse msg,
+         Object state
+         )
+      {
+         var challengeResult = HandleSASLAuthentication_ContinueOrFinal( ioArgs, msg, state );
+         if ( challengeResult.IsSecond || challengeResult.First.Item2 != SASLChallengeResult.Completed )
+         {
+            throw new PgSQLException( "Aauthentication failed." );
+         }
+         else
+         {
+            try
+            {
+               creationInfo.OnSASLSuccess?.Invoke( ( (TSASLAuthState) state ).Item2.PasswordDigest );
+            }
+            catch
+            {
+               // Ignore...
+            }
+
+            DisposeSASLState( state );
          }
       }
-   }
 
+      private static EitherOr<(Int32, SASLChallengeResult), Int32> HandleSASLAuthentication_ContinueOrFinal(
+         MessageIOArgs ioArgs,
+         AuthenticationResponse msg,
+         Object state
+         )
+      {
+         var idx = msg.AdditionalDataInfo.offset;
+         var count = msg.AdditionalDataInfo.count;
+         var buffer = ioArgs.Item4;
 
+         var saslState = (TSASLAuthState) state;
+         return saslState.Item1.Challenge( SASLAuthenticationArgumentsFactory.CreateClientArguments(
+            buffer.Array,
+            idx,
+            count,
+            saslState.Item3,
+            0,
+            saslState.Item4,
+            saslState.Item2
+            ) ).GetResultForceSynchronous();
+      }
 
-   internal class PgReservedForStatement : ReservedForStatement
-   {
-      private Int32 _rfqEncountered;
+      private static void DisposeSASLState( Object state )
+      {
+         if ( state is TSASLAuthState saslState )
+         {
+            saslState.Item1?.DisposeSafely();
+            saslState.Item3?.Array?.Clear();
+         }
+      }
 
-      public PgReservedForStatement(
+      internal class PgReservedForStatement : ReservedForStatement
+      {
+         private Int32 _rfqEncountered;
+
+         public PgReservedForStatement(
 #if DEBUG
          Object statement,
 #endif
          Boolean isSimple,
-         String statementName
-         )
+            String statementName
+            )
 #if DEBUG
          : base( statement )
 #endif
-      {
-         this.IsSimple = isSimple;
-         this.StatementName = statementName;
-         this._rfqEncountered = Convert.ToInt32( false );
+         {
+            this.IsSimple = isSimple;
+            this.StatementName = statementName;
+            this._rfqEncountered = Convert.ToInt32( false );
+         }
+
+         public Boolean IsSimple { get; }
+
+         public String StatementName { get; }
+
+         public Boolean RFQEncountered => Convert.ToBoolean( this._rfqEncountered );
+
+         public void RFQSeen()
+         {
+            Interlocked.Exchange( ref this._rfqEncountered, Convert.ToInt32( true ) );
+         }
       }
 
-      public Boolean IsSimple { get; }
-
-      public String StatementName { get; }
-
-      public Boolean RFQEncountered => Convert.ToBoolean( this._rfqEncountered );
-
-      public void RFQSeen()
-      {
-         Interlocked.Exchange( ref this._rfqEncountered, Convert.ToInt32( true ) );
-      }
    }
 
+   // TODO move to utilpack
+   internal static class E_TODO
+   {
+      public static T GetResultForceSynchronous<T>( this ValueTask<T> task )
+      {
+         return task.IsCompleted ? task.Result : throw new InvalidOperationException( "ValueTask is not completed when it should've been." );
+      }
+   }
 }

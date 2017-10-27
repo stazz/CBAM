@@ -269,7 +269,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          AuthenticationSCMCredential = 6,
          AuthenticationGSS = 7,
          AuthenticationGSSContinue = 8,
-         AuthenticationSSPI = 9
+         AuthenticationSSPI = 9,
+         AuthenticationSASL = 10,
+         AuthenticationSASLContinue = 11,
+         AuthenticationSASLFinal = 12
       }
 
       public AuthenticationResponse( Byte[] array, Int32 messageLength )

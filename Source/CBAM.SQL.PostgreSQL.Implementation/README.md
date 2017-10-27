@@ -21,7 +21,7 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
   )
 {
 
-  // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
+  // Quick example on using connection pool to execute "SELECT 1" statement
   integers = await pool.UseResourceAsync( async pgConnection =>
   {
      return await pgConnection
@@ -32,6 +32,8 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
   } );
 
 }
+
+Console.WriteLine( "The integer: " + integers.Single() ); // Prints "The integer: 1"
 
 // Elsewhere, e.g. maybe in a separate background thread/loop:
 // This will close all connections that has been idle in a pool for over one minute

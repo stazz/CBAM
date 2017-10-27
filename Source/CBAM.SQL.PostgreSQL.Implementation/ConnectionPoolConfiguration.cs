@@ -202,10 +202,13 @@ namespace CBAM.SQL.PostgreSQL
       public String Username { get; set; }
 
       /// <summary>
-      /// Gets the password, as bytes, to use along with <see cref="Username"/> when connecting to the database.
+      /// Gets the textual password as byte array, to use along with <see cref="Username"/> when connecting to the database.
       /// </summary>
-      /// <value>The password, as bytes, to use along with <see cref="Username"/> when connecting to the database.</value>
+      /// <value>The textual password as byte array, to use along with <see cref="Username"/> when connecting to the database.</value>
+      /// <seealso cref="PasswordDigest"/>
       public Byte[] PasswordBytes { get; private set; }
+
+      public Byte[] PasswordDigest { get; set; }
 
       /// <summary>
       /// Gets the password, as <see cref="String"/>, to use along with <see cref="Username"/> when connecting to the database.
@@ -260,6 +263,8 @@ namespace CBAM.SQL.PostgreSQL
    /// </summary>
    public sealed class PgSQLConnectionCreationInfo
    {
+      private const String SCRAM_SHA_256 = "SCRAM-SHA-256";
+      private const String SCRAM_SHA_512 = "SCRAM-SHA-512";
 
       /// <summary>
       /// Creates a new instance of <see cref="PgSQLConnectionCreationInfo"/> with given <see cref="PgSQLConnectionCreationInfoData"/>.
@@ -274,6 +279,38 @@ namespace CBAM.SQL.PostgreSQL
          )
       {
          this.CreationData = ArgumentValidator.ValidateNotNull( nameof( data ), data );
+
+         this.CreateSASLMechanism = ( names ) =>
+         {
+            UtilPack.Cryptography.Digest.BlockDigestAlgorithm algorithm;
+            String mechanismName;
+
+            if ( String.IsNullOrEmpty( names ) )
+            {
+               algorithm = null;
+               mechanismName = null;
+            }
+            else
+            {
+               if ( names.IndexOf( SCRAM_SHA_512 ) >= 0 )
+               {
+                  algorithm = new UtilPack.Cryptography.Digest.SHA512();
+                  mechanismName = SCRAM_SHA_512;
+               }
+               else if ( names.IndexOf( SCRAM_SHA_256 ) >= 0 )
+               {
+                  algorithm = new UtilPack.Cryptography.Digest.SHA256();
+                  mechanismName = SCRAM_SHA_256;
+               }
+               else
+               {
+                  algorithm = null;
+                  mechanismName = null;
+               }
+            }
+
+            return (algorithm?.CreateSASLClientSCRAM(), mechanismName);
+         };
 
 #if NETSTANDARD2_0 || NETCOREAPP1_1 || NET45 || NET40
          this.ProvideSSLStream = (
@@ -324,6 +361,10 @@ namespace CBAM.SQL.PostgreSQL
       /// </summary>
       /// <value>The <see cref="PgSQLConnectionCreationInfoData"/> that this <see cref="PgSQLConnectionCreationInfo"/> will use when creating and initializing new <see cref="PgSQLConnection"/>s.</value>
       public PgSQLConnectionCreationInfoData CreationData { get; }
+
+      public Func<String, (UtilPack.Cryptography.SASL.SASLMechanism, String)> CreateSASLMechanism { get; set; }
+
+      public Action<Byte[]> OnSASLSuccess { get; set; }
 
 #if !NETSTANDARD1_0
 

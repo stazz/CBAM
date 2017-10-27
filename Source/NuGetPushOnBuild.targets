@@ -14,6 +14,7 @@
   <Target 
     Name="NuGetPush"
     AfterTargets="Pack"
+    Condition="Exists('$(NuGetPushSourcesFile)')"
     >
     <!-- We must perform actual push in via other file, as we don't want to get UtilPack.NuGet.MSBuild dependency. -->
     <PropertyGroup>

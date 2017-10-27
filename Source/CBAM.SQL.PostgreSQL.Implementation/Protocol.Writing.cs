@@ -146,13 +146,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
       protected override Int32 CalculateBufferSize( BackendABIHelper args, ResizableArray<Byte> array )
       {
-         return this._pw.Length + 1;
+         return this._pw.Length;
       }
 
       protected override void WriteMessageToBuffer( BackendABIHelper args, ResizableArray<Byte> array )
       {
          this._pw.CopyTo( array.Array, 0 );
-         array.Array[this._pw.Length] = 0;
       }
    }
 
@@ -703,7 +702,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       }
 
    }
-
 
    internal enum FrontEndMessageCode : byte
    {

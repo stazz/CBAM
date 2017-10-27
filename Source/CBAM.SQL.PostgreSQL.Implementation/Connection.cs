@@ -478,7 +478,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
          (var proto, var warnings) = await PostgreSQLProtocol.PerformStartup(
             new PgSQLConnectionVendorFunctionalityImpl(),
-            parameters.CreationData?.Initialization,
+            parameters,
             token,
             stream,
             state.Item1,
