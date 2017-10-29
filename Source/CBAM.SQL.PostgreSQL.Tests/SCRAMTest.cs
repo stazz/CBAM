@@ -18,7 +18,6 @@ namespace CBAM.SQL.PostgreSQL.Tests
          ]
       public async Task TestSCRAM( String connectionConfigFileLocation )
       {
-         // No other proper way to ensure SSL actually works
          var creationInfo = GetConnectionCreationInfo( connectionConfigFileLocation );
          var pool = GetPool( creationInfo );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );

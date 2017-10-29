@@ -34,12 +34,12 @@ namespace CBAM.SQL
    /// <remarks>
    /// While the API exposed directly by this interface can be used, in most scenarios, the actual usage happens through extension methods:
    /// <list type="bullet">
-   /// <item><description><see cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>,</description></item>
-   /// <item><description><see cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>, and</description></item>
-   /// <item><description><see cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>.</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetSchemaMetadataAsync(SQLConnection, string)"/>,</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>,</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>,</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>,</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>, and</description></item>
+   /// <item><description><see cref="CBAMExtensions.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>.</description></item>
    /// </list>
    /// </remarks>
    /// <seealso cref="SQLConnection.DatabaseMetadata"/>
@@ -56,7 +56,7 @@ namespace CBAM.SQL
       /// </summary>
       /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
       /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the schema information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+      /// <seealso cref="CBAMExtensions.GetSchemaMetadataAsync(SQLConnection, string)"/>
       /// <seealso cref="ExtractSchemaMetadataAsync(AsyncDataRow)"/>
       SQLStatementBuilder CreateSchemaSearch( String schemaNamePattern = null );
 
@@ -67,7 +67,7 @@ namespace CBAM.SQL
       /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <param name="tableTypes">The table types. If not <c>null</c> and not empty, can be used to further narrow down search results based on table type.</param>
       /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+      /// <seealso cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
       /// <seealso cref="ExtractTableMetadataAsync(AsyncDataRow)"/>
       /// <seealso cref="TableType"/>
       SQLStatementBuilder CreateTableSearch( String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes );
@@ -79,7 +79,7 @@ namespace CBAM.SQL
       /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <param name="columnNamePattern">The column name pattern. If not <c>null</c>, will narrow down search results based on table column name.</param>
       /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table column information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
       /// <seealso cref="ExtractColumnMetadataAsync(AsyncDataRow)"/>
       SQLStatementBuilder CreateColumnSearch( String schemaNamePattern, String tableNamePattern, String columnNamePattern = null );
 
@@ -89,7 +89,7 @@ namespace CBAM.SQL
       /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
       /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table primary key information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
       /// <seealso cref="ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
       SQLStatementBuilder CreatePrimaryKeySearch( String schemaNamePattern, String tableNamePattern );
 
@@ -101,9 +101,9 @@ namespace CBAM.SQL
       /// <param name="foreignSchemaName">The schema name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table schema name.</param>
       /// <param name="foreignTableName">The name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table name.</param>
       /// <returns>An <see cref="SQLStatementBuilder"/> which can be used to search the table foreign key information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
       /// <seealso cref="ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
       SQLStatementBuilder CreateForeignKeySearch( String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName );
 
@@ -116,7 +116,7 @@ namespace CBAM.SQL
       /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateSchemaSearch(string)"/> will most likely result in errors.
       /// </remarks>
       /// <exception cref="ArgumentNullException">If <paramref name="row"/> is <c>null</c>.</exception>
-      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+      /// <seealso cref="CBAMExtensions.GetSchemaMetadataAsync(SQLConnection, string)"/>
       /// <seealso cref="CreateSchemaSearch(string)"/>
       ValueTask<SchemaMetadata> ExtractSchemaMetadataAsync( AsyncDataRow row );
 
@@ -128,7 +128,7 @@ namespace CBAM.SQL
       /// <remarks>
       /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateTableSearch(string, string, TableType[])"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+      /// <seealso cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
       /// <seealso cref="CreateTableSearch(string, string, TableType[])"/>
       ValueTask<TableMetadata> ExtractTableMetadataAsync( AsyncDataRow row );
 
@@ -140,7 +140,7 @@ namespace CBAM.SQL
       /// <remarks>
       /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateColumnSearch(string, string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
       /// <seealso cref="CreateColumnSearch(string, string, string)"/>
       ValueTask<ColumnMetadata> ExtractColumnMetadataAsync( AsyncDataRow row );
 
@@ -152,7 +152,7 @@ namespace CBAM.SQL
       /// <remarks>
       /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreatePrimaryKeySearch(string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
       /// <seealso cref="CreatePrimaryKeySearch(string, string)"/>
       ValueTask<PrimaryKeyMetadata> ExtractPrimaryKeyMetadataAsync( AsyncDataRow row );
 
@@ -164,9 +164,9 @@ namespace CBAM.SQL
       /// <remarks>
       /// Using this method on a <see cref="AsyncDataRow"/> which originates from other <see cref="AsyncEnumerator{T}"/> then the one returned by <see cref="CreateForeignKeySearch(string, string, string, string)"/> will most likely result in errors.
       /// </remarks>
-      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
       /// <seealso cref="CreateForeignKeySearch(string, string, string, string)"/>
       ValueTask<ForeignKeyMetadata> ExtractForeignKeyMetadataAsync( AsyncDataRow row );
    }
@@ -191,7 +191,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface represents information about a single schema in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+   /// <seealso cref="CBAMExtensions.GetSchemaMetadataAsync(SQLConnection, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
    public interface SchemaMetadata : DatabaseElementWithSchemaName, DatabaseElementWithComment
    {
@@ -245,7 +245,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+   /// <seealso cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
    /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
    public interface TableMetadata : DatabaseElementWithTableName, DatabaseElementWithComment, DatabaseElementWithTypeName
    {
@@ -285,7 +285,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+   /// <seealso cref="CBAMExtensions.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
    public interface ColumnMetadata : DatabaseElementWithColumnName, DatabaseElementWithComment, DatabaseElementWithTypeName, DatabaseElementWithOrdinalPosition
    {
@@ -353,7 +353,7 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single primary key column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="CBAMExtensions.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
    public interface PrimaryKeyMetadata : KeyMetadata
    {
@@ -362,9 +362,9 @@ namespace CBAM.SQL
    /// <summary>
    /// This interface contains information about single foreign key column of a single table in the database.
    /// </summary>
-   /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-   /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-   /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+   /// <seealso cref="CBAMExtensions.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="CBAMExtensions.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+   /// <seealso cref="CBAMExtensions.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
    /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
    public interface ForeignKeyMetadata : KeyMetadata
    {
@@ -441,7 +441,7 @@ namespace CBAM.SQL
    }
 
    /// <summary>
-   /// This enumeration specifies for possible table types in table search of <see cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/> and <see cref="DatabaseMetadata.CreateTableSearch(string, string, TableType[])"/> methods.
+   /// This enumeration specifies for possible table types in table search of <see cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/> and <see cref="DatabaseMetadata.CreateTableSearch(string, string, TableType[])"/> methods.
    /// </summary>
    public enum TableType
    {
@@ -492,7 +492,7 @@ namespace CBAM.SQL
       /// <param name="connection">This <see cref="SQLConnection"/>.</param>
       /// <param name="schemaNamePattern">The schema name pattern. If not <c>null</c>, will narrow down search results based on schema name.</param>
       /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the schema information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetSchemaMetadataAsync(SQLConnection, string)"/>
+      /// <seealso cref="CBAMExtensions.GetSchemaMetadataAsync(SQLConnection, string)"/>
       /// <seealso cref="DatabaseMetadata.ExtractSchemaMetadataAsync(AsyncDataRow)"/>
       public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareSchemaSearch( this SQLConnection connection, String schemaNamePattern = null )
       {
@@ -507,7 +507,7 @@ namespace CBAM.SQL
       /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <param name="tableTypes">The table types. If not <c>null</c> and not empty, can be used to further narrow down search results based on table type.</param>
       /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table information from the database.</returns>
-      /// <seealso cref="E_CBAM.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
+      /// <seealso cref="CBAMExtensions.GetTableMetadataAsync(SQLConnection, string, string, TableType[])"/>
       /// <seealso cref="DatabaseMetadata.ExtractTableMetadataAsync(AsyncDataRow)"/>
       /// <seealso cref="TableType"/>
       public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareTableSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
@@ -524,7 +524,7 @@ namespace CBAM.SQL
       /// <param name="columnNamePattern">The column name pattern. If not <c>null</c>, will narrow down search results based on table column name.</param>
       /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table column information from the database.</returns>
       /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
-      /// <seealso cref="E_CBAM.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetColumnMetadataAsync(SQLConnection, string, string, string)"/>
       /// <seealso cref="DatabaseMetadata.ExtractColumnMetadataAsync(AsyncDataRow)"/>
       public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareColumnSearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
       {
@@ -539,7 +539,7 @@ namespace CBAM.SQL
       /// <param name="tableNamePattern">The table name pattern. If not <c>null</c>, will narrow down search results based on table name.</param>
       /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table primary key information from the database.</returns>
       /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
-      /// <seealso cref="E_CBAM.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetPrimaryKeyMetadataAsync(SQLConnection, string, string)"/>
       /// <seealso cref="DatabaseMetadata.ExtractPrimaryKeyMetadataAsync(AsyncDataRow)"/>
       public static IAsyncEnumerable<SQLStatementExecutionResult> PreparePrimaryKeySearch( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
       {
@@ -556,9 +556,9 @@ namespace CBAM.SQL
       /// <param name="foreignTableName">The name of the table containing foreign key. If not <c>null</c>, will narrow down search results based on foreign key table name.</param>
       /// <returns>An <see cref="AsyncEnumerator{T}"/> which can be executed to search the table foreign key information from the database.</returns>
       /// <exception cref="NullReferenceException">If this <see cref="SQLConnection"/> is <c>null</c>.</exception>
-      /// <seealso cref="E_CBAM.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
-      /// <seealso cref="E_CBAM.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetImportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetExportedForeignKeyMetadataAsync(SQLConnection, string, string)"/>
+      /// <seealso cref="CBAMExtensions.GetCrossReferenceMetadataAsync(SQLConnection, string, string, string, string)"/>
       /// <seealso cref="DatabaseMetadata.ExtractForeignKeyMetadataAsync(AsyncDataRow)"/>
       public static IAsyncEnumerable<SQLStatementExecutionResult> PrepareForeignKeySearch( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
       {
@@ -618,9 +618,11 @@ namespace CBAM.SQL
       public static async ValueTask<List<SchemaMetadata>> GetSchemaMetadataAsync( this SQLConnection connection, String schemaNamePattern = null )
       {
          var md = connection.DatabaseMetadata;
-         var list = new List<SchemaMetadata>();
-         await connection.PrepareSchemaSearch( schemaNamePattern ).EnumerateSequentiallyAsync( async schema => list.Add( await md.ExtractSchemaMetadataAsync( (SQLDataRow) schema ) ) );
-         return list;
+         return await connection
+            .PrepareSchemaSearch( schemaNamePattern )
+            .IncludeDataRowsOnly()
+            .Select( async row => await md.ExtractSchemaMetadataAsync( row ) )
+            .ToListAsync();
       }
 
       /// <summary>
@@ -640,7 +642,8 @@ namespace CBAM.SQL
       public static async ValueTask<List<TableMetadata>> GetTableMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, params TableType[] tableTypes )
       {
          var md = connection.DatabaseMetadata;
-         return await connection.PrepareTableSearch( schemaNamePattern, tableNamePattern )
+         return await connection
+            .PrepareTableSearch( schemaNamePattern, tableNamePattern )
             .IncludeDataRowsOnly()
             .Select( async row => await md.ExtractTableMetadataAsync( row ) )
             .ToListAsync();
@@ -663,9 +666,11 @@ namespace CBAM.SQL
       public static async ValueTask<List<ColumnMetadata>> GetColumnMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern, String columnNamePattern = null )
       {
          var md = connection.DatabaseMetadata;
-         var list = new List<ColumnMetadata>();
-         await connection.PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern ).EnumerateSequentiallyAsync( async column => list.Add( await md.ExtractColumnMetadataAsync( (SQLDataRow) column ) ) );
-         return list;
+         return await connection
+            .PrepareColumnSearch( schemaNamePattern, tableNamePattern, columnNamePattern )
+            .IncludeDataRowsOnly()
+            .Select( async row => await md.ExtractColumnMetadataAsync( row ) )
+            .ToListAsync();
       }
 
       /// <summary>
@@ -684,9 +689,11 @@ namespace CBAM.SQL
       public static async ValueTask<List<PrimaryKeyMetadata>> GetPrimaryKeyMetadataAsync( this SQLConnection connection, String schemaNamePattern, String tableNamePattern )
       {
          var md = connection.DatabaseMetadata;
-         var list = new List<PrimaryKeyMetadata>();
-         await connection.PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern ).EnumerateSequentiallyAsync( async pk => list.Add( await md.ExtractPrimaryKeyMetadataAsync( (SQLDataRow) pk ) ) );
-         return list;
+         return await connection
+            .PreparePrimaryKeySearch( schemaNamePattern, tableNamePattern )
+            .IncludeDataRowsOnly()
+            .Select( async row => await md.ExtractPrimaryKeyMetadataAsync( row ) )
+            .ToListAsync();
       }
 
       /// <summary>
@@ -707,9 +714,11 @@ namespace CBAM.SQL
       public static async ValueTask<List<ForeignKeyMetadata>> GetCrossReferenceMetadataAsync( this SQLConnection connection, String primarySchemaName, String primaryTableName, String foreignSchemaName, String foreignTableName )
       {
          var md = connection.DatabaseMetadata;
-         var list = new List<ForeignKeyMetadata>();
-         await connection.PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName ).EnumerateSequentiallyAsync( async fk => list.Add( await md.ExtractForeignKeyMetadataAsync( (SQLDataRow) fk ) ) );
-         return list;
+         return await connection
+            .PrepareForeignKeySearch( primarySchemaName, primaryTableName, foreignSchemaName, foreignTableName )
+            .IncludeDataRowsOnly()
+            .Select( async row => await md.ExtractForeignKeyMetadataAsync( row ) )
+            .ToListAsync();
       }
    }
 }

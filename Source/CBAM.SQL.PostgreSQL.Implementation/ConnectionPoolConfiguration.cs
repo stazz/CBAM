@@ -27,6 +27,7 @@ using UtilPack;
 using CBAM.Abstractions.Implementation;
 using CBAM.SQL.PostgreSQL;
 using UtilPack.Cryptography.SASL.SCRAM;
+using UtilPack.Cryptography.SASL;
 
 #if !NETSTANDARD1_0
 using UtilPack.ResourcePooling.NetworkStream;
@@ -209,6 +210,14 @@ namespace CBAM.SQL.PostgreSQL
       /// <seealso cref="PasswordDigest"/>
       public Byte[] PasswordBytes { get; private set; }
 
+      /// <summary>
+      /// Gets or sets the digest of the cleartext password.
+      /// </summary>
+      /// <value>The digest of the cleartext password.</value>
+      /// <remarks>
+      /// This property will *only* be used in SCRAM authentication, if server chooses to perform it.
+      /// The SCRAM authentication allows to use the digest of the password instead of cleartext password.
+      /// </remarks>
       public Byte[] PasswordDigest { get; set; }
 
       /// <summary>
@@ -363,9 +372,22 @@ namespace CBAM.SQL.PostgreSQL
       /// <value>The <see cref="PgSQLConnectionCreationInfoData"/> that this <see cref="PgSQLConnectionCreationInfo"/> will use when creating and initializing new <see cref="PgSQLConnection"/>s.</value>
       public PgSQLConnectionCreationInfoData CreationData { get; }
 
-      public Func<String, (UtilPack.Cryptography.SASL.SASLMechanism, String)> CreateSASLMechanism { get; set; }
+      /// <summary>
+      /// This callback will be used during SCRAM authentication to select the <see cref="SASLMechanism"/> based on the advertised mechanisms sent by server as a string.
+      /// The constructor will set this to default value which supports SCRAM-SHA-256 and SCRAM-SHA-512, but this may be overridden for custom <see cref="SASLMechanism"/>s.
+      /// </summary>
+      /// <value>The callback to select <see cref="SASLMechanism"/> from a list of SASL mechanisms advertised by backend.</value>
+      /// <remarks>
+      /// This callback should return a tuple of <see cref="SASLMechanism"/> and the name of it.
+      /// </remarks>
+      public Func<String, (SASLMechanism, String)> CreateSASLMechanism { get; set; }
 
-      public Action<Byte[]> OnSASLSuccess { get; set; }
+      /// <summary>
+      /// This callback will be used during SCRAM authentication, when the user is successfully authenticated.
+      /// It will receive a digest of the cleartext password, so that it can be e.g. saved for later purpose.
+      /// </summary>
+      /// <value>The callback to call on successful SASL SCRAM authentication, receiving password digest as argument.</value>
+      public Action<Byte[]> OnSASLSCRAMSuccess { get; set; }
 
 #if !NETSTANDARD1_0
 

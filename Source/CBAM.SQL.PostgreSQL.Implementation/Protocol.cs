@@ -1183,7 +1183,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             try
             {
-               creationInfo.OnSASLSuccess?.Invoke( ( (TSASLAuthState) state ).Item2.PasswordDigest );
+               creationInfo.OnSASLSCRAMSuccess?.Invoke( ( (TSASLAuthState) state ).Item2.PasswordDigest );
             }
             catch
             {
