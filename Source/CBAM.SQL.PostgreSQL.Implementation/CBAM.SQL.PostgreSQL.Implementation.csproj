@@ -60,7 +60,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling. Taking the UtilPack.ResourcePooling.NetworkStream project into use.</PackageReleaseNotes>
+    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling. Taking the UtilPack.ResourcePooling.NetworkStream project into use. Added support for SCRAM authentication, introduced by PostgreSQL 10.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
