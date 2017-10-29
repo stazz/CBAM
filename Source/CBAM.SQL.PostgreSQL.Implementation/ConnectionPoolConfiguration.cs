@@ -26,6 +26,7 @@ using CBAM.SQL.PostgreSQL.Implementation;
 using UtilPack;
 using CBAM.Abstractions.Implementation;
 using CBAM.SQL.PostgreSQL;
+using UtilPack.Cryptography.SASL.SCRAM;
 
 #if !NETSTANDARD1_0
 using UtilPack.ResourcePooling.NetworkStream;

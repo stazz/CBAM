@@ -794,12 +794,12 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          if ( socket == null )
          {
 #endif
-            // Just do "SELECT 1"; to get any notifications
-            var enumerable = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ), out var dummy )
-               .AsObservable();
-            // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
-            enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-            await enumerable.EnumerateSequentiallyAsync( null );
+         // Just do "SELECT 1"; to get any notifications
+         var enumerable = this.PrepareStatementForExecution( this.VendorFunctionality.CreateStatementBuilder( "SELECT 1" ), out var dummy )
+            .AsObservable();
+         // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
+         enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
+         await enumerable.EnumerateSequentiallyAsync( null );
 #if !NETSTANDARD1_0
          }
          else
@@ -1108,34 +1108,33 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             new SASLCredentialsSCRAMForClient( username, pwDigest );
          var writeBuffer = new ResizableArray<Byte>();
          var saslEncoding = new UTF8Encoding( false, true ).CreateDefaultEncodingInfo();
-         var challengeResult = mechanism.Challenge( SASLAuthenticationArgumentsFactory.CreateClientArguments(
+         var challengeResult = mechanism.ChallengeAsync( credentials.CreateChallengeArguments(
             Empty<Byte>.Array,
             -1,
             -1,
             writeBuffer,
             0,
-            saslEncoding,
-            credentials
+            saslEncoding
             ) ).GetResultForceSynchronous();
 
          (PasswordMessage, Object) retVal;
-         if ( challengeResult.IsSecond || challengeResult.First.Item2 != SASLChallengeResult.MoreToCome )
+         if ( !challengeResult.IsFirst || challengeResult.First.Item2 != SASLChallengeResult.MoreToCome )
          {
             retVal = default;
          }
          else
          {
             // SASL initial response is: null-terminated string for mechanism name, length of initial response, and initial response as byte array
-            var challengeLength = challengeResult.First.Item1;
+            var bytesWritten = challengeResult.First.Item1;
             var pwArray = new Byte[
                protocolEncoding.Encoding.GetByteCount( mechanismName ) + protocolEncoding.BytesPerASCIICharacter
                + sizeof( Int32 )
-               + challengeLength
+               + bytesWritten
                ];
             idx = protocolEncoding.Encoding.GetBytes( mechanismName, 0, mechanismName.Length, pwArray, 0 ) + 1;
-            pwArray.WritePgInt32( ref idx, challengeLength );
+            pwArray.WritePgInt32( ref idx, bytesWritten );
             var dummy = 0;
-            writeBuffer.Array.CopyTo( pwArray, ref dummy, idx, challengeLength );
+            writeBuffer.Array.CopyTo( pwArray, ref dummy, idx, bytesWritten );
 
             retVal = (
                new PasswordMessage( pwArray ),
@@ -1206,14 +1205,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var buffer = ioArgs.Item4;
 
          var saslState = (TSASLAuthState) state;
-         return saslState.Item1.Challenge( SASLAuthenticationArgumentsFactory.CreateClientArguments(
+         return saslState.Item1.ChallengeAsync( saslState.Item2.CreateChallengeArguments(
             buffer.Array,
             idx,
             count,
             saslState.Item3,
             0,
-            saslState.Item4,
-            saslState.Item2
+            saslState.Item4
             ) ).GetResultForceSynchronous();
       }
 
