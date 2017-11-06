@@ -395,7 +395,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       private readonly Boolean _disableBinarySend;
       private readonly Boolean _disableBinaryReceive;
       private readonly FormatCodeInfo _sendCodes;
-      private readonly FormatCodeInfo _receiveCodes;
+      //private readonly FormatCodeInfo _receiveCodes;
 
       internal BindMessage(
          IEnumerable<StatementParameter> paramz,
@@ -416,7 +416,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          this._types = types;
          this._preCreatedParamSizes = new BackendExtraSizeInfo[paramCount];
          this._sendCodes = this.GetFormatCodes( true );
-         this._receiveCodes = this.GetFormatCodes( false );
+         //this._receiveCodes = this.GetFormatCodes( false );
       }
 
       protected override Int32 CalculateSize( BackendABIHelper args, ResizableArray<Byte> array )
@@ -425,7 +425,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             + args.GetStringSize( this._statementName, array )
             + 6 // paramFormatCount, paramCount, columnFormatCount
             + this._sendCodes.Item2 * sizeof( Int16 )
-            + this._receiveCodes.Item2 * sizeof( Int16 )
+            //+ this._receiveCodes.Item2 * sizeof( Int16 )
             + this.CalculateParamSizes( args );
          return retVal;
       }
@@ -513,7 +513,13 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
 
          // Write format info for columns
-         await this.WriteFormatInfo( args, stream, token, false, array );
+         // Since we don't know the result column count (that'd require advanced SQL parsing), just set all formats to text
+         // TODO add ResultColumnInfo: Type[] to StatementBuilder, which would be used for prepared statements, which would enable most optimal data sending from server to client.
+         idx = 0;
+         array.Array.WritePgInt16( ref idx, 0 );
+         await stream.WriteAsync( array.Array, 0, idx, token );
+
+         //await this.WriteFormatInfo( args, stream, token, false, array );
       }
 
       private FormatCodeInfo GetFormatCodes( Boolean isForWriting )
@@ -560,7 +566,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          ResizableArray<Byte> buffer
          )
       {
-         var formatCodesTuple = isForWriting ? this._sendCodes : this._receiveCodes;
+         var formatCodesTuple = this._sendCodes; // isForWriting ? this._sendCodes : this._receiveCodes;
          var formatCodes = formatCodesTuple.Item1;
 
          buffer.CurrentMaxCapacity = sizeof( Int16 ) + sizeof( Int16 ) * ( formatCodes?.Length ?? 0 );
