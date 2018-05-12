@@ -50,7 +50,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling.</PackageReleaseNotes>
+    <PackageReleaseNotes>Tracking dependant packages releases. Also made some of the ConnectionFunctionalitySU API into a public interface, which does not have any generic parameters.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection</PackageTags>
     <Title>Skeleton Implementations for Common CBAM Abstractions</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

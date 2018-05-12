@@ -36,7 +36,7 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
     <DebugSymbols>False</DebugSymbols>
-    <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- NuGet package stuff -->
@@ -45,7 +45,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updating to newer version of UtilPack.ResourcePooling.MSBuild and tracking releases of dependant packages.</PackageReleaseNotes>
+    <PackageReleaseNotes>Added a property to customize behaviour when an error occurs: WhenExceptionInMultipleStatements.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
     <Title>SQL-Oriented MSBuild Tasks</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

@@ -174,6 +174,10 @@ namespace CBAM.SQL.MSBuild
       /// </remarks>
       public String DefaultFileEncoding { get; set; }
 
+      /// <summary>
+      /// Gets or sets the behaviour when an exception occurs within processing statements.
+      /// </summary>
+      /// <value>The behaviour when an exception occurs within processing statements.</value>
       public WhenExceptionInMultipleStatements WhenExceptionInMultipleStatements { get; set; } = WhenExceptionInMultipleStatements.Continue;
 
       private static Encoding GetEncoding( String encodingName )

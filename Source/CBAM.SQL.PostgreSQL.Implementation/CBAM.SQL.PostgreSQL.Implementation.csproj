@@ -64,7 +64,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Fixing a bug which caused "bind message has X result formats but query has Y columns" errors, now text format is always used as format to receive data for prepared statements. Proper fix for this issue will be done for 0.5.0 release.</PackageReleaseNotes>
+    <PackageReleaseNotes>IMPORTANT: The configuration format has changed, now username and authentication are in separate "Authentication" section of "Initialization" section.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
