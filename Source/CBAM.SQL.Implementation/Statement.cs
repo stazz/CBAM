@@ -198,6 +198,11 @@ namespace CBAM.SQL.Implementation
          this._currentParameters[parameterIndex] = this.CreateStatementParameter( parameterIndex, value, clrType ?? value.GetType() );
       }
 
+      public void RemoveAllBatchedParameters()
+      {
+         this._batchParameters.Clear();
+      }
+
       /// <summary>
       /// Derived classes should implement this method to return custom instances of <see cref="StatementParameter"/>.
       /// </summary>

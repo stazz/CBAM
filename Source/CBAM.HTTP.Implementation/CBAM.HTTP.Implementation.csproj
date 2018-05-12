@@ -1,29 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- The BufferedStream only appears in 1.5 ... -->
-    <TargetFrameworks>netstandard1.5;netstandard2.0;netcoreapp1.1;net45;net40</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3;netstandard2.0;netcoreapp1.1;net45;net40</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
-    <LangVersion>7.1</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.HTTP\CBAM.HTTP.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC3" />
+    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix>beta</VersionSuffix>
+    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
     <NeutralLanguage>en-US</NeutralLanguage>

@@ -31,10 +31,11 @@ namespace CBAM.SQL.PostgreSQL.Tests
 {
    public class AbstractPostgreSQLTest
    {
-      public const String DEFAULT_CONFIG_FILE_LOCATION = "../../../test_config.json";
-      public const String DEFAULT_CONFIG_FILE_LOCATION_SSL = "../../../test_config_ssl.json";
-      public const String SCRAM_CONFIG_FILE_LOCATION = "../../../test_config_scram.json";
-      public const String SCRAM_DIGEST_CONFIG_FILE_LOCATION = "../../../test_config_scram_digest.json";
+      private const String COMMON_PREFIX = "../../../../../TestConfigFiles/";
+      public const String DEFAULT_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config.json";
+      public const String DEFAULT_CONFIG_FILE_LOCATION_SSL = COMMON_PREFIX + "test_config_ssl.json";
+      public const String SCRAM_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config_scram.json";
+      public const String SCRAM_DIGEST_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config_scram_digest.json";
 
       public const Int32 DEFAULT_TIMEOUT = 10000;
 

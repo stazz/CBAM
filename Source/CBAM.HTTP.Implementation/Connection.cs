@@ -219,9 +219,11 @@ public static partial class E_HTTP
    private const Byte COLON = 0x3A;
 
    private const String CRLF = "\r\n";
+   private static readonly Byte[] CRLF_BYTES = new[] { (Byte) '\r', (Byte) '\n' };
    private const String SPACE_STR = " ";
    private const String COLON_STR = ":";
 
+   // TODO get rid of this method - it is not exactly optimal.
    internal static ValueTask<Int64> WriteString( this HTTPWriter writer, ResizableArray<Byte> buffer, Encoding encoding, String str, Int32 bufferIndex = 0 )
    {
       ValueTask<Int64> retVal;
@@ -310,6 +312,7 @@ public static partial class E_HTTP
             }
          }
          retVal += await writer.WriteString( buffer, encoding, CRLF + CRLF );
+         await stream.FlushAsync( default );
 
          // Body
          var body = request.Content;
@@ -324,6 +327,8 @@ public static partial class E_HTTP
                }
 
                retVal += await body.WriteToStream( writer, bodySize );
+
+               await stream.FlushAsync( default );
             }
          }
       }
@@ -364,70 +369,76 @@ public static partial class E_HTTP
          return str;
       }
 
-      var buffer = bufferPool.TakeInstance() ?? new ResizableArray<Byte>( initialSize: bufferInitialSize, maxLimit: bufferLimit );
+      //var buffer = bufferPool.TakeInstance() ?? new ResizableArray<Byte>( initialSize: bufferInitialSize, maxLimit: bufferLimit );
       try
       {
-         var reader = new BufferedStream( stream, 1024 ); // StreamFactory.CreateUnlimitedReader( stream, token, buffer: buffer );
+         var buffer = new ResizableArray<Byte>();
+         var streamReadCount = 0x1000;
          // Read first line
-         var bytesRead = await reader.ReadUntilCRLF( buffer, token );
+         (var bufferOffset, var bufferTotal) = await stream.ReadUntilMaybeAsync2( buffer, 0, 0, CRLF_BYTES, streamReadCount );
          var array = buffer.Array;
          var idx = Array.IndexOf( array, SPACE );
          var version = UnescapeHTTPComponentString( encoding.GetString( array, 0, idx ) );
+
          var start = idx + 1;
          idx = Array.IndexOf( array, SPACE, start );
          var statusCode = UnescapeHTTPComponentString( encoding.GetString( array, start, idx - start ) );
-         // The rest is message
-         var statusMessage = UnescapeHTTPComponentString( encoding.GetString( array, idx + 1, bytesRead - idx - 3 ) );
          Int32.TryParse( statusCode, out var statusCodeInt );
-         var retVal = HTTPMessageFactory.CreateResponse(
-            version,
-            statusCodeInt,
-            statusMessage,
-            null // Don't create content yet - we want to read headers first to see if there is Content-Length header
-            );
 
+         // The rest is message
+         var statusMessage = UnescapeHTTPComponentString( encoding.GetString( array, idx + 1, bufferOffset - idx - 1 ) );
          // Read headers - one line at a time
          // TODO max header count limit (how many fieldname:fieldvalue lines)
-         var headers = retVal.Headers;
-         while ( ( bytesRead = await reader.ReadUntilCRLF( buffer, token ) ) > 2 )
+         var headers = HTTPMessageFactory.CreateHeadersDictionary();
+         bufferTotal = HTTPResponseContentFromStream_Chunked.EraseReadData( array, bufferOffset, bufferTotal );
+         do
          {
-            array = buffer.Array;
-            idx = Array.IndexOf( array, COLON );
-            if ( idx > 0 )
+            (bufferOffset, bufferTotal) = await stream.ReadUntilMaybeAsync( buffer, 0, bufferTotal, CRLF_BYTES, streamReadCount );
+            if ( bufferOffset > 0 )
             {
-               start = 0;
-               // In this block, "idx" = count
-               TrimBeginAndEnd( array, ref start, ref idx, false );
-               if ( start < idx )
+               array = buffer.Array;
+               idx = Array.IndexOf( array, COLON );
+               if ( idx > 0 )
                {
-                  var headerName = UnescapeHTTPComponentString( encoding.GetString( array, start, idx ) );
-                  start = idx + 1;
-                  idx = bytesRead - 2 - start; // Skip ending CRLF
-                  TrimBeginAndEnd( array, ref start, ref idx, true );
-                  String headerValue;
-                  if ( idx > 0 )
+                  start = 0;
+                  // In this block, "idx" = count
+                  TrimBeginAndEnd( array, ref start, ref idx, false );
+                  if ( start < idx )
                   {
-                     headerValue = UnescapeHTTPComponentString( encoding.GetString( array, start, idx ) );
+                     var headerName = UnescapeHTTPComponentString( encoding.GetString( array, start, idx ) );
+                     start = idx + 1;
+                     idx = bufferOffset - start;
+                     TrimBeginAndEnd( array, ref start, ref idx, true );
+                     String headerValue;
+                     if ( idx > 0 )
+                     {
+                        headerValue = UnescapeHTTPComponentString( encoding.GetString( array, start, idx ) );
+                     }
+                     else
+                     {
+                        headerValue = String.Empty;
+                     }
+                     headers
+                        .GetOrAdd_NotThreadSafe( headerName, hn => new List<String>( 1 ) )
+                        .Add( headerValue );
                   }
-                  else
-                  {
-                     headerValue = String.Empty;
-                  }
-                  headers
-                     .GetOrAdd_NotThreadSafe( headerName, hn => new List<String>( 1 ) )
-                     .Add( headerValue );
                }
             }
-         }
+
+            bufferTotal = HTTPResponseContentFromStream_Chunked.EraseReadData( array, bufferOffset, bufferTotal );
+         } while ( bufferOffset > 0 );
 
          // Now we can set the content, if it is present
          // https://tools.ietf.org/html/rfc7230#section-3.3
          var hasContent = CanHaveMessageContent( requestMethod, statusCodeInt );
+         HTTPResponseContent responseContent;
          if ( hasContent )
          {
+            var hasXferEncoding = headers.TryGetValue( "Transfer-Encoding", out var xferEncodingStrings );
+            var contentLengthStrings = xferEncodingStrings;
             Int64? contentLength;
             if (
-               ( headers.TryGetValue( "Transfer-Encoding", out var contentLengthStrings ) || headers.TryGetValue( "Content-Length", out contentLengthStrings ) )
+               ( hasXferEncoding || headers.TryGetValue( "Content-Length", out contentLengthStrings ) )
                && contentLengthStrings.Count > 0
                && Int64.TryParse( contentLengthStrings[0], out var contentLengthInt )
                )
@@ -439,35 +450,58 @@ public static partial class E_HTTP
                contentLength = null;
             }
 
-            hasContent = !contentLength.HasValue || contentLength.Value > 0;
-            if ( hasContent )
-            {
+            hasContent = contentLength.HasValue && contentLength.Value > 0;
 
+            ValueTask<Boolean> OnEnd()
+            {
+               ValueTask<Boolean> awaitable = default;
+               lock ( allStreams )
+               {
+                  var streamIdx = allStreams.IndexOf( streamAcquireInfo );
+                  if ( streamIdx >= 0 )
+                  {
+                     awaitable = streamPool.ReturnResource( allStreams[streamIdx] );
+                     allStreams.RemoveAt( streamIdx );
+                  }
+               }
+
+               return awaitable;
+            }
+
+
+            if ( contentLength.HasValue
+               || ( xferEncodingStrings?.All( xferEncoding => !String.Equals( xferEncoding, "chunked", StringComparison.OrdinalIgnoreCase ) ) ?? true )
+               )
+            {
+               if ( contentLength.HasValue && contentLength.Value == 0 )
+               {
+                  responseContent = EmptyHTTPResponseContent.Instance;
+               }
+               else
+               {
+                  lock ( allStreams )
+                  {
+                     allStreams.Add( streamAcquireInfo );
+                  }
+
+                  responseContent = new HTTPResponseContentFromStream( stream, buffer.Array, 0, bufferTotal, contentLength, OnEnd );
+               }
+            }
+            else
+            {
+               // Chunked encoding
+               hasContent = true;
                lock ( allStreams )
                {
                   allStreams.Add( streamAcquireInfo );
                }
 
-               retVal.Content = HTTPMessageFactory.CreateResponseContentFromStream( reader, contentLength, () =>
-               {
-                  ValueTask<Boolean> awaitable = default;
-                  lock ( allStreams )
-                  {
-                     var streamIdx = allStreams.IndexOf( streamAcquireInfo );
-                     if ( streamIdx >= 0 )
-                     {
-                        awaitable = streamPool.ReturnResource( allStreams[streamIdx] );
-                        allStreams.RemoveAt( streamIdx );
-                     }
-                  }
-
-                  return awaitable;
-               } );
+               responseContent = await CreateChunkedContentAsync( stream, buffer, 0, bufferTotal, streamReadCount, OnEnd );
             }
-            else
-            {
-               retVal.Content = EmptyHTTPResponseContent.Instance;
-            }
+         }
+         else
+         {
+            responseContent = EmptyHTTPResponseContent.Instance;
          }
 
          if ( !hasContent )
@@ -476,7 +510,7 @@ public static partial class E_HTTP
             await streamPool.ReturnResource( streamAcquireInfo );
          }
 
-         return retVal;
+         return HTTPMessageFactory.CreateResponse( version, statusCodeInt, statusMessage, headers, responseContent );
       }
       catch
       {
@@ -485,9 +519,29 @@ public static partial class E_HTTP
       }
       finally
       {
-         Array.Clear( buffer.Array, 0, buffer.Array.Length );
-         bufferPool.ReturnInstance( buffer );
+         //Array.Clear( buffer.Array, 0, buffer.Array.Length );
+         //bufferPool.ReturnInstance( buffer );
       }
+   }
+
+   private static async ValueTask<HTTPResponseContentFromStream_Chunked> CreateChunkedContentAsync(
+      Stream stream,
+      ResizableArray<Byte> buffer,
+      Int32 bufferOffset,
+      Int32 bufferTotal,
+      Int32 streamReadCount,
+      Func<ValueTask<Boolean>> onEnd
+      )
+   {
+      Int32 chunkLength;
+      (chunkLength, bufferOffset, bufferTotal) = await HTTPResponseContentFromStream_Chunked.ReadChunkHeader( stream, buffer, bufferOffset, bufferTotal, streamReadCount, true );
+      if ( chunkLength == 0 )
+      {
+         await HTTPResponseContentFromStream.CallOnEnd( onEnd );
+         onEnd = null;
+      }
+
+      return new HTTPResponseContentFromStream_Chunked( stream, buffer, chunkLength, bufferOffset, bufferTotal, streamReadCount, onEnd );
    }
 
    private static Boolean CanHaveMessageContent( String requestMethod, Int32 statusCode )
@@ -497,50 +551,50 @@ public static partial class E_HTTP
       return !( String.Equals( requestMethod, "HEAD" ) || ( statusCode >= 100 && statusCode < 200 ) || statusCode == 204 || statusCode == 304 );
    }
 
-   private static async ValueTask<Int32> ReadUntilCRLF( this BufferedStream stream, ResizableArray<Byte> buffer, CancellationToken token )
-   {
-      const Int32 INITIAL = 0;
-      const Int32 CRLF_SEEN = 1;
-      const Int32 END_SEEN = 2;
-      var cur = 0;
-      var endEncountered = INITIAL;
-      do
-      {
-         buffer.CurrentMaxCapacity = cur + 1;
-         // The implementation of BufferedStream is optimized to return cached task when reading from buffer using same count
-         if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
-         {
-            ++cur;
-            if ( buffer.Array[cur - 1] == CR )
-            {
-               buffer.CurrentMaxCapacity = cur + 1;
-               if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
-               {
-                  ++cur;
-                  if ( buffer.Array[cur - 1] == LF )
-                  {
-                     endEncountered = CRLF_SEEN;
-                  }
-               }
-               else
-               {
-                  endEncountered = END_SEEN;
-               }
-            }
-         }
-         else
-         {
-            endEncountered = END_SEEN;
-         }
-      } while ( endEncountered == INITIAL );
+   //private static async ValueTask<Int32> ReadUntilCRLF( this BufferedStream stream, ResizableArray<Byte> buffer, CancellationToken token )
+   //{
+   //   const Int32 INITIAL = 0;
+   //   const Int32 CRLF_SEEN = 1;
+   //   const Int32 END_SEEN = 2;
+   //   var cur = 0;
+   //   var endEncountered = INITIAL;
+   //   do
+   //   {
+   //      buffer.CurrentMaxCapacity = cur + 1;
+   //      // The implementation of BufferedStream is optimized to return cached task when reading from buffer using same count
+   //      if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
+   //      {
+   //         ++cur;
+   //         if ( buffer.Array[cur - 1] == CR )
+   //         {
+   //            buffer.CurrentMaxCapacity = cur + 1;
+   //            if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
+   //            {
+   //               ++cur;
+   //               if ( buffer.Array[cur - 1] == LF )
+   //               {
+   //                  endEncountered = CRLF_SEEN;
+   //               }
+   //            }
+   //            else
+   //            {
+   //               endEncountered = END_SEEN;
+   //            }
+   //         }
+   //      }
+   //      else
+   //      {
+   //         endEncountered = END_SEEN;
+   //      }
+   //   } while ( endEncountered == INITIAL );
 
-      if ( endEncountered == END_SEEN )
-      {
-         throw new EndOfStreamException();
-      }
+   //   if ( endEncountered == END_SEEN )
+   //   {
+   //      throw new EndOfStreamException();
+   //   }
 
-      return cur;
-   }
+   //   return cur;
+   //}
 
    private static void TrimBeginAndEnd( Byte[] array, ref Int32 start, ref Int32 count, Boolean trimEnd )
    {
@@ -561,3 +615,43 @@ public static partial class E_HTTP
    }
 }
 
+internal static partial class E_TEMP
+{
+   public static async ValueTask<(Int32 Offset, Int32 TotalReadBytes)> ReadUntilMaybeAsync2(
+   this Stream stream,
+   ResizableArray<Byte> buffer,
+   Int32 alreadyRead,
+   Int32 totalExisting,
+   Byte[] endMark,
+   Int32 streamReadCount
+   )
+   {
+      ArgumentValidator.ValidateNotNullReference( stream );
+      // Scan to see if we have endMark already
+      var end = ArgumentValidator.ValidateNotNull( nameof( buffer ), buffer ).Array.IndexOfArray( alreadyRead, totalExisting - alreadyRead, endMark );
+      if ( end == -1 )
+      {
+         //beforeAsyncRead?.Invoke();
+         (end, totalExisting) = await stream.ReadUntilAsync( buffer, totalExisting, endMark, streamReadCount );
+      }
+      return (end, totalExisting);
+   }
+
+   private static async Task<(Int32 Offset, Int32 TotalReadBytes)> ReadUntilAsync( this Stream stream, ResizableArray<Byte> buffer, Int32 offset, Byte[] endMark, Int32 streamReadCount )
+   {
+      Int32 originalBufferOffset, bytesRead, retVal;
+
+      do
+      {
+         bytesRead = await stream.ReadAsync( buffer.SetCapacityAndReturnArray( offset + streamReadCount ), offset, streamReadCount, default );
+         if ( bytesRead <= 0 )
+         {
+            throw new EndOfStreamException();
+         }
+         originalBufferOffset = Math.Max( 0, offset + 1 - endMark.Length );
+         offset += bytesRead;
+      } while ( ( retVal = buffer.Array.IndexOfArray( originalBufferOffset, bytesRead, endMark, EqualityComparer<Byte>.Default ) ) < 0 );
+
+      return (retVal, offset);
+   }
+}

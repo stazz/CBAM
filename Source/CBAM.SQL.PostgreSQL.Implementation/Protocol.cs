@@ -104,7 +104,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
          this.LastSeenTransactionStatus = status;
          this.BackendProcessID = backendPID;
-         this.EnqueuedNotifications = new List<NotificationEventArgs>();
+         this.EnqueuedNotifications = new Queue<NotificationEventArgs>();
       }
 
       public TypeRegistryImpl TypeRegistry { get; }
@@ -234,7 +234,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   }
                   break;
                case RowDescription rd:
-                  throw new PgSQLException( "Batch statements may only be used for non-query statements." );
+                  // This happens when e.g. doing SELECT schema.function(x, y, z) -> can return NULLs or rows, we don't care.
+                  break; // throw new PgSQLException( "Batch statements may only be used for non-query statements." );
                case ParameterDescription pd:
                   if ( !ArrayEqualityComparer<Int32>.ArrayEquality( pd.ObjectIDs, typeIDs ) )
                   {
@@ -317,26 +318,37 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          // We must allocate new buffer, since the reading will be done concurrently while the writing still performs
          // Furthermore, if some error is occurred during sending task, the backend will send error response right away.
-         var buffer = new ResizableArray<Byte>( initialSize: 8 );
+         var buffer = new ResizableArray<Byte>( initialSize: 8, exponentialResize: true );
 
          for ( var i = 0; i < affectedRows.Length; ++i )
          {
             var msg = ( await this.ReadMessagesUntilMeaningful( notices, bufferToUse: buffer ) ).Item1;
             if ( msg is MessageWithNoContents nc && msg.Code == BackendMessageCode.BindComplete )
             {
-               // Bind was sucessul - now read result of execute message
-               msg = ( await this.ReadMessagesUntilMeaningful( notices, bufferToUse: buffer ) ).Item1;
-               if ( msg is CommandComplete cc )
+               // Bind was successul - now read result of execute message
+               msg = null;
+               while ( msg == null )
                {
-                  Interlocked.Exchange( ref affectedRows[i], cc.AffectedRows ?? 0 );
-                  if ( commandTag[0] == null )
+                  Int32 remaining;
+                  (msg, remaining) = await this.ReadMessagesUntilMeaningful( notices, bufferToUse: buffer );
+                  switch ( msg )
                   {
-                     Interlocked.Exchange( ref commandTag[0], cc.CommandTag );
+                     case CommandComplete cc:
+                        Interlocked.Exchange( ref affectedRows[i], cc.AffectedRows ?? 0 );
+                        if ( commandTag[0] == null )
+                        {
+                           Interlocked.Exchange( ref commandTag[0], cc.CommandTag );
+                        }
+                        break;
+                     case DataRowObject dr:
+                        // Skip thru data
+                        await this.Stream.ReadSpecificAmountAsync( buffer.SetCapacityAndReturnArray( remaining ), 0, remaining, this.CurrentCancellationToken );
+                        // And read more
+                        msg = null;
+                        break;
+                     default:
+                        throw new PgSQLException( "Unrecognized response at this point: " + msg.Code );
                   }
-               }
-               else
-               {
-                  throw new PgSQLException( "Unrecognized response at this point: " + msg.Code );
                }
             }
             else
@@ -660,7 +672,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       public Boolean DisableBinaryProtocolSend { get; }
       public Boolean DisableBinaryProtocolReceive { get; }
 
-      public List<NotificationEventArgs> EnqueuedNotifications { get; }
+      public Queue<NotificationEventArgs> EnqueuedNotifications { get; }
 
       internal async ValueTask<Object> ConvertFromBytes(
          Int32 typeID,
@@ -747,7 +759,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                   }
                   break;
                case NotificationMessage notification:
-                  this.EnqueuedNotifications.Add( notification.Args );
+                  this.EnqueuedNotifications.Enqueue( notification.Args );
                   encounteredMeaningful = false;
                   break;
                case ParameterStatus ps:
@@ -778,8 +790,17 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          await FrontEndMessageWithNoContent.TERMINATION.SendMessageAsync( this.GetIOArgs( tokenToUse: token ) );
       }
 
+#if !NETSTANDARD1_0
+      private Boolean SocketHasDataPending()
+      {
+         var socket = this.Socket;
+         return socket.Available > 0 || socket.Poll( 1, SelectMode.SelectRead ) || socket.Available > 0;
+      }
+#endif
+
       public async ValueTask<NotificationEventArgs[]> CheckNotificationsAsync()
       {
+         // TODO this could be optimized a little, if we notice EnqueuedNotifications.Count > 0, then just don't read from stream at all. We still need to use statement protection regions tho.
          NotificationEventArgs[] args = null;
 
          NotificationEventArgs[] GetEnqueuedNotifications()
@@ -799,29 +820,26 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             .AsObservable();
          // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
          enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-         await enumerable.EnumerateSequentiallyAsync( null );
+         await enumerable.EnumerateSequentiallyAsync();
 #if !NETSTANDARD1_0
          }
          else
          {
             // First, check from the socket that we have any data pending
-            Boolean SocketHasDataPending()
-            {
-               return socket.Available > 0 || socket.Poll( 1, SelectMode.SelectRead ) || socket.Available > 0;
-            };
-            var hasDataPending = SocketHasDataPending();
+
+            var hasDataPending = this.SocketHasDataPending();
             if ( hasDataPending || this.EnqueuedNotifications.Count > 0 )
             {
                // There is pending data
                // We always must use UseStreamOutsideStatementAsync method, since modifying this.EnqueuedNotifications outside that will result in concurrent modification exceptions
                await this.UseStreamOutsideStatementAsync( async () =>
                {
-                  // If we call "ReadMessagesUntilMeaningful" with no socket data pending, we will become stuck.
+                  // If we call "ReadMessagesUntilMeaningful" with no socket data pending, we will never break free of loop properly.
                   if ( hasDataPending )
                   {
                      await this.ReadMessagesUntilMeaningful(
                         null,
-                        SocketHasDataPending
+                        this.SocketHasDataPending
                         );
                   }
                   args = GetEnqueuedNotifications();
@@ -831,8 +849,73 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          }
 #endif
 
-         return args;
+         return args ?? Empty<NotificationEventArgs>.Array;
 
+      }
+
+
+      public IAsyncEnumerable<NotificationEventArgs> ListenToNotificationsAsync()
+      {
+#if !NETSTANDARD1_0
+         if ( this.Socket == null )
+         {
+#else
+         throw new NotSupportedException( "No socket available for this method." );
+#endif
+#if !NETSTANDARD1_0
+         }
+
+         var enqueued = this.EnqueuedNotifications;
+         Boolean KeepReadingMore()
+         {
+            return enqueued.Count <= 0 || ( enqueued.Count <= 1000 && this.SocketHasDataPending() );
+         }
+
+         async Task PerformReadForNotifications()
+         {
+            if ( enqueued.Count <= 0 )
+            {
+               await this.ReadMessagesUntilMeaningful( null, KeepReadingMore );
+            }
+         }
+
+         return AsyncEnumerationFactory.CreateStatefulWrappingEnumerable( () =>
+         {
+            PgReservedForStatement reservation = null;
+            return AsyncEnumerationFactory.CreateWrappingStartInfo(
+               async () =>
+               {
+                  if ( reservation == null )
+                  {
+                     reservation = new PgReservedForStatement(
+#if DEBUG
+                        null,
+#endif
+                        true,
+                        null
+                        );
+                     reservation.RFQSeen();
+                     await this.UseStreamOutsideStatementAsync( PerformReadForNotifications, reservation, false, true );
+                  }
+                  else
+                  {
+                     await this.UseStreamWithinStatementAsync( reservation, PerformReadForNotifications, true );
+                  }
+
+                  return enqueued.Count > 0;
+               },
+               ( out Boolean success ) =>
+               {
+                  success = enqueued.Count > 0;
+                  return success ? enqueued.Dequeue() : default;
+               },
+               () =>
+               {
+                  return this.DisposeStatementAsync( reservation );
+               }
+               );
+         } );
+#endif
       }
 
       public static async Task<(PostgreSQLProtocol Protocol, List<PgSQLError> notices)> PerformStartup(
@@ -884,9 +967,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          )
       {
          var dbConfig = creationInfo?.CreationData?.Initialization?.Database ?? throw new ArgumentException( "Please specify database configuration" );
+         var authConfig = creationInfo?.CreationData?.Initialization?.Authentication ?? throw new ArgumentException( "Please specify authentication configuration" );
 
          var encoding = ioArgs.Item1.Encoding.Encoding;
-         var username = dbConfig.Username ?? throw new ArgumentException( "Please specify username in database configuration." );
+         var username = authConfig.Username ?? throw new ArgumentException( "Please specify username in authentication configuration." );
          var parameters = new Dictionary<String, String>()
          {
             { SERVER_PARAMETER_DATABASE, dbConfig.Database ?? throw new ArgumentException("Please specify database name in database configuration.") },
@@ -989,10 +1073,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASL:
                var saslResult = ( HandleSASLAuthentication_Start( creationInfo, ioArgs, username, msg ) );
                saslState = saslResult.Item2;
-               await ( saslResult.Item1 ?? throw new PgSQLException( "Aauthentication failed." ) ).SendMessageAsync( ioArgs );
+               await ( saslResult.Item1 ?? throw new PgSQLException( "Authentication failed." ) ).SendMessageAsync( ioArgs );
                break;
             case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASLContinue:
-               await ( HandleSASLAuthentication_Continue( ioArgs, msg, saslState ) ?? throw new PgSQLException( "Aauthentication failed." ) ).SendMessageAsync( ioArgs );
+               await ( HandleSASLAuthentication_Continue( ioArgs, msg, saslState ) ?? throw new PgSQLException( "Authentication failed." ) ).SendMessageAsync( ioArgs );
                break;
             case AuthenticationResponse.AuthenticationRequestType.AuthenticationSASLFinal:
                HandleSASLAuthentication_Final( creationInfo, ioArgs, msg, saslState );
@@ -1009,11 +1093,11 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          MessageIOArgs ioArgs
          )
       {
-         var dbConfig = creationInfo.CreationData.Initialization.Database;
+         var authConfig = creationInfo.CreationData.Initialization.Authentication;
          var encoding = ioArgs.Item1.Encoding.Encoding;
-         return ( String.Equals( PgSQLDatabaseConfiguration.PasswordByteEncoding.WebName, encoding.WebName ) ?
-            dbConfig.PasswordBytes :
-            encoding.GetBytes( dbConfig.Password ) ) ?? throw new PgSQLException( "Backend requested password, but it was not supplied." );
+         return ( String.Equals( PgSQLAuthenticationConfiguration.PasswordByteEncoding.WebName, encoding.WebName ) ?
+            authConfig.PasswordBytes :
+            encoding.GetBytes( authConfig.Password ) ) ?? throw new PgSQLException( "Backend requested password, but it was not supplied." );
       }
 
       // Having this in separate method also won't force load of UtilPack.Cryptography assemblies if other than MD5/SASL authentication mechanism is used
@@ -1101,10 +1185,10 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var mechanismInfo = creationInfo.CreateSASLMechanism?.Invoke( authSchemes ) ?? throw new PgSQLException( "Failed to provide SASL mechanism information." );
          var mechanism = mechanismInfo.Item1 ?? throw new PgSQLException( "Failed to provide SASL mechanism." );
          var mechanismName = mechanismInfo.Item2 ?? throw new PgSQLException( "Failed to provide SASL mechanism name." );
-         var dbConfig = creationInfo.CreationData.Initialization.Database;
-         var pwDigest = dbConfig.PasswordDigest;
+         var authConfig = creationInfo.CreationData.Initialization.Authentication;
+         var pwDigest = authConfig.PasswordDigest;
          var credentials = pwDigest.IsNullOrEmpty() ?
-            new SASLCredentialsSCRAMForClient( username, dbConfig.Password ) :
+            new SASLCredentialsSCRAMForClient( username, authConfig.Password ) :
             new SASLCredentialsSCRAMForClient( username, pwDigest );
          var writeBuffer = new ResizableArray<Byte>();
          var saslEncoding = new UTF8Encoding( false, true ).CreateDefaultEncodingInfo();
@@ -1177,7 +1261,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var challengeResult = HandleSASLAuthentication_ContinueOrFinal( ioArgs, msg, state );
          if ( challengeResult.IsSecond || challengeResult.First.Item2 != SASLChallengeResult.Completed )
          {
-            throw new PgSQLException( "Aauthentication failed." );
+            throw new PgSQLException( "Authentication failed." );
          }
          else
          {

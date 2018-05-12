@@ -27,6 +27,7 @@ using CBAM.Abstractions.Implementation;
 using UtilPack.ResourcePooling;
 using UtilPack.TabularData;
 using System.Net;
+using UtilPack.Configuration.NetworkStream;
 
 #if !NETSTANDARD1_0
 using UtilPack.ResourcePooling.NetworkStream;
@@ -53,7 +54,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
       }
 
-      public event GenericEventHandler<NotificationEventArgs> NotificationEvent;
+      //public event GenericEventHandler<NotificationEventArgs> NotificationEvent;
 
       public Int32 BackendProcessID => this.ConnectionFunctionality.BackendProcessID;
 
@@ -69,24 +70,29 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          return new ValueTask<Boolean>( false );
       }
 
-      public async ValueTask<Int32> CheckNotificationsAsync()
+      public ValueTask<NotificationEventArgs[]> CheckNotificationsAsync()
       {
-         var argsArray = await this.ConnectionFunctionality.CheckNotificationsAsync();
+         return this.ConnectionFunctionality.CheckNotificationsAsync();
 
-         if ( !argsArray.IsNullOrEmpty() )
-         {
-            foreach ( var args in argsArray )
-            {
-#if DEBUG
-               this.NotificationEvent?.Invoke( args );
-#else
-               var curArgs = args;
-               this.NotificationEvent.InvokeAllEventHandlers( evt => evt( curArgs ), throwExceptions: false );
-#endif
-            }
-         }
+         //         if ( !argsArray.IsNullOrEmpty() )
+         //         {
+         //            foreach ( var args in argsArray )
+         //            {
+         //#if DEBUG
+         //               this.NotificationEvent?.Invoke( args );
+         //#else
+         //                     var curArgs = args;
+         //                     this.NotificationEvent?.InvokeAllEventHandlers( evt => evt( curArgs ), throwExceptions: false );
+         //#endif
+         //            }
+         //         }
 
-         return argsArray?.Length ?? 0;
+         //         return argsArray?.Length ?? 0;
+      }
+
+      public IAsyncEnumerable<NotificationEventArgs> ContinuouslyListenToNotificationsAsync()
+      {
+         return this.ConnectionFunctionality.ListenToNotificationsAsync();
       }
 
       public TypeRegistry TypeRegistry => this.ConnectionFunctionality.TypeRegistry;
@@ -351,54 +357,34 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          IEncodingInfo encoding
          ) : base( creationInfo )
       {
+
          this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
          ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
+
+#if NETSTANDARD1_0
          if ( !( creationInfo.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? default ) )
          {
             this._stringPool = BinaryStringPoolFactory.NewConcurrentBinaryStringPool( encoding.Encoding );
          }
-
-#if !NETSTANDARD1_0
-         var data = creationInfo.CreationData;
-         var host = data.Connection?.Host;
-         this._remoteAddress = host.CreateAddressOrHostNameResolvingLazy(
-               creationInfo.SelectRemoteIPAddress,
-#if NETSTANDARD1_3
-               creationInfo.DNSResolve
 #else
-               null
-#endif
-            );
-         this._networkStreamConfig = new NetworkStreamFactoryConfiguration<TNetworkStreamInitState>()
-         {
-            CreateState = ( socket, stream, token ) => this.CreateNetworkStreamInitState( token, stream ),
-            SelectLocalIPEndPoint = creationInfo.SelectLocalIPEndPoint,
-            RemoteAddress = async ( token ) => await this._remoteAddress,
-            RemotePort = addr => creationInfo.CreationData?.Connection?.Port ?? 5432,
-
-            // SSL stuff here
-            ConnectionSSLMode = ( state ) => data.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired,
-            IsSSLPossible = async ( state ) =>
+#if !NETSTANDARD1_0
+         (this._networkStreamConfig, this._remoteAddress, this._stringPool) = creationInfo.CreateStatefulNetworkStreamFactoryConfiguration().Create(
+            ( socket, stream, token ) => this.CreateNetworkStreamInitState( token, stream ),
+            encoding.Encoding,
+            async ( state ) =>
             {
                await SSLRequestMessage.INSTANCE.SendMessageAsync( (state.Item1, state.Item4, state.Item3, state.Item2) );
 
                var response = await state.Item4.ReadByte( state.Item2, state.Item3 );
                return response == (Byte) 'S';
             },
-            ProvideSSLStream = creationInfo.ProvideSSLStream,
-            ProtocolType = System.Net.Sockets.ProtocolType.Tcp,
-            SocketType = System.Net.Sockets.SocketType.Stream,
-            ProvideSSLHost = ( state ) => host,
-            SelectLocalCertificate = creationInfo.SelectLocalCertificate,
-            ValidateServerCertificate = creationInfo.ValidateServerCertificate,
-
-            // Exception creation callbacks
-            NoSSLStreamProvider = () => new PgSQLException( "Server accepted SSL request, but the creation parameters did not have callback to create SSL stream" ),
-            RemoteNoSSLSupport = () => new PgSQLException( "Server does not support SSL." ),
-            SSLStreamProviderNoStream = () => new PgSQLException( "SSL stream creation callback returned null." ),
-            SSLStreamProviderNoAuthenticationCallback = () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
-            SSLStreamOtherError = inner => new PgSQLException( "Unable to start SSL client.", inner )
-         };
+            () => new PgSQLException( "Server accepted SSL request, but the creation parameters did not have callback to create SSL stream" ),
+            () => new PgSQLException( "Server does not support SSL." ),
+            () => new PgSQLException( "SSL stream creation callback returned null." ),
+            () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
+            inner => new PgSQLException( "Unable to start SSL client.", inner )
+            );
+#endif
 #endif
       }
 
@@ -419,7 +405,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          return new PgSQLConnectionAcquireInfo(
             connection,
-            functionality.Stream
+            functionality
             );
       }
 

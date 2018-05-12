@@ -11,14 +11,15 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 {
    internal sealed class PgSQLConnectionAcquireInfo : ConnectionAcquireInfoImpl<PgSQLConnectionImpl, PostgreSQLProtocol, System.IO.Stream>
    {
-      public PgSQLConnectionAcquireInfo( PgSQLConnectionImpl connection, Stream associatedStream )
-         : base( connection, associatedStream )
+      public PgSQLConnectionAcquireInfo( PgSQLConnectionImpl connection, PostgreSQLProtocol functionality )
+         : base( connection, functionality, functionality.Stream )
       {
+
       }
 
-      protected override async Task DisposeBeforeClosingStream( CancellationToken token, PostgreSQLProtocol connectionFunctionality )
+      protected override Task DisposeBeforeClosingChannel( CancellationToken token )
       {
-         await connectionFunctionality.PerformClose( token );
+         return this.Functionality.PerformClose( token );
       }
    }
 }

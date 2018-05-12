@@ -37,24 +37,24 @@ namespace CBAM.SQL.PostgreSQL
    /// </remarks>
    public partial interface PgSQLConnection : SQLConnection
    {
-      /// <summary>
-      /// This event will be fired whenever a notification is processed, which happens *only* when <see cref="CheckNotificationsAsync"/> is called.
-      /// </summary>
-      /// <seealso cref="NotificationEventArgs"/>
-      event GenericEventHandler<NotificationEventArgs> NotificationEvent;
+      ///// <summary>
+      ///// This event will be fired whenever a notification is processed, which happens *only* when <see cref="CheckNotificationsAsync"/> is called.
+      ///// </summary>
+      ///// <seealso cref="NotificationEventArgs"/>
+      //event GenericEventHandler<NotificationEventArgs> NotificationEvent;
 
       /// <summary>
       /// Checks whether any notifications are pending.
-      /// Please note that if runtime of the process is equivalent to .NET Standard 1.0-1.2, calling this method causes SQL query (<c>SELECT 1</c>).
-      /// In other frameworks, it does not cause any traffic from this process to backend.
+      /// Please note that this will NOT cause SQL query (<c>SELECT 1</c>) to be sent to backend, unless this connection was explicitly created from stream (which should happen extremely rarely).
       /// </summary>
       /// <returns>Task which will have completed after processing all pending notifies. The returned integer will be amount of event arguments processed.</returns>
-      /// <seealso cref="NotificationEvent"/>
       /// <remarks>
       /// During normal SQL statement processing, all encountered notifications will be queued to list.
       /// This method will empty that list, and also check for any pending notifications from backend.
       /// </remarks>
-      ValueTask<Int32> CheckNotificationsAsync();
+      ValueTask<NotificationEventArgs[]> CheckNotificationsAsync();
+
+      IAsyncEnumerable<NotificationEventArgs> ContinuouslyListenToNotificationsAsync(); // TODO argument Func<Boolean> shouldContinue - would be invoked within WaitForNext() and TryGetNext() methods. This will cause wait-based polling for socket if non-null. If null, just use current implementation.
 
       /// <summary>
       /// Gets the <see cref="PostgreSQL.TypeRegistry"/> object which manages the conversions between CLR types and PostgreSQL types.

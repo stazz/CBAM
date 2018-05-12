@@ -144,7 +144,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality"/>.</typeparam>
    /// <typeparam name="TStream">The actual type of underlying stream or other disposable resource.</typeparam>
    public abstract class ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStream> : AsyncResourceAcquireInfoImpl<TConnection, TStream>
-      where TConnection : ConnectionImpl<TConnectionFunctionality>
+      where TConnection : class
       where TConnectionFunctionality : class, PooledConnectionFunctionality
       where TStream : IDisposable
    {
@@ -156,11 +156,14 @@ namespace CBAM.Abstractions.Implementation
       /// <exception cref="ArgumentNullException">If <paramref name="connection"/> is <c>null</c>.</exception>
       public ConnectionAcquireInfoImpl(
          TConnection connection,
+         TConnectionFunctionality functionality,
          TStream associatedStream
-         ) : base( ArgumentValidator.ValidateNotNull( nameof( connection ), connection ), associatedStream, ( c, t ) => c.ConnectionFunctionality.CurrentCancellationToken = t, c => c.ConnectionFunctionality.ResetCancellationToken() )
+         ) : base( ArgumentValidator.ValidateNotNull( nameof( connection ), connection ), associatedStream, ( c, t ) => functionality.CurrentCancellationToken = t, c => functionality.ResetCancellationToken() )
       {
-
+         this.Functionality = ArgumentValidator.ValidateNotNull( nameof( functionality ), functionality );
       }
+
+      protected TConnectionFunctionality Functionality { get; }
 
       /// <summary>
       /// This method overrides <see cref="AbstractDisposable.Dispose(bool)"/> and will dispose this <see cref="AsyncResourceAcquireInfoImpl{TPublicResource, TPrivateResource}.Channel"/> if <paramref name="disposing"/> is <c>true</c>.
@@ -174,15 +177,15 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      /// <summary>
-      /// This method forwards the disposing for <see cref="DisposeBeforeClosingStream(CancellationToken, TConnectionFunctionality)"/> and giving <see cref="ConnectionImpl{TConnectionFunctionality}.ConnectionFunctionality"/> as second parameter to the method.
-      /// </summary>
-      /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
-      /// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
-      protected override Task DisposeBeforeClosingChannel( CancellationToken token )
-      {
-         return this.DisposeBeforeClosingStream( token, this.PublicResource.ConnectionFunctionality );
-      }
+      ///// <summary>
+      ///// This method forwards the disposing for <see cref="DisposeBeforeClosingStream(CancellationToken, TConnectionFunctionality)"/> and giving <see cref="ConnectionImpl{TConnectionFunctionality}.ConnectionFunctionality"/> as second parameter to the method.
+      ///// </summary>
+      ///// <param name="token">The <see cref="CancellationToken"/> to use.</param>
+      ///// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
+      //protected override Task DisposeBeforeClosingChannel( CancellationToken token )
+      //{
+      //   return this.DisposeBeforeClosingStream( token );
+      //}
 
       /// <summary>
       /// Overrides the abstract <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.PublicResourceCanBeReturnedToPool"/> method and forwards the call to <see cref="PooledConnectionFunctionality.CanBeReturnedToPool"/>.
@@ -190,16 +193,16 @@ namespace CBAM.Abstractions.Implementation
       /// <returns>The value indicating whether this <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TStream}"/> can be returned to pool, as indicated by <see cref="PooledConnectionFunctionality.CanBeReturnedToPool"/> property.</returns>
       protected override Boolean PublicResourceCanBeReturnedToPool()
       {
-         return this.PublicResource.ConnectionFunctionality.CanBeReturnedToPool;
+         return this.Functionality.CanBeReturnedToPool;
       }
 
-      /// <summary>
-      /// Derived classes should implement the disposing functionality, see <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.DisposeBeforeClosingChannel(CancellationToken)"/>.
-      /// </summary>
-      /// <param name="token">The cancellation token to use.</param>
-      /// <param name="connectionFunctionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</param>
-      /// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
-      protected abstract Task DisposeBeforeClosingStream( CancellationToken token, TConnectionFunctionality connectionFunctionality );
+      ///// <summary>
+      ///// Derived classes should implement the disposing functionality, see <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.DisposeBeforeClosingChannel(CancellationToken)"/>.
+      ///// </summary>
+      ///// <param name="token">The cancellation token to use.</param>
+      ///// <param name="connectionFunctionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</param>
+      ///// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
+      //protected abstract Task DisposeBeforeClosingStream( CancellationToken token );
 
 
    }

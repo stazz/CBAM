@@ -92,10 +92,11 @@ namespace CBAM.SQL.MSBuild
       /// </summary>
       /// <param name="connection">The <see cref="SQLConnection"/> acquired from the connection pool loaded by <see cref="UtilPack.ResourcePooling.MSBuild.AbstractResourceUsingTask{TResource}"/>.</param>
       /// <returns>Always asynchronously returns <c>true</c>.</returns>
-      protected override async System.Threading.Tasks.Task<Boolean> UseResource( SQLConnection connection )
+      protected override async Task<Boolean> UseResource( SQLConnection connection )
       {
          var defaultEncoding = GetEncoding( this.DefaultFileEncoding ) ?? Encoding.UTF8;
          connection.DisableEnumerableObservability = false;
+         var whenExceptionInMultipleStatements = this.WhenExceptionInMultipleStatements;
          using ( var helper = new UsingHelper( () =>
            {
               connection.BeforeEnumerationStart -= this.Connection_BeforeStatementExecutionStart;
@@ -122,7 +123,7 @@ namespace CBAM.SQL.MSBuild
                            onException: exc =>
                            {
                               this.Log.LogError( exc.ToString() );
-                              return WhenExceptionInMultipleStatements.Continue;
+                              return whenExceptionInMultipleStatements;
                            },
                            token: this.CancellationToken
                         ),
@@ -172,6 +173,8 @@ namespace CBAM.SQL.MSBuild
       /// If this property is not specified, the <see cref="Encoding.UTF8"/> encoding will be used.
       /// </remarks>
       public String DefaultFileEncoding { get; set; }
+
+      public WhenExceptionInMultipleStatements WhenExceptionInMultipleStatements { get; set; } = WhenExceptionInMultipleStatements.Continue;
 
       private static Encoding GetEncoding( String encodingName )
       {

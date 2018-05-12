@@ -38,13 +38,6 @@ namespace CBAM.SQL.PostgreSQL
    public sealed class PgSQLConnectionPoolProvider : AbstractAsyncResourceFactoryProvider<PgSQLConnection, PgSQLConnectionCreationInfo>
    {
 
-      static PgSQLConnectionPoolProvider()
-      {
-         var encoding = new UTF8EncodingInfo();
-         Factory = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config => new PgSQLConnectionFactory( config, encoding ) );
-      }
-
-
       /// <summary>
       /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.
       /// </summary>
@@ -53,7 +46,7 @@ namespace CBAM.SQL.PostgreSQL
       /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
       /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
       /// </remarks>
-      public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; }
+      public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config => new PgSQLConnectionFactory( config, new UTF8EncodingInfo() ) );
 
       /// <summary>
       /// Creates a new instance of <see cref="PgSQLConnectionPoolProvider"/>.
@@ -144,27 +137,27 @@ namespace CBAM.SQL.PostgreSQL
       //      .WithoutExplicitAPI();
       //}
 
-      private static PgSQLConnectionCreationInfo CheckCreationParameters( Object creationParameters )
-      {
-         ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
+      //private static PgSQLConnectionCreationInfo CheckCreationParameters( Object creationParameters )
+      //{
+      //   ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
 
-         PgSQLConnectionCreationInfo retVal;
-         if ( creationParameters is PgSQLConnectionCreationInfoData creationData )
-         {
-            retVal = new PgSQLConnectionCreationInfo( creationData );
+      //   PgSQLConnectionCreationInfo retVal;
+      //   if ( creationParameters is PgSQLConnectionCreationInfoData creationData )
+      //   {
+      //      retVal = new PgSQLConnectionCreationInfo( creationData );
 
-         }
-         else if ( creationParameters is PgSQLConnectionCreationInfo creationInfo )
-         {
-            retVal = creationInfo;
-         }
-         else
-         {
-            throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( PgSQLConnectionCreationInfoData ).FullName}." );
-         }
+      //   }
+      //   else if ( creationParameters is PgSQLConnectionCreationInfo creationInfo )
+      //   {
+      //      retVal = creationInfo;
+      //   }
+      //   else
+      //   {
+      //      throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( PgSQLConnectionCreationInfoData ).FullName}." );
+      //   }
 
-         return retVal;
-      }
+      //   return retVal;
+      //}
 
 
    }

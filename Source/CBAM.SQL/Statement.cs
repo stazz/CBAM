@@ -106,6 +106,11 @@ namespace CBAM.SQL
       void AddBatch();
 
       /// <summary>
+      /// Removes all parameters previously added to batch via <see cref="AddBatch"/> call.
+      /// </summary>
+      void RemoveAllBatchedParameters();
+
+      /// <summary>
       /// Gets the read-only <see cref="SQLStatementBuilderInformation"/> object which has same state as this <see cref="SQLStatementBuilder"/>.
       /// </summary>
       /// <value>The read-only <see cref="SQLStatementBuilderInformation"/> object which has same state as this <see cref="SQLStatementBuilder"/>.</value>

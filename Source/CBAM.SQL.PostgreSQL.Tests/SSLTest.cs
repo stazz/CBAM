@@ -20,11 +20,14 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using UtilPack.Configuration.NetworkStream;
 using UtilPack.ResourcePooling.NetworkStream;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
-   [TestClass]
+   [TestClass,
+      Ignore // For now
+      ]
    public class SSLTest : AbstractPostgreSQLTest
    {
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION_SSL ), Timeout( DEFAULT_TIMEOUT )]

@@ -46,6 +46,18 @@ namespace CBAM.HTTP
       /// </summary>
       /// <value>The HTTP request path, as string.</value>
       String Path { get; set; }
+
+      /// <summary>
+      /// Gets or sets the HTTP version of this HTTP message (request or response).
+      /// </summary>
+      /// <value>The HTTP version of this HTTP message (request or response).</value>
+      new String Version { get; set; }
+
+      /// <summary>
+      /// Gets or sets the content of this HTTP message (request or response).
+      /// </summary>
+      /// <value>The content of this HTTP message (request or response).</value>
+      new HTTPRequestContent Content { get; set; }
    }
 
    /// <summary>
@@ -55,16 +67,16 @@ namespace CBAM.HTTP
    public interface HTTPResponse : HTTPMessage<HTTPResponseContent>
    {
       /// <summary>
-      /// Gets or sets the status code returned by the server.
+      /// Gets the status code returned by the server.
       /// </summary>
       /// <value>The status code returned by the server.</value>
-      Int32 StatusCode { get; set; }
+      Int32 StatusCode { get; }
 
       /// <summary>
-      /// Gets or sets the status code message returned by the server.
+      /// Gets the status code message returned by the server.
       /// </summary>
       /// <value>The status code message returned by the server.</value>
-      String StatusCodeMessage { get; set; }
+      String StatusCodeMessage { get; }
    }
 
    /// <summary>
@@ -81,16 +93,16 @@ namespace CBAM.HTTP
       IDictionary<String, List<String>> Headers { get; }
 
       /// <summary>
-      /// Gets or sets the HTTP version of this HTTP message (request or response).
+      /// Gets the HTTP version of this HTTP message (request or response).
       /// </summary>
       /// <value>The HTTP version of this HTTP message (request or response).</value>
-      String Version { get; set; }
+      String Version { get; }
 
       /// <summary>
-      /// Gets or sets the content of this HTTP message (request or response).
+      /// Gets the content of this HTTP message (request or response).
       /// </summary>
       /// <value>The content of this HTTP message (request or response).</value>
-      TContent Content { get; set; }
+      TContent Content { get; }
    }
 
    /// <summary>
@@ -103,6 +115,8 @@ namespace CBAM.HTTP
       /// </summary>
       /// <value>The amount of bytes this content takes, if the amount is known.</value>
       Int64? ByteCount { get; }
+
+      Boolean ContentEndIsKnown { get; }
    }
 
    /// <summary>
@@ -138,9 +152,8 @@ namespace CBAM.HTTP
       /// <param name="array">The byte array to read to.</param>
       /// <param name="offset">The offset in <paramref name="array"/> where to start writing bytes.</param>
       /// <param name="count">The maximum amount of bytes to write.</param>
-      /// <param name="token">The optional <see cref="CancellationToken"/> to use.</param>
       /// <returns>Potentially asynchronously returns amount of bytes read. The return value of <c>0</c> means that end of content has been reached.</returns>
-      ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token = default );
+      ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count );
    }
 
    /// <summary>
@@ -183,6 +196,8 @@ namespace CBAM.HTTP
 
       }
 
+      public Boolean ContentEndIsKnown => true;
+
       /// <summary>
       /// Implements <see cref="HTTPMessageContent.ByteCount"/> and always returns <c>0</c>.
       /// </summary>
@@ -203,7 +218,7 @@ namespace CBAM.HTTP
       /// <param name="count">The maximum amount of bytes to read, ignored.</param>
       /// <param name="token">The <see cref="CancellationToken"/>, ignored.</param>
       /// <returns>Always returns <c>0</c> synchronously.</returns>
-      public ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count, CancellationToken token )
+      public ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count )
       {
          array.CheckArrayArguments( offset, count, false );
          return new ValueTask<Int32>( 0 );
@@ -280,13 +295,15 @@ namespace CBAM.HTTP
          String version = HTTP1_1
          )
       {
-         return new HTTPRequestImpl()
+         HTTPRequest retVal = new HTTPRequestImpl()
          {
-            Version = DefaultIfNullOrEmpty( version, HTTP1_1 ),
             Method = METHOD_GET,
-            Path = path,
-            Content = content
+            Path = path
          };
+
+         retVal.Version = DefaultIfNullOrEmpty( version, HTTP1_1 );
+         retVal.Content = content;
+         return retVal;
       }
 
       /// <summary>
@@ -313,31 +330,43 @@ namespace CBAM.HTTP
          String version,
          Int32 statusCode,
          String statusMessage,
+         IDictionary<String, List<String>> headers,
          HTTPResponseContent content
          )
       {
-         return new HTTPResponseImpl()
-         {
-            Version = version,
-            StatusCode = statusCode,
-            StatusCodeMessage = statusMessage,
-            Content = content
-         };
+         return new HTTPResponseImpl(
+            statusCode,
+            statusMessage,
+            version,
+            headers,
+            content
+            );
       }
 
-      /// <summary>
-      /// Creates a new instance of <see cref="HTTPResponseContent"/> which operates on <see cref="Stream"/> to read data from. It assumes that data begins at stream's current position.
-      /// </summary>
-      /// <param name="stream">The stream to read data from.</param>
-      /// <param name="byteCount">The amount of data, if known.</param>
-      /// <param name="onEnd">The callback to run when end of data is encountered.</param>
-      /// <returns>A new instance of<see cref="HTTPResponseContent"/> which redirects read actions to underlying <see cref="Stream"/>.</returns>
-      /// <exception cref="ArgumentNullException">If <paramref name="stream"/> is <c>null</c>.</exception>
-      public static HTTPResponseContent CreateResponseContentFromStream(
-         Stream stream,
-         Int64? byteCount,
-         Func<ValueTask<Boolean>> onEnd
-         ) => new HTTPResponseContentFromStream( stream, byteCount, onEnd );
+      public static IDictionary<String, List<String>> CreateHeadersDictionary()
+      {
+         return new Dictionary<String, List<String>>( StringComparer.OrdinalIgnoreCase );
+      }
+
+      ///// <summary>
+      ///// Creates a new instance of <see cref="HTTPResponseContent"/> which operates on <see cref="Stream"/> to read data from. It assumes that data begins at stream's current position.
+      ///// </summary>
+      ///// <param name="stream">The stream to read data from.</param>
+      ///// <param name="byteCount">The amount of data, if known.</param>
+      ///// <param name="onEnd">The callback to run when end of data is encountered.</param>
+      ///// <returns>A new instance of<see cref="HTTPResponseContent"/> which redirects read actions to underlying <see cref="Stream"/>.</returns>
+      ///// <exception cref="ArgumentNullException">If <paramref name="stream"/> is <c>null</c>.</exception>
+      //public static HTTPResponseContent CreateResponseContentFromStream(
+      //   Stream stream,
+      //   Int64? byteCount,
+      //   Func<ValueTask<Boolean>> onEnd
+      //   ) => new HTTPResponseContentFromStream( stream, byteCount, onEnd );
+
+      //public static HTTPResponseContent CreateResponseContentFromStreamChunked(
+      //   Stream stream,
+      //   Int64? byteCount,
+      //   Func<ValueTask<Boolean>> onEnd
+      //   ) => new HTTPResponseContentFromStream_Chunked(  new HTTPResponseContentFromStream( stream, byteCount, onEnd );
    }
 }
 
@@ -387,10 +416,32 @@ public static partial class E_HTTP
    /// <returns>Potentially asynchronously returns a new byte array with the contents read from this <see cref="HTTPResponseContent"/>.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="HTTPResponseContent"/> is <c>null</c>.</exception>
    /// <exception cref="InvalidOperationException">If this <see cref="HTTPResponseContent"/> does not know its byte size, that is, its <see cref="HTTPResponseContent.BytesRemaining"/> is <c>null</c>.</exception>
-   public static async ValueTask<Byte[]> ReadAllContentIfKnownSizeAsync( this HTTPResponseContent content, CancellationToken token = default )
+   public static ValueTask<Byte[]> ReadAllContentAsync( this HTTPResponseContent content )
    {
       ArgumentValidator.ValidateNotNullReference( content );
-      var length = (Int32) ( content.BytesRemaining ?? throw new InvalidOperationException( "Content must have known byte count." ) );
+      if ( !content.ContentEndIsKnown )
+      {
+         throw new InvalidOperationException( "The response content does not know where the data ends." );
+      }
+
+      var length = content.ByteCount;
+      return length.HasValue ?
+         content.ReadAllContentIfKnownSizeAsync( content.BytesRemaining.Value ) :
+         content.ReadAllContentGrowBuffer();
+   }
+
+   private static async ValueTask<Byte[]> ReadAllContentIfKnownSizeAsync( this HTTPResponseContent content, Int64 length64 )
+   {
+      if ( length64 > Int32.MaxValue )
+      {
+         throw new InvalidOperationException( "The content length is too big: " + length64 );
+      }
+      else if ( length64 < 0 )
+      {
+         throw new InvalidOperationException( "The content length is negative: " + length64 );
+      }
+
+      var length = (Int32) length64;
       Byte[] retVal;
       if ( length > 0 )
       {
@@ -398,8 +449,13 @@ public static partial class E_HTTP
          var offset = 0;
          do
          {
-            offset += await content.ReadToBuffer( retVal, offset, length - offset, token );
-         } while ( content.BytesRemaining.Value > 0 );
+            var readCount = await content.ReadToBuffer( retVal, offset, length - offset );
+            offset += readCount;
+            if ( offset < length && readCount <= 0 )
+            {
+               throw new EndOfStreamException();
+            }
+         } while ( offset < length );
       }
       else
       {
@@ -407,6 +463,19 @@ public static partial class E_HTTP
       }
 
       return retVal;
+   }
+
+   private static async ValueTask<Byte[]> ReadAllContentGrowBuffer( this HTTPResponseContent content )
+   {
+      var buffer = new ResizableArray<Byte>( exponentialResize: false );
+      var bytesRead = 0;
+      Int32 bytesRemaining;
+      while ( ( bytesRemaining = (Int32) content.BytesRemaining.Value ) > 0 )
+      {
+         bytesRead += await content.ReadToBuffer( buffer.SetCapacityAndReturnArray( bytesRead + bytesRemaining ), bytesRead, bytesRemaining );
+      }
+      // Since exponentialResize was set to false, the array will never be too big
+      return buffer.Array;
    }
 
    /// <summary>

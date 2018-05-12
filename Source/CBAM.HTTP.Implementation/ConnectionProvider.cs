@@ -25,6 +25,7 @@ using UtilPack.ResourcePooling.NetworkStream;
 using System.IO;
 using CBAM.HTTP;
 using UtilPack;
+using UtilPack.Configuration.NetworkStream;
 
 namespace CBAM.HTTP
 {
@@ -75,7 +76,7 @@ public static partial class E_HTTP
       return new NetworkStreamFactoryConfiguration()
       {
          ConnectionSSLMode = () => httpEndPointConfigurationData.IsSecure ? ConnectionSSLMode.Required : ConnectionSSLMode.NotRequired,
-         IsSSLPossible = () => true,
+         IsSSLPossible = () => TaskUtils.True,
          ProvideSSLHost = () => host,
          RemoteAddress = async ( token ) => await remoteAddress,
          RemotePort = addr =>
@@ -86,7 +87,8 @@ public static partial class E_HTTP
                port = httpEndPointConfigurationData.IsSecure ? 443 : 80;
             }
             return port;
-         }
+         },
+         TransformStreamAfterCreation = nwStream => new DuplexBufferedAsyncStream( nwStream )
       };
    }
 

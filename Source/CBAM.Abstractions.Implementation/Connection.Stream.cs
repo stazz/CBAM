@@ -40,7 +40,7 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
       /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
       /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
-      Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action );
+      Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean throwIfBusy = true );
 
       /// <summary>
       /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
@@ -50,6 +50,15 @@ namespace CBAM.Abstractions.Implementation
       /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
       /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
       ValueTask<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func );
+
+      Task UseStreamOutsideStatementAsync( Func<Task> action, Boolean throwIfBusy = true );
+
+      ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func );
+
+
+      Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly, Boolean throwIfBusy );
+
+      ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly );
    }
 
    /// <summary>
@@ -103,11 +112,6 @@ namespace CBAM.Abstractions.Implementation
       /// <seealso cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T})"/>
       protected override IAsyncEnumerable<TEnumerableItem> CreateEnumerable(
          TStatementInformation metadata
-         //Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionStart,
-         //Func<GenericEventHandler<EnumerationStartedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionStart,
-         //Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalBeforeEnumerationExecutionEnd,
-         //Func<GenericEventHandler<EnumerationEndedEventArgs<TStatementInformation>>> getGlobalAfterEnumerationExecutionEnd,
-         //Func<GenericEventHandler<EnumerationItemEventArgs<TEnumerableItem, TStatementInformation>>> getGlobalAfterEnumerationExecutionItemEncountered
          )
       {
          ReservedForStatement reservation = null;
@@ -157,32 +161,6 @@ namespace CBAM.Abstractions.Implementation
 
       }
 
-      ///// <summary>
-      ///// Marks this connection as being reserved for this <paramref name="statement"/> until remote resource is observed to have been completed its execution.
-      ///// </summary>
-      ///// <param name="statement">The read-only statement information.</param>
-      ///// <param name="token">The <see cref="CancellationToken"/> passed to initial call of <see cref="AsyncEnumerator{T}.MoveNextAsync(CancellationToken)"/> method.</param>
-      ///// <returns>The information about the statement execution and enumeration.</returns>
-      ///// <remarks>
-      ///// In order to mark this connection as reserved, a new instance of <see cref="ReservedForStatement"/> is created by calling <see cref="CreateReservationObject(TStatementInformation)"/> method.
-      ///// Then <see cref="UseStreamOutsideStatementAsync(Func{Task}, ReservedForStatement, bool)"/> is called such that it would call <see cref="ExecuteStatement(CancellationToken, TStatementInformation, ReservedForStatement)"/> if current connection is not markeda s reserved by other statement.
-      ///// </remarks>
-      ///// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      ///// <seealso cref="InitialMoveNextAsyncDelegate{T}"/>
-      ///// <seealso cref="AsyncEnumerator{T}"/>
-      //protected async ValueTask<(Boolean, TEnumerableItem, MoveNextAsyncDelegate<TEnumerableItem>, EnumerationEndedDelegate)> InitialMoveNext(
-      //   TStatementInformation statement
-      //   )
-      //{
-      //   var reserved = this.CreateReservationObject( statement );
-      //   var simpleTuple = await this.UseStreamOutsideStatementAsync(
-      //      async () => await this.ExecuteStatement( token, statement, reserved ),
-      //      reserved,
-      //      false
-      //      );
-      //   return (simpleTuple.Item1 != null, simpleTuple.Item1, simpleTuple.Item2, async ( moveNextEnded, tkn ) => await this.DisposeStatementAsync( moveNextEnded, reserved ));
-      //}
-
       /// <summary>
       /// Derived classes should override this abstract method to provide custom execution logic for statement.
       /// </summary>
@@ -207,9 +185,9 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="action">The asynchronous callback to execute after reserving and before freeing the connection.</param>
       /// <returns>A task which will complete after connection is freed up.</returns>
       /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      protected Task UseStreamOutsideStatementAsync( Func<Task> action )
+      public Task UseStreamOutsideStatementAsync( Func<Task> action, Boolean throwIfBusy )
       {
-         return this.UseStreamOutsideStatementAsync( action, _NoStatement, true );
+         return this.UseStreamOutsideStatementAsync( action, _NoStatement, true, throwIfBusy );
       }
 
       /// <summary>
@@ -218,12 +196,12 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="func">The asynchronous callback to execute after reserving and before freeing the connection.</param>
       /// <returns>A task which will complete after connection is freed up, returning result of the <paramref name="func"/>.</returns>
       /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      protected ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func )
+      public ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func )
       {
          return this.UseStreamOutsideStatementAsync( func, _NoStatement, true );
       }
 
-      private async Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly )
+      public async Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly, Boolean throwIfBusy )
       {
          if ( ReferenceEquals( Interlocked.CompareExchange( ref this._currentlyExecutingStatement, reservedState, NotInUse.Instance ), NotInUse.Instance ) )
          {
@@ -239,13 +217,13 @@ namespace CBAM.Abstractions.Implementation
                }
             }
          }
-         else
+         else if ( throwIfBusy )
          {
             throw new InvalidOperationException( "The connection is currently being used by another statement." );
          }
       }
 
-      private async ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly )
+      public async ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly )
       {
          if ( ReferenceEquals( Interlocked.CompareExchange( ref this._currentlyExecutingStatement, reservedState, NotInUse.Instance ), NotInUse.Instance ) )
          {
@@ -274,7 +252,7 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
       /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
       /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
-      public async Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action )
+      public async Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean throwIfBusy = true )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
          ConnectionStreamUsageState prevState;
@@ -291,7 +269,7 @@ namespace CBAM.Abstractions.Implementation
                Interlocked.Exchange( ref this._currentlyExecutingStatement, prevState );
             }
          }
-         else // if ( throwIfNotReserved )
+         else if ( throwIfBusy )
          {
             throw new InvalidOperationException( "The stream is not reserved for this statement." );
          }
@@ -327,7 +305,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      private async Task DisposeStatementAsync( ReservedForStatement reservationObject )
+      protected async Task DisposeStatementAsync( ReservedForStatement reservationObject )
       {
          try
          {
@@ -353,6 +331,7 @@ namespace CBAM.Abstractions.Implementation
       public override Boolean CanBeReturnedToPool => ReferenceEquals( this._currentlyExecutingStatement, NotInUse.Instance );
 
    }
+
 
    /// <summary>
    /// This is common class which is used to mark <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> as either being reserved for idle statement, or statement processing being in progress.

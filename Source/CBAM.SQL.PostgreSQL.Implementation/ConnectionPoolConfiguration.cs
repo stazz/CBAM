@@ -28,6 +28,7 @@ using CBAM.Abstractions.Implementation;
 using CBAM.SQL.PostgreSQL;
 using UtilPack.Cryptography.SASL.SCRAM;
 using UtilPack.Cryptography.SASL;
+using UtilPack.Configuration.NetworkStream;
 
 #if !NETSTANDARD1_0
 using UtilPack.ResourcePooling.NetworkStream;
@@ -45,108 +46,23 @@ namespace CBAM.SQL.PostgreSQL
    /// See <see href="https://github.com/CometaSolutions/CBAM/tree/develop/Source/CBAM.SQL.PostgreSQL.Implementation"/> for small example on typical usecase of this class.
    /// </remarks>
    /// <seealso cref="PgSQLConnectionCreationInfo"/>
-   public class PgSQLConnectionCreationInfoData
+   public class PgSQLConnectionCreationInfoData : NetworkConnectionCreationInfoData<PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
    {
-
-#if !NETSTANDARD1_0
-
-      /// <summary>
-      /// Gets or sets the <see cref="PgSQLConnectionConfiguration"/>, holding data related to socket-based connections.
-      /// </summary>
-      /// <value>The <see cref="PgSQLConnectionConfiguration"/>, holding data related to socket-based connections.</value>
-      public PgSQLConnectionConfiguration Connection { get; set; }
-
-#endif
-
-      /// <summary>
-      /// Gets or sets the <see cref="PgSQLInitializationConfiguration"/>, holding data related to initialization process of the <see cref="PgSQLConnection"/>.
-      /// </summary>
-      /// <value>The <see cref="PgSQLInitializationConfiguration"/>, holding data related to initialization process of the <see cref="PgSQLConnection"/>.</value>
-      public PgSQLInitializationConfiguration Initialization { get; set; }
 
 
    }
 
-#if !NETSTANDARD1_0
    /// <summary>
    /// This class contains all passive configuration data related to opening a socket connection when initializing new <see cref="PgSQLConnection"/>.
    /// </summary>
-   public class PgSQLConnectionConfiguration
+   public class PgSQLConnectionConfiguration : NetworkConnectionConfiguration
    {
-      /// <summary>
-      /// This constant defines default SSL protocol, if SSL is enabled.
-      /// </summary>
-      /// <remarks>
-      /// In .NET 4.0 environment, this is Tls. In other environments, it is Tls1.2.
-      /// </remarks>
-      public const System.Security.Authentication.SslProtocols DEFAULT_SSL_PROTOCOL = System.Security.Authentication.SslProtocols
-#if NET40
-            .Tls
-#else
-            .Tls12
-#endif
-         ;
-
-      /// <summary>
-      /// Creates a new instance of <see cref="PgSQLConnectionConfiguration"/> with default values.
-      /// </summary>
-      /// <remarks>
-      /// This constructor sets <see cref="SSLProtocols"/> to <see cref="DEFAULT_SSL_PROTOCOL"/> value.
-      /// </remarks>
-      public PgSQLConnectionConfiguration()
-      {
-         this.SSLProtocols = DEFAULT_SSL_PROTOCOL;
-      }
-
-      /// <summary>
-      /// Gets or sets the host name of the PostgreSQL backend process.
-      /// </summary>
-      /// <value>The host name of the PostgreSQL backend process.</value>
-      /// <remarks>
-      /// This should be either textual IP address, or host name.
-      /// </remarks>
-      public String Host { get; set; }
-
-      /// <summary>
-      /// Gets or sets the port of the PostgreSQL backend process.
-      /// </summary>
-      /// <value>The port of the PostgreSQL backend process.</value>
-      public Int32 Port { get; set; }
-
-      ///// <summary>
-      ///// Gets or sets the host name to use for local endpoint of the socket connection.
-      ///// May be <c>null</c>, in which case default is used.
-      ///// </summary>
-      ///// <value>The host name to use for local endpoint of the socket connection.</value>
-      //public String LocalHost { get; set; }
-
-      ///// <summary>
-      ///// Gets or sets the port to use for local endpoint of the socket connection.
-      ///// </summary>
-      ///// <value>The port to use for local endpoint of the socket connection.</value>
-      //public Int32 LocalPort { get; set; }
-
-      /// <summary>
-      /// Gets or sets the <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.
-      /// </summary>
-      /// <value>The <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode"/> to control the SSL encryption for the socket connection.</value>
-      public ConnectionSSLMode ConnectionSSLMode { get; set; }
-
-      /// <summary>
-      /// Gets or sets the <see cref="System.Security.Authentication.SslProtocols"/> controlling what kind of SSL encryption will be used for the socket connection.
-      /// </summary>
-      /// <value>The <see cref="System.Security.Authentication.SslProtocols"/> controlling what kind of SSL encryption will be used for the socket connection.</value>
-      /// <remarks>
-      /// This field will only be used of <see cref="ConnectionSSLMode"/> property will be something else than <see cref="UtilPack.ResourcePooling.NetworkStream.ConnectionSSLMode.NotRequired"/>
-      /// </remarks>
-      public System.Security.Authentication.SslProtocols SSLProtocols { get; set; }
    }
-#endif
 
    /// <summary>
    /// This class contains all passive configuration data related to initialization routine of new <see cref="PgSQLConnection"/> once the <see cref="Stream"/> used to communicate with backend has been initialized.
    /// </summary>
-   public class PgSQLInitializationConfiguration
+   public class PgSQLInitializationConfiguration : NetworkInitializationConfiguration<PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
    {
       /// <summary>
       /// Gets or sets the type containing passive configuration data about the database to connect to.
@@ -155,47 +71,19 @@ namespace CBAM.SQL.PostgreSQL
       /// <seealso cref="PgSQLDatabaseConfiguration"/>
       public PgSQLDatabaseConfiguration Database { get; set; }
 
-      /// <summary>
-      /// Gets or sets the type containing passive configuration data about the communication protocol -specific settings.
-      /// </summary>
-      /// <value>The type containing passive configuration data about the communication protocol -specific settings.</value>
-      /// <seealso cref="PgSQLProtocolConfiguration"/>
-      public PgSQLProtocolConfiguration Protocol { get; set; }
-
-      /// <summary>
-      /// Gets or sets the type containing passive configuration data about the behaviour of the connections when they are used within the connection pool.
-      /// </summary>
-      /// <value>The type containing passive configuration data about the behaviour of the connections when they are used within the connection pool.</value>
-      public PgSQLPoolingConfiguration ConnectionPool { get; set; }
    }
 
    /// <summary>
-   /// This class contains all passive configuration data related to behaviour of connections when they are used within the connection pool.
+   /// This class contains all passive configuration data related to behaviour of PgSQL connections when they are used within the connection pool.
    /// </summary>
-   public class PgSQLPoolingConfiguration
+   public class PgSQLPoolingConfiguration : NetworkPoolingConfiguration
    {
-      /// <summary>
-      /// Gets or sets the value indicating whether each connection should have its own <see cref="BinaryStringPool"/>.
-      /// </summary>
-      /// <value>The value indicating whether each connection should have its own <see cref="BinaryStringPool"/>.</value>
-      /// <remarks>
-      /// Typically this should be true if the same connection pool is used to access secure data of multiple roles or conceptional users.
-      /// </remarks>
-      public Boolean ConnectionsOwnStringPool { get; set; }
    }
 
-   /// <summary>
-   /// This class contains all passive configuration data related to selecting which database the <see cref="PgSQLConnection"/> will be connected to, as well as authentication to that database.
-   /// </summary>
-   public class PgSQLDatabaseConfiguration
+   public class PgSQLAuthenticationConfiguration
    {
+
       internal static readonly Encoding PasswordByteEncoding = new UTF8Encoding( false, true );
-
-      /// <summary>
-      /// Gets or sets the name of the database that the <see cref="PgSQLConnection"/> should be connected to.
-      /// </summary>
-      /// <value>The name of the database that the <see cref="PgSQLConnection"/> should be connected to.</value>
-      public String Database { get; set; }
 
       /// <summary>
       /// Gets or sets the username to use when connecting to the database.
@@ -236,6 +124,19 @@ namespace CBAM.SQL.PostgreSQL
             this.PasswordBytes = value == null ? null : PasswordByteEncoding.GetBytes( value );
          }
       }
+   }
+
+   /// <summary>
+   /// This class contains all passive configuration data related to selecting which database the <see cref="PgSQLConnection"/> will be connected to, as well as authentication to that database.
+   /// </summary>
+   public class PgSQLDatabaseConfiguration
+   {
+
+      /// <summary>
+      /// Gets or sets the name of the database that the <see cref="PgSQLConnection"/> should be connected to.
+      /// </summary>
+      /// <value>The name of the database that the <see cref="PgSQLConnection"/> should be connected to.</value>
+      public String Database { get; set; }
 
       /// <summary>
       /// Gets the search path (<see href="https://www.postgresql.org/docs/current/static/runtime-config-client.html"/>) to use for the database.
@@ -271,7 +172,7 @@ namespace CBAM.SQL.PostgreSQL
    /// <summary>
    /// This class binds together the passive configuration data of the <see cref="PgSQLConnectionCreationInfoData"/> and behaviour (callbacks) needed when creating and initializing <see cref="PgSQLConnection"/>s.
    /// </summary>
-   public sealed class PgSQLConnectionCreationInfo
+   public sealed class PgSQLConnectionCreationInfo : NetworkConnectionCreationInfo<PgSQLConnectionCreationInfoData, PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
    {
       private const String SCRAM_SHA_256 = "SCRAM-SHA-256";
       private const String SCRAM_SHA_512 = "SCRAM-SHA-512";
@@ -286,10 +187,8 @@ namespace CBAM.SQL.PostgreSQL
       /// </remarks>
       public PgSQLConnectionCreationInfo(
          PgSQLConnectionCreationInfoData data
-         )
+         ) : base( data )
       {
-         this.CreationData = ArgumentValidator.ValidateNotNull( nameof( data ), data );
-
          this.CreateSASLMechanism = ( names ) =>
          {
             UtilPack.Cryptography.Digest.BlockDigestAlgorithm algorithm;
@@ -321,57 +220,7 @@ namespace CBAM.SQL.PostgreSQL
 
             return (algorithm?.CreateSASLClientSCRAM(), mechanismName);
          };
-
-#if NETSTANDARD2_0 || NETCOREAPP1_1 || NET45 || NET40
-         this.ProvideSSLStream = (
-            Stream innerStream,
-            Boolean leaveInnerStreamOpen,
-            RemoteCertificateValidationCallback userCertificateValidationCallback,
-            LocalCertificateSelectionCallback userCertificateSelectionCallback,
-            out AuthenticateAsClientAsync authenticateAsClientAsync
-            ) =>
-         {
-            authenticateAsClientAsync = (
-               Stream stream,
-               String targetHost,
-               System.Security.Cryptography.X509Certificates.X509CertificateCollection clientCertificates,
-               System.Security.Authentication.SslProtocols enabledSslProtocols,
-               Boolean checkCertificateRevocation
-            ) =>
-            {
-               return ( (System.Net.Security.SslStream) stream ).AuthenticateAsClientAsync( targetHost, clientCertificates, enabledSslProtocols, checkCertificateRevocation );
-            };
-
-            return new System.Net.Security.SslStream(
-               innerStream,
-               leaveInnerStreamOpen,
-                  (
-                     Object sender,
-                     System.Security.Cryptography.X509Certificates.X509Certificate certificate,
-                     System.Security.Cryptography.X509Certificates.X509Chain chain,
-                     System.Net.Security.SslPolicyErrors sslPolicyErrors
-                     ) => userCertificateValidationCallback?.Invoke( sender, certificate, chain, sslPolicyErrors ) ?? true,
-               userCertificateSelectionCallback == null ?
-                  (System.Net.Security.LocalCertificateSelectionCallback) null :
-                  (
-                     Object sender,
-                     String targetHost,
-                     System.Security.Cryptography.X509Certificates.X509CertificateCollection localCertificates,
-                     System.Security.Cryptography.X509Certificates.X509Certificate remoteCertificate,
-                     String[] acceptableIssuers
-                  ) => userCertificateSelectionCallback( sender, targetHost, localCertificates, remoteCertificate, acceptableIssuers ),
-               System.Net.Security.EncryptionPolicy.RequireEncryption
-               );
-         };
-#endif
       }
-
-      /// <summary>
-      /// Gets the <see cref="PgSQLConnectionCreationInfoData"/> that this <see cref="PgSQLConnectionCreationInfo"/> will use when creating and initializing new <see cref="PgSQLConnection"/>s.
-      /// </summary>
-      /// <value>The <see cref="PgSQLConnectionCreationInfoData"/> that this <see cref="PgSQLConnectionCreationInfo"/> will use when creating and initializing new <see cref="PgSQLConnection"/>s.</value>
-      public PgSQLConnectionCreationInfoData CreationData { get; }
-
       /// <summary>
       /// This callback will be used during SCRAM authentication to select the <see cref="SASLMechanism"/> based on the advertised mechanisms sent by server as a string.
       /// The constructor will set this to default value which supports SCRAM-SHA-256 and SCRAM-SHA-512, but this may be overridden for custom <see cref="SASLMechanism"/>s.
@@ -388,91 +237,6 @@ namespace CBAM.SQL.PostgreSQL
       /// </summary>
       /// <value>The callback to call on successful SASL SCRAM authentication, receiving password digest as argument.</value>
       public Action<Byte[]> OnSASLSCRAMSuccess { get; set; }
-
-#if !NETSTANDARD1_0
-
-      /// <summary>
-      /// Gets or sets the callback which should select single <see cref="IPAddress"/> from an array of <see cref="IPAddress"/> that were resolved from the hostname.
-      /// </summary>
-      /// <value>The callback which should select single <see cref="IPAddress"/> from an array of <see cref="IPAddress"/> that were resolved from the hostname.</value>
-      /// <remarks>
-      /// This will be invoked only when the amount of resolved <see cref="IPAddress"/>es is more than <c>1</c>.
-      /// If this returns <c>null</c>, the first <see cref="IPAddress"/> will be used.
-      /// </remarks>
-      public Func<IPAddress[], IPAddress> SelectRemoteIPAddress { get; set; }
-
-      /// <summary>
-      /// Gets or sets the callback which should provide the local <see cref="IPEndPoint"/> given remote <see cref="IPEndPoint"/>.
-      /// </summary>
-      /// <value>The callback which should provide the local <see cref="IPEndPoint"/> given remote <see cref="IPEndPoint"/>.</value>
-      /// <remarks>
-      /// If this is <c>null</c> or returns <c>null</c>, a first free local endpoint will be used.
-      /// </remarks>
-      public Func<IPEndPoint, IPEndPoint> SelectLocalIPEndPoint { get; set; }
-
-#if NETSTANDARD1_3
-
-      /// <summary>
-      /// Gets or sets the callback which should perform DNS resolve from host name.
-      /// </summary>
-      /// <value>The callback which should perform DNS resolve from host name.</value>
-      /// <remarks>
-      /// This property is available only on platforms .NET Standard 1.3-1.6.
-      /// </remarks>
-      public Func<String, ValueTask<IPAddress[]>> DNSResolve { get; set; }
-
-#endif
-
-      /// <summary>
-      /// This event is used to add client certificates to <see cref="System.Security.Cryptography.X509Certificates.X509CertificateCollection"/> when using SSL to connect to the backend.
-      /// </summary>
-      public event Action<System.Security.Cryptography.X509Certificates.X509CertificateCollection> ProvideClientCertificatesEvent;
-      internal Action<System.Security.Cryptography.X509Certificates.X509CertificateCollection> ProvideClientCertificates => this.ProvideClientCertificatesEvent;
-
-      /// <summary>
-      /// This callback is used to create SSL stream when using SSL to connect to backend.
-      /// </summary>
-      /// <value>The callback to create SSL stream when using SSL to connect to backend.</value>
-      /// <remarks>
-      /// In .NET Core App 1.1+ and .NET Desktop 4.0+ environments this will be set to default by the constructor.
-      /// </remarks>
-      public ProvideSSLStream ProvideSSLStream { get; set; }
-
-      /// <summary>
-      /// This callback will be used to validate server certificate when using SSL to connect to the backend.
-      /// </summary>
-      /// <value>The callback will to validate server certificate when using SSL to connect to the backend.</value>
-      /// <remarks>
-      /// When not specified (i.e. left to <c>null</c>), server certificate (if provided) will always be accepted.
-      /// </remarks>
-      public RemoteCertificateValidationCallback ValidateServerCertificate { get; set; }
-
-      /// <summary>
-      /// This callback will be used to select local certificate when using SSL to connect to the backend.
-      /// </summary>
-      /// <value>The callback to select local certificate when using SSL to connect to the backend.</value>
-      /// <remarks>
-      /// When not specified (i.e. left to <c>null</c>), the first of the certificates is selected, if any.
-      /// </remarks>
-      public LocalCertificateSelectionCallback SelectLocalCertificate { get; set; }
-
-#endif
-
-      /// <summary>
-      /// This property is special in a sense that it is only one visible in .NET Standard 1.0-1.2 environments, and thus is mandatory on those platforms.
-      /// On .NET Standard 1.3, .NET Core App 1.1+, and .NET Desktop 4.0+, this property is optional, and may be used to override socket initialization routine and create <see cref="Stream"/> right away.
-      /// </summary>
-      /// <value>Callback to override socket intialization and create <see cref="Stream"/> right away.</value>
-      /// <remarks>
-      /// <para>
-      /// Using this property has consequence on <see cref="PgSQLConnection.CheckNotificationsAsync"/> method so that using it will cause SQL query to be issued to backend.
-      /// This property should be used only in special circumstances (.NET Standard 1.0-1.2 environments, or tests), and in 99.99% of the other cases it should not be used.
-      /// </para>
-      /// <para>
-      /// The <see cref="Stream"/> returned by this callback will be used to start normal PostgreSQL backend initialization routine (<see href="https://www.postgresql.org/docs/current/static/protocol-flow.html#AEN112843"/>).
-      /// </para>
-      /// </remarks>
-      public Func<ValueTask<Stream>> StreamFactory { get; set; }
 
    }
 }
@@ -499,6 +263,7 @@ public static partial class E_CBAM
       var db = init?.Database;
       var protocol = init?.Protocol;
       var pool = init?.ConnectionPool;
+      var auth = init?.Authentication;
 
       return new PgSQLConnectionCreationInfoData()
       {
@@ -516,9 +281,13 @@ public static partial class E_CBAM
             Database = new PgSQLDatabaseConfiguration()
             {
                Database = db?.Database,
-               Username = db?.Username,
-               Password = db?.Password,
                SearchPath = db?.SearchPath
+            },
+            Authentication = new PgSQLAuthenticationConfiguration()
+            {
+               Username = auth?.Username,
+               Password = auth?.Password,
+               PasswordDigest = auth?.PasswordDigest
             },
             Protocol = new PgSQLProtocolConfiguration()
             {

@@ -74,7 +74,21 @@ namespace CBAM.SQL.PostgreSQL.Implementation
       {
          // We will enter here for multidimensional arrays, from BindMessage
          var objType = obj.GetType();
-         return objType.IsArray && Equals( objType.GetElementType(), this._arrayElementType ) ? obj : throw new InvalidCastException( $"The object to cast must be single- or multidimensionsal array with element type of {this._arrayElementType.FullName}." );
+         return objType.IsArray
+            && EqualsIgnoreNullability( objType.GetElementType(), this._arrayElementType ) ? // The WriteArrayText and WriteArrayBinary methods work for both X[] and X?[] array types.
+               obj :
+               throw new InvalidCastException( $"The object to cast must be single- or multidimensionsal array with element type of {this._arrayElementType.FullName}." );
+      }
+
+      private static Boolean EqualsIgnoreNullability( Type x, Type y )
+      {
+         return Equals( x, y )
+            || Equals( GetActualIfNullable( x ), GetActualIfNullable( y ) );
+      }
+
+      private static Type GetActualIfNullable( Type type )
+      {
+         return type.IsNullable( out var actual ) ? actual : type;
       }
 
       public Object ChangeTypePgSQLToFramework( PgSQLTypeDatabaseData dbData, Object obj, Type typeTo )

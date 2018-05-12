@@ -33,13 +33,10 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
          await pool.UseResourceAsync( async conn =>
          {
-            NotificationEventArgs notificationArgs = null;
-            conn.NotificationEvent += ( nArgs ) => notificationArgs = nArgs;
 
             // Check that notification check will not stuck
-            var notificationsFired = await conn.CheckNotificationsAsync();
-            Assert.AreEqual( 0, notificationsFired );
-            Assert.IsNull( notificationArgs );
+            var receivedNotifications = await conn.CheckNotificationsAsync();
+            Assert.AreEqual( 0, receivedNotifications.Length );
 
             // Start listening
             await conn.ExecuteAndIgnoreResults( "LISTEN " + NOTIFICATION_NAME );
@@ -48,16 +45,17 @@ namespace CBAM.SQL.PostgreSQL.Tests
             await pool.UseResourceAsync( async conn2 => await conn2.ExecuteAndIgnoreResults( "NOTIFY " + NOTIFICATION_NAME ) );
 
             // Make sure that we have received it
-            notificationsFired = await conn.CheckNotificationsAsync();
-            Assert.AreEqual( 1, notificationsFired );
+            receivedNotifications = await conn.ContinuouslyListenToNotificationsAsync().Take( 1 ).ToArrayAsync();
+            Assert.AreEqual( 1, receivedNotifications.Length );
+            var notificationArgs = receivedNotifications[0];
             Assert.IsNotNull( notificationArgs );
             Assert.AreEqual( notificationArgs.Name, NOTIFICATION_NAME );
             Assert.AreNotEqual( notificationArgs.ProcessID, conn.BackendProcessID );
             Assert.AreEqual( notificationArgs.Payload.Length, 0 );
 
             notificationArgs = null;
-            notificationsFired = await conn.CheckNotificationsAsync();
-            Assert.AreEqual( 0, notificationsFired );
+            receivedNotifications = await conn.CheckNotificationsAsync();
+            Assert.AreEqual( 0, receivedNotifications.Length );
             Assert.IsNull( notificationArgs );
          } );
       }

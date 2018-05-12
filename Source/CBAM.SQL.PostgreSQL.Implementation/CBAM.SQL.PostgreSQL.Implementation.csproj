@@ -8,11 +8,11 @@
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
-    <LangVersion>7.1</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="UtilPack.Cryptography.SASL.SCRAM" Version="1.0.0-RC1" />
+    <PackageReference Include="UtilPack.Cryptography.SASL.SCRAM" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,12 +24,16 @@
     <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.0'">
+    <PackageReference Include="UtilPack.Configuration.NetworkStream" Version="1.0.0" />
+  </ItemGroup>
+
   <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard1.0'">
-    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0-RC2" />
+    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0" />
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.4.1</VersionPrefix>
+    <VersionPrefix>0.5.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
