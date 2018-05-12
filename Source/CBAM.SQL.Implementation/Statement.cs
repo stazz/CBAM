@@ -198,6 +198,7 @@ namespace CBAM.SQL.Implementation
          this._currentParameters[parameterIndex] = this.CreateStatementParameter( parameterIndex, value, clrType ?? value.GetType() );
       }
 
+      /// <inheritdoc />
       public void RemoveAllBatchedParameters()
       {
          this._batchParameters.Clear();

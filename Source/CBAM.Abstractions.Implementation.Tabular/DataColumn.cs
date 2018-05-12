@@ -26,7 +26,7 @@ namespace CBAM.Abstractions.Implementation.Tabular
    /// This class extends <see cref="DataColumnSUKS"/> to use <see cref="ConnectionFunctionalitySU"/> to reserve it when reading values.
    /// </summary>
    /// <typeparam name="TConnectionFunctionality">The real type of <see cref="ConnectionFunctionalitySU"/>.</typeparam>
-   /// <seealso cref="ConnectionFunctionalitySU.UseStreamWithinStatementAsync(ReservedForStatement, Func{Task})"/>
+   /// <seealso cref="ConnectionFunctionalitySU.UseStreamWithinStatementAsync(ReservedForStatement, Func{Task}, Boolean)"/>
    /// <seealso cref="ConnectionFunctionalitySU.UseStreamWithinStatementAsync{T}(ReservedForStatement, Func{ValueTask{T}})"/>
    public abstract class DataColumnSUKSWithConnectionFunctionality<TConnectionFunctionality> : DataColumnSUKS
       where TConnectionFunctionality : class, ConnectionFunctionalitySU

@@ -16,6 +16,7 @@
  * limitations under the License. 
  */
 using CBAM.Abstractions;
+using CBAM.Abstractions.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -31,34 +32,60 @@ namespace CBAM.Abstractions.Implementation
    /// This interface provides a way to execute some code with checks that the connection is still useable, using <see cref="ReservedForStatement"/> as token.
    /// This is typically desireable when connection uses unseekable stream (SU) as its communication channel to remote endpoint.
    /// </summary>
+   /// <remarks>
+   /// These methods should really be protected methods of <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>, but since there is no multi-inheritance, this is an interface.
+   /// </remarks>
    public interface ConnectionFunctionalitySU
    {
       /// <summary>
-      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback. The connection is then left as reserved for <paramref name="reservedState"/>.
       /// </summary>
       /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
       /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
+      /// <param name="throwIfBusy">If set to <c>true</c>, will throw an exception if currently underlying stream is reserved for other activity than the one identified by <paramref name="reservedState"/>.</param>
       /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
-      Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean throwIfBusy = true );
+      /// <exception cref="InvalidOperationException">If <paramref name="throwIfBusy"/> is <c>true</c>, and if this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean throwIfBusy );
 
       /// <summary>
-      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
+      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback. The connection is then left as reserved for <paramref name="reservedState"/>.
       /// </summary>
+      /// <typeparam name="T">The asynchronous return type of <paramref name="func"/>.</typeparam>
       /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
       /// <param name="func">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
       /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <paramref name="reservedState"/> object.</exception>
       ValueTask<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func );
 
-      Task UseStreamOutsideStatementAsync( Func<Task> action, Boolean throwIfBusy = true );
+      /// <summary>
+      /// This method will make sure that connection is not reserved for any statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement reservation.</param>
+      /// <param name="action">The asynchronous callback to execute, if the connection is not reserved for any statement.</param>
+      /// <param name="oneTimeOnly">If <c>true</c>, the connection reservation state will be returned to original after <paramref name="action"/> has executed. Otherwise, the connection will be left in reserved state to <paramref name="reservedState"/>.</param>
+      /// <param name="throwIfBusy">If set to <c>true</c>, will throw an exception if currently underlying stream is reserved for other activity than the one identified by <paramref name="reservedState"/>.</param>
+      /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored, if <paramref name="oneTimeOnly"/> is <c>true</c>, to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If <paramref name="throwIfBusy"/> is <c>true</c>, and if this connection is already reserved to another statement.</exception>
+      Task UseStreamOutsideStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean oneTimeOnly, Boolean throwIfBusy );
 
-      ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func );
+      /// <summary>
+      /// This method will make sure that connection is not reserved for any statement, and if so, execute the given asynchronous callback.
+      /// </summary>
+      /// <typeparam name="T">The asynchronous return type of <paramref name="func"/>.</typeparam>
+      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement reservation.</param>
+      /// <param name="func">The asynchronous callback to execute, if the connection is not reserved for any statement.</param>
+      /// <param name="oneTimeOnly">If <c>true</c>, the connection reservation state will be returned to original after <paramref name="func"/> has executed. Otherwise, the connection will be left in reserved state to <paramref name="reservedState"/>.</param>
+      /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored, if <paramref name="oneTimeOnly"/> is <c>true</c>, to which it was at start.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is already reserved to another statement.</exception>
+      ValueTask<T> UseStreamOutsideStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func, Boolean oneTimeOnly );
 
-
-      Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly, Boolean throwIfBusy );
-
-      ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly );
+      /// <summary>
+      /// This method will make sure that connection is reserved to given statement, and then perform potentially asynchronous dispose operations.
+      /// </summary>
+      /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object identifying the statement reservation.</param>
+      /// <returns>A task which will complete when dipose operations are done, and the connection reservation state has been cleared.</returns>
+      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <paramref name="reservationObject"/> object.</exception>
+      Task DisposeStatementAsync( ReservedForStatement reservationObject );
    }
 
    /// <summary>
@@ -85,11 +112,7 @@ namespace CBAM.Abstractions.Implementation
          public static readonly NotInUse Instance = new NotInUse();
       }
 
-      private static readonly ReservedForStatement _NoStatement = new ReservedForStatement(
-#if DEBUG
-         null
-#endif
-         );
+
 
       private ConnectionStreamUsageState _currentlyExecutingStatement;
 
@@ -125,8 +148,8 @@ namespace CBAM.Abstractions.Implementation
                   if ( reservation == null && Interlocked.CompareExchange( ref reservation, this.CreateReservationObject( metadata ), null ) == null )
                   {
                      (item, moveNext) = await this.UseStreamOutsideStatementAsync(
-                        async () => await this.ExecuteStatement( metadata, reservation ),
                         reservation,
+                        async () => await this.ExecuteStatement( metadata, reservation ),
                         false
                         );
                   }
@@ -179,29 +202,9 @@ namespace CBAM.Abstractions.Implementation
       /// <returns>A new instance of <see cref="ReservedForStatement"/> which will be used to mark this connection as being in use to execute the <paramref name="stmt"/>.</returns>
       protected abstract ReservedForStatement CreateReservationObject( TStatementInformation stmt );
 
-      /// <summary>
-      /// This is helper method to mark this connection as reserved for anonymous statement, execute custom callback, and then free the connection.
-      /// </summary>
-      /// <param name="action">The asynchronous callback to execute after reserving and before freeing the connection.</param>
-      /// <returns>A task which will complete after connection is freed up.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      public Task UseStreamOutsideStatementAsync( Func<Task> action, Boolean throwIfBusy )
-      {
-         return this.UseStreamOutsideStatementAsync( action, _NoStatement, true, throwIfBusy );
-      }
 
-      /// <summary>
-      /// This is helper method to mark this connection as reserved for anonymous statement, execute custom callback, and then free the connection.
-      /// </summary>
-      /// <param name="func">The asynchronous callback to execute after reserving and before freeing the connection.</param>
-      /// <returns>A task which will complete after connection is freed up, returning result of the <paramref name="func"/>.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is already reserved for another statement.</exception>
-      public ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func )
-      {
-         return this.UseStreamOutsideStatementAsync( func, _NoStatement, true );
-      }
-
-      public async Task UseStreamOutsideStatementAsync( Func<Task> action, ReservedForStatement reservedState, Boolean oneTimeOnly, Boolean throwIfBusy )
+      /// <inheritdoc />
+      public async Task UseStreamOutsideStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean oneTimeOnly, Boolean throwIfBusy )
       {
          if ( ReferenceEquals( Interlocked.CompareExchange( ref this._currentlyExecutingStatement, reservedState, NotInUse.Instance ), NotInUse.Instance ) )
          {
@@ -223,7 +226,8 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      public async ValueTask<T> UseStreamOutsideStatementAsync<T>( Func<ValueTask<T>> func, ReservedForStatement reservedState, Boolean oneTimeOnly )
+      /// <inheritdoc />
+      public async ValueTask<T> UseStreamOutsideStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func, Boolean oneTimeOnly )
       {
          if ( ReferenceEquals( Interlocked.CompareExchange( ref this._currentlyExecutingStatement, reservedState, NotInUse.Instance ), NotInUse.Instance ) )
          {
@@ -245,13 +249,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      /// <summary>
-      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
-      /// </summary>
-      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
-      /// <param name="action">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
-      /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      /// <inheritdoc />
       public async Task UseStreamWithinStatementAsync( ReservedForStatement reservedState, Func<Task> action, Boolean throwIfBusy = true )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
@@ -275,13 +273,7 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      /// <summary>
-      /// This method will make sure that connection is reserved for given statement, and if so, execute the given asynchronous callback.
-      /// </summary>
-      /// <param name="reservedState">The <see cref="ReservedForStatement"/> object identifying the statement the connection should be reserved to.</param>
-      /// <param name="func">The asynchronous callback to execute, if the connection is reserved to statement represented by <see cref="ReservedForStatement"/>.</param>
-      /// <returns>A task which will return result of <paramref name="func"/> and complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
-      /// <exception cref="InvalidOperationException">If this connection is not reserved to statement represented by given <see cref="ReservedForStatement"/> object.</exception>
+      /// <inheritdoc />
       public async ValueTask<T> UseStreamWithinStatementAsync<T>( ReservedForStatement reservedState, Func<ValueTask<T>> func )
       {
          ArgumentValidator.ValidateNotNull( nameof( reservedState ), reservedState );
@@ -305,7 +297,8 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      protected async Task DisposeStatementAsync( ReservedForStatement reservationObject )
+      /// <inheritdoc />
+      public async Task DisposeStatementAsync( ReservedForStatement reservationObject )
       {
          try
          {
@@ -397,5 +390,44 @@ namespace CBAM.Abstractions.Implementation
 #if DEBUG
       public Object Statement { get; }
 #endif
+   }
+}
+
+/// <summary>
+/// Contains extension methods for types defined in this assembly.
+/// </summary>
+public static partial class E_CBAM
+{
+   private static readonly ReservedForStatement _NoStatement = new ReservedForStatement(
+#if DEBUG
+         null
+#endif
+         );
+
+   /// <summary>
+   /// This method will make sure that connection is not reserved for any statement, and if so, execute the given asynchronous callback. An anonymous <see cref="ReservedForStatement"/> reservation will be used.
+   /// </summary>
+   /// <param name="functionality">This <see cref="ConnectionFunctionalitySU"/>.</param>
+   /// <param name="action">The asynchronous callback to execute, if connection is not reserved for any statement.</param>
+   /// <param name="throwIfBusy">If set to <c>true</c>, will throw an exception if currently underlying stream is reserved for any other activity. By default, is <c>true</c>.</param>
+   /// <returns>A task which will complete when <paramref name="action"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="ConnectionFunctionalitySU"/> is <c>null</c>.</exception>
+   /// <exception cref="InvalidOperationException">If <paramref name="throwIfBusy"/> is <c>true</c>, and if this connection is reserved to any statement.</exception>
+   public static Task UseStreamOutsideStatementAsync( this ConnectionFunctionalitySU functionality, Func<Task> action, Boolean throwIfBusy = true )
+   {
+      return functionality.UseStreamOutsideStatementAsync( _NoStatement, action, true, throwIfBusy );
+   }
+
+   /// <summary>
+   /// This method will make sure that connection is not reserved for any statement, and if so, execute the given asynchronous callback. An anonymous <see cref="ReservedForStatement"/> reservation will be used.
+   /// </summary>
+   /// <param name="functionality">This <see cref="ConnectionFunctionalitySU"/>.</param>
+   /// <param name="func">The asynchronous callback to execute, if connection is not reserved for any statement.</param>
+   /// <returns>A task which will complete when <paramref name="func"/> is completed and connection reservation state has been restored to which it was at start.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="ConnectionFunctionalitySU"/> is <c>null</c>.</exception>
+   /// <exception cref="InvalidOperationException">If this connection is reserved to any statement.</exception>
+   public static ValueTask<T> UseStreamOutsideStatementAsync<T>( this ConnectionFunctionalitySU functionality, Func<ValueTask<T>> func )
+   {
+      return functionality.UseStreamOutsideStatementAsync( _NoStatement, func, true );
    }
 }

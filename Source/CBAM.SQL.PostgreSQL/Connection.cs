@@ -54,6 +54,10 @@ namespace CBAM.SQL.PostgreSQL
       /// </remarks>
       ValueTask<NotificationEventArgs[]> CheckNotificationsAsync();
 
+      /// <summary>
+      /// This method will return an <see cref="IAsyncEnumerable{T}"/> that can be used to continuously and asynchronously to extract notifications from this connection.
+      /// </summary>
+      /// <returns>An <see cref="IAsyncEnumerable{T}"/> that can be used to continuously and asynchronously to extract notifications from this connection.</returns>
       IAsyncEnumerable<NotificationEventArgs> ContinuouslyListenToNotificationsAsync(); // TODO argument Func<Boolean> shouldContinue - would be invoked within WaitForNext() and TryGetNext() methods. This will cause wait-based polling for socket if non-null. If null, just use current implementation.
 
       /// <summary>

@@ -151,7 +151,8 @@ namespace CBAM.Abstractions.Implementation
       /// <summary>
       /// Creates a new instance of <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TStream}"/> with given parameters.
       /// </summary>
-      /// <param name="connection">The <see cref="ConnectionImpl{TConnectionFunctionality}"/>.</param>
+      /// <param name="connection">The <typeparamref name="TConnection"/>.</param>
+      /// <param name="functionality">The <typeparamref name="TConnectionFunctionality"/>.</param>
       /// <param name="associatedStream">The underlying stream or other disposable resource.</param>
       /// <exception cref="ArgumentNullException">If <paramref name="connection"/> is <c>null</c>.</exception>
       public ConnectionAcquireInfoImpl(
@@ -163,6 +164,10 @@ namespace CBAM.Abstractions.Implementation
          this.Functionality = ArgumentValidator.ValidateNotNull( nameof( functionality ), functionality );
       }
 
+      /// <summary>
+      /// Gets the <typeparamref name="TConnectionFunctionality"/> of this <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TStream}"/>.
+      /// </summary>
+      /// <value>The <typeparamref name="TConnectionFunctionality"/> of this <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TStream}"/>.</value>
       protected TConnectionFunctionality Functionality { get; }
 
       /// <summary>

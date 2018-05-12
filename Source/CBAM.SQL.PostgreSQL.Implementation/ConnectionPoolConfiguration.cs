@@ -80,6 +80,9 @@ namespace CBAM.SQL.PostgreSQL
    {
    }
 
+   /// <summary>
+   /// This class contains all passive configuration data related to authentication of new <see cref="PgSQLConnection"/>.
+   /// </summary>
    public class PgSQLAuthenticationConfiguration
    {
 

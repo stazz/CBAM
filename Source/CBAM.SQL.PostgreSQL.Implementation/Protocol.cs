@@ -895,7 +895,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
                         null
                         );
                      reservation.RFQSeen();
-                     await this.UseStreamOutsideStatementAsync( PerformReadForNotifications, reservation, false, true );
+                     await this.UseStreamOutsideStatementAsync( reservation, PerformReadForNotifications, false, true );
                   }
                   else
                   {
