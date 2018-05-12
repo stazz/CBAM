@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+      <TargetFrameworks>netstandard1.0;net40;net45</TargetFrameworks>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors />
+      <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+      <LangVersion>latest</LangVersion>
+   </PropertyGroup>
+
+   <ItemGroup>
+     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
+   </ItemGroup>
+
+   <PropertyGroup>
+      <VersionPrefix>0.5.0</VersionPrefix>
+      <VersionSuffix></VersionSuffix>
+      <Authors>Stanislav Muhametsin</Authors>
+      <Company>Cometa Solutions Ltd</Company>
+      <NeutralLanguage>en-US</NeutralLanguage>
+      <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+      <Product>CBAM</Product>
+      <Description>The Connection-Based Asynchronous Messaging (CBAM) NATS assembly contains API (but not implementation) for NATS ( https://nats.io/ ) messaging protocol.</Description>
+      <Copyright>Stanislav Muhametsin</Copyright>
+      <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
+   </PropertyGroup>
+
+   <!-- Assembly signing stuff -->
+   <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
+      <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
+      <SignAssembly>true</SignAssembly>
+   </PropertyGroup>
+
+   <!-- Disable all debug information in release mode-->
+   <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
+      <DebugType>none</DebugType>
+      <DebugSymbols>False</DebugSymbols>
+      <GenerateDocumentationFile>true</GenerateDocumentationFile>
+   </PropertyGroup>
+
+   <!-- NuGet package stuff -->
+   <PropertyGroup>
+      <PackageId>$(AssemblyName)</PackageId>
+      <PackageVersion>$(VersionPrefix)</PackageVersion>
+      <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+      <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+      <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+      <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
+      <Title>API for NATS protcol using CBAM abstractions</Title>
+      <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
+      <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
+      <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+   </PropertyGroup>
+   <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" />
+
+</Project>
