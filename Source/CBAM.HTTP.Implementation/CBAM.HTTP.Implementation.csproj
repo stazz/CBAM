@@ -14,6 +14,13 @@
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.HTTP\CBAM.HTTP.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.0'">
+    <PackageReference Include="UtilPack.Configuration.NetworkStream" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard1.0'">
     <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0" />
   </ItemGroup>
 

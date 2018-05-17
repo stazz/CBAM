@@ -26,14 +26,48 @@ using UtilPack;
 
 namespace CBAM.HTTP
 {
-   // It would be nice to use System.Net.Http namespace, but it is old and outdated API, and HttpResponseMessage can be properly build only by HttpClient, and that is not suitable for this library at all.
-   // Microsoft.AspNetCore.Http would be also nice, but that is server-oriented API, while this is client-oriented API, and therefore can't be used directly either (also it requires .NET Standard 2.0).
+
+#if NET40
+   public sealed class DictionaryWithReadOnlyAPI<TKey, TValue> : Dictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
+   {
+      IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => this.Keys;
+
+      IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => this.Values;
+   }
+
+   public sealed class ListWithReadOnlyAPI<TValue> : List<TValue>, IReadOnlyList<TValue>
+   {
+      public ListWithReadOnlyAPI()
+         : base()
+      {
+      }
+
+      public ListWithReadOnlyAPI(
+         IEnumerable<TValue> collection
+         )
+         : base( collection )
+      {
+      }
+   }
+#endif
 
    /// <summary>
    /// This interface describes a HTTP request, which client sends to server, from client's point of view.
    /// </summary>
    /// <seealso cref="HTTPMessageFactory"/>
-   public interface HTTPRequest : HTTPMessage<HTTPRequestContent>
+   public interface HTTPRequest : HTTPMessage<HTTPRequestContent,
+#if NET40
+      DictionaryWithReadOnlyAPI<String, ListWithReadOnlyAPI<String>>
+#else
+      Dictionary<String, List<String>>
+#endif
+      ,
+#if NET40
+      ListWithReadOnlyAPI<String>
+#else
+      List<String>
+#endif
+      >
    {
       /// <summary>
       /// Gets or sets the HTTP request method, as string.
@@ -64,7 +98,7 @@ namespace CBAM.HTTP
    /// This interface describes a HTTP response, which server sends to the client, from client's point of view.
    /// </summary>
    /// <seealso cref="HTTPMessageFactory"/>
-   public interface HTTPResponse : HTTPMessage<HTTPResponseContent>
+   public interface HTTPResponse : HTTPMessage<HTTPResponseContent, IReadOnlyDictionary<String, IReadOnlyList<String>>, IReadOnlyList<String>>
    {
       /// <summary>
       /// Gets the status code returned by the server.
@@ -83,14 +117,16 @@ namespace CBAM.HTTP
    /// This is common interface for <see cref="HTTPRequest"/> and <see cref="HTTPResponse"/>.
    /// </summary>
    /// <typeparam name="TContent"></typeparam>
-   public interface HTTPMessage<TContent>
+   public interface HTTPMessage<TContent, TDictionary, TList>
       where TContent : HTTPMessageContent
+      where TDictionary : IReadOnlyDictionary<String, TList>
+      where TList : IReadOnlyList<String>
    {
       /// <summary>
       /// Gets the HTTP headers of this HTTP message (request or response).
       /// </summary>
       /// <value>The HTTP headers of this HTTP message (request or response).</value>
-      IDictionary<String, List<String>> Headers { get; }
+      TDictionary Headers { get; }
 
       /// <summary>
       /// Gets the HTTP version of this HTTP message (request or response).
@@ -116,7 +152,7 @@ namespace CBAM.HTTP
       /// <value>The amount of bytes this content takes, if the amount is known.</value>
       Int64? ByteCount { get; }
 
-      Boolean ContentEndIsKnown { get; }
+      Boolean ContentEndIsKnown { get; } // TODO not sure if we should even allow situation when this is true??
    }
 
    /// <summary>
@@ -231,10 +267,10 @@ namespace CBAM.HTTP
    /// </summary>
    public static class HTTPMessageFactory
    {
-      private const String HTTP1_1 = "HTTP/1.1";
+      public const String HTTP1_1 = "HTTP/1.1";
 
-      private const String METHOD_GET = "GET";
-      private const String METHOD_POST = "POST";
+      public const String METHOD_GET = "GET";
+      public const String METHOD_POST = "POST";
 
       private static String DefaultIfNullOrEmpty( this String str, String defaultString )
       {
@@ -397,12 +433,16 @@ public static partial class E_HTTP
    /// <param name="headerValue">The value of the header.</param>
    /// <returns>This <see cref="HTTPMessage{TContent}"/>.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="HTTPMessage{TContent}"/> is <c>null</c>.</exception>
-   public static T WithHeader<T, TContent>( this T message, String headerName, String headerValue )
-      where T : HTTPMessage<TContent>
-      where TContent : HTTPMessageContent
+   public static HTTPRequest WithHeader( this HTTPRequest message, String headerName, String headerValue )
    {
       message.Headers
-         .GetOrAdd_NotThreadSafe( headerName, hn => new List<String>() )
+         .GetOrAdd_NotThreadSafe( headerName, hn => new
+#if NET40
+         ListWithReadOnlyAPI
+#else
+         List
+#endif
+         <String>() )
          .Add( headerValue );
 
       return message;
@@ -470,8 +510,10 @@ public static partial class E_HTTP
       var buffer = new ResizableArray<Byte>( exponentialResize: false );
       var bytesRead = 0;
       Int32 bytesRemaining;
+      Int32 bytesSeen = 0;
       while ( ( bytesRemaining = (Int32) content.BytesRemaining.Value ) > 0 )
       {
+         bytesSeen += bytesRemaining;
          bytesRead += await content.ReadToBuffer( buffer.SetCapacityAndReturnArray( bytesRead + bytesRemaining ), bytesRead, bytesRemaining );
       }
       // Since exponentialResize was set to false, the array will never be too big

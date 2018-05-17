@@ -99,7 +99,6 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
    public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : PooledConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, IAsyncEnumerable<TEnumerableItem>>, ConnectionFunctionalitySU
       where TStatement : TStatementInformation
-      where TEnumerableItem : class
       where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
       private sealed class NotInUse : ConnectionStreamUsageState
@@ -144,10 +143,10 @@ namespace CBAM.Abstractions.Implementation
                async () =>
                {
                   TEnumerableItem item;
-
+                  Boolean success;
                   if ( reservation == null && Interlocked.CompareExchange( ref reservation, this.CreateReservationObject( metadata ), null ) == null )
                   {
-                     (item, moveNext) = await this.UseStreamOutsideStatementAsync(
+                     (item, success, moveNext) = await this.UseStreamOutsideStatementAsync(
                         reservation,
                         async () => await this.ExecuteStatement( metadata, reservation ),
                         false
@@ -157,20 +156,16 @@ namespace CBAM.Abstractions.Implementation
                   {
                      if ( moveNext == null )
                      {
-                        item = null;
+                        success = false;
+                        item = default;
                      }
                      else
                      {
-                        Boolean success;
                         (success, item) = await this.UseStreamWithinStatementAsync( reservation, moveNext );
-                        if ( !success )
-                        {
-                           item = null;
-                        }
                      }
                   }
 
-                  return (item != null, item);
+                  return (success, item);
                },
                () =>
                {
@@ -193,7 +188,7 @@ namespace CBAM.Abstractions.Implementation
       /// <remarks>
       /// The connection will be marked as reserved to the statement before this method is called.
       /// </remarks>
-      protected abstract ValueTask<(TEnumerableItem, Func<ValueTask<(Boolean, TEnumerableItem)>>)> ExecuteStatement( TStatementInformation stmt, ReservedForStatement reservationObject );
+      protected abstract ValueTask<(TEnumerableItem, Boolean, Func<ValueTask<(Boolean, TEnumerableItem)>>)> ExecuteStatement( TStatementInformation stmt, ReservedForStatement reservationObject );
 
       /// <summary>
       /// Derived classes should override this abstract method to create custom <see cref="ReservedForStatement"/> objects.

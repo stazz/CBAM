@@ -17,24 +17,59 @@
  */
 using CBAM.Abstractions;
 using UtilPack.AsyncEnumeration;
+using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using UtilPack;
 
-using TCreationParameter = UtilPack.EitherOr<CBAM.HTTP.HTTPRequest, System.Func<CBAM.HTTP.HTTPRequest>>;
 namespace CBAM.HTTP
 {
    /// <summary>
    /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to client.
    /// </summary>
-   public interface HTTPConnection : Connection<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPResponse, HTTPConnectionVendorFunctionality, IAsyncConcurrentEnumerable<HTTPResponse>>
+   public interface HTTPConnection<TRequestMetaData> : Connection<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorFunctionality<TRequestMetaData>, IAsyncEnumerable<HTTPResponseInfo<TRequestMetaData>>>
    {
-
+      String ProtocolVersion { get; }
    }
 
    /// <summary>
    /// This interface extends <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/> to provide any HTTP-specific functionality which does not need a connection.
    /// </summary>
-   public interface HTTPConnectionVendorFunctionality : ConnectionVendorFunctionality<HTTPStatement, TCreationParameter>
+   public interface HTTPConnectionVendorFunctionality<TRequestMetaData> : ConnectionVendorFunctionality<HTTPStatement<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>>
    {
 
+   }
+
+   public struct HTTPResponseInfo<TRequestMetaData>
+   {
+      public HTTPResponseInfo(
+         HTTPResponse response,
+         TRequestMetaData md
+         )
+      {
+         this.Response = ArgumentValidator.ValidateNotNull( nameof( response ), response );
+         this.RequestMetaData = md;
+      }
+
+      public HTTPResponse Response { get; }
+
+      public TRequestMetaData RequestMetaData { get; }
+   }
+
+   public struct HTTPRequestInfo<TRequestMetaData>
+   {
+      public HTTPRequestInfo(
+         HTTPRequest request,
+         TRequestMetaData md
+         )
+      {
+         this.Request = request;
+         this.RequestMetaData = md;
+      }
+
+      public HTTPRequest Request { get; }
+
+      public TRequestMetaData RequestMetaData { get; }
    }
 
 }

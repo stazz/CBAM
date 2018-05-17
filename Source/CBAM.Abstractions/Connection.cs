@@ -127,49 +127,49 @@ public static partial class E_CBAM
 
    // For some reason the implicit cast of UtilPack.EitherOr struct is not always picked up by compiler, so these two methods exist
 
-   /// <summary>
-   /// This is shortcut method to directly prepare statement from its starting parameters without using builder.
-   /// </summary>
-   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
-   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
-   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
-   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
-   /// <typeparam name="TEnumerable">The actual type of <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</typeparam>
-   /// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
-   /// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
-   /// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</param>
-   /// <param name="creationArgs">The statement builder creation parameters.</param>
-   /// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> is <c>null</c>.</exception>
-   public static TEnumerable PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, TEnumerable, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality, TEnumerable> connection, T1 creationArgs )
-      where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
-      where TStatement : TStatementInformation
-      where TEnumerable : IAsyncEnumerable<TEnumerableItem>
-   {
-      return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
-   }
+   ///// <summary>
+   ///// This is shortcut method to directly prepare statement from its starting parameters without using builder.
+   ///// </summary>
+   ///// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   ///// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   ///// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   ///// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   ///// <typeparam name="TEnumerable">The actual type of <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</typeparam>
+   ///// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
+   ///// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
+   ///// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</param>
+   ///// <param name="creationArgs">The statement builder creation parameters.</param>
+   ///// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
+   ///// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> is <c>null</c>.</exception>
+   //public static TEnumerable PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, TEnumerable, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality, TEnumerable> connection, T1 creationArgs )
+   //   where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
+   //   where TStatement : TStatementInformation
+   //   where TEnumerable : IAsyncEnumerable<TEnumerableItem>
+   //{
+   //   return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
+   //}
 
-   /// <summary>
-   /// This is shortcut method to directly prepare statement from its starting parameters without using builder.
-   /// </summary>
-   /// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
-   /// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
-   /// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
-   /// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
-   /// <typeparam name="TEnumerable">The actual type of <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</typeparam>
-   /// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
-   /// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
-   /// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</param>
-   /// <param name="creationArgs">The statement builder creation parameters.</param>
-   /// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> is <c>null</c>.</exception>
-   public static TEnumerable PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, TEnumerable, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality, TEnumerable> connection, T2 creationArgs )
-      where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
-      where TStatement : TStatementInformation
-      where TEnumerable : IAsyncEnumerable<TEnumerableItem>
-   {
-      return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
-   }
+   ///// <summary>
+   ///// This is shortcut method to directly prepare statement from its starting parameters without using builder.
+   ///// </summary>
+   ///// <typeparam name="TStatement">The type of objects used to manipulate or query remote resource.</typeparam>
+   ///// <typeparam name="TStatementInformation">The type of objects describing <typeparamref name="TStatement"/>s.</typeparam>
+   ///// <typeparam name="TEnumerableItem">The type of object representing the response of manipulation or querying remote resource.</typeparam>
+   ///// <typeparam name="TVendorFunctionality">The type of object describing vendor-specific information.</typeparam>
+   ///// <typeparam name="TEnumerable">The actual type of <see cref="IAsyncEnumerable{T}"/> returned by <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}.PrepareStatementForExecution"/>.</typeparam>
+   ///// <typeparam name="T1">The first possible type of statement creation parameters.</typeparam>
+   ///// <typeparam name="T2">The second possible type of statement creation parameters.</typeparam>
+   ///// <param name="connection">This <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</param>
+   ///// <param name="creationArgs">The statement builder creation parameters.</param>
+   ///// <returns>A new instance of <see cref="AsyncEnumerator{T}"/>, ready to be executed.</returns>
+   ///// <exception cref="NullReferenceException">If this <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> is <c>null</c>.</exception>
+   //public static TEnumerable PrepareStatementForExecution<TStatement, TStatementInformation, TEnumerableItem, TVendorFunctionality, TEnumerable, T1, T2>( this Connection<TStatement, TStatementInformation, EitherOr<T1, T2>, TEnumerableItem, TVendorFunctionality, TEnumerable> connection, T2 creationArgs )
+   //   where TVendorFunctionality : ConnectionVendorFunctionality<TStatement, EitherOr<T1, T2>>
+   //   where TStatement : TStatementInformation
+   //   where TEnumerable : IAsyncEnumerable<TEnumerableItem>
+   //{
+   //   return connection.PrepareStatementForExecution( connection.CreateStatementBuilder( creationArgs ) );
+   //}
 
 
    /// <summary>

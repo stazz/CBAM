@@ -50,14 +50,16 @@ namespace CBAM.SQL.Implementation
       /// <param name="stmt">The <see cref="SQLStatementBuilderInformation"/> to use.</param>
       /// <param name="reservationObject">The <see cref="ReservedForStatement"/> object of this execution.</param>
       /// <returns>The result of <see cref="ExecuteStatementAsBatch(SQLStatementBuilderInformation, ReservedForStatement)"/>, if <paramref name="stmt"/> is a batched statement. Otherwise, if <paramref name="stmt"/> is prepared statement, returns result of <see cref="ExecuteStatementAsPrepared(SQLStatementBuilderInformation, ReservedForStatement)"/>. Otherwise, returns result of <see cref="ExecuteStatementAsSimple(SQLStatementBuilderInformation, ReservedForStatement)"/>.</returns>
-      protected override ValueTask<TStatementExecutionTaskParameter> ExecuteStatement( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject )
+      protected override async ValueTask<(SQLStatementExecutionResult, Boolean, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>)> ExecuteStatement( SQLStatementBuilderInformation stmt, ReservedForStatement reservationObject )
       {
-         return stmt.HasBatchParameters() ?
+         var retVal = await ( stmt.HasBatchParameters() ?
             this.ExecuteStatementAsBatch( stmt, reservationObject ) : (
                stmt.SQLParameterCount > 0 ?
                   this.ExecuteStatementAsPrepared( stmt, reservationObject ) :
                   this.ExecuteStatementAsSimple( stmt, reservationObject )
-            );
+            ) );
+
+         return (retVal.Item1, retVal.Item1 != null, retVal.Item2);
       }
 
       /// <summary>

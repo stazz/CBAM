@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.HTTP.Implementation;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -57,7 +58,7 @@ namespace CBAM.HTTP.Tests
          public Int32 StatusCode { get; }
          public String Message { get; }
 
-         public IDictionary<String, List<String>> Headers { get; }
+         public IReadOnlyDictionary<String, IReadOnlyList<String>> Headers { get; }
 
          public String TextualContent { get; }
 
@@ -88,89 +89,119 @@ namespace CBAM.HTTP.Tests
       ]
       public async Task TestHTTPRequestSending( String host, Int32 port, Boolean isSecure, String path )
       {
-         var httpConnection = NetworkStreamFactory.Instance
-            .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
+         var pool = HTTPNetworkConnectionPoolProvider<Int64>.Factory
+            .BindCreationParameters( new HTTPNetworkCreationInfo( new HTTPNetworkCreationInfoData()
             {
-               Host = host,
-               Port = port,
-               IsSecure = isSecure
-            }.CreateNetworkStreamFactoryConfiguration() )
-            .CreateOneTimeUseResourcePool()
-            .CreateNewHTTPConnection();
-
-         var responses = await httpConnection
-            .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ) )
-            .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response ) );
-
-         Assert.AreEqual( 1, responses.Count );
-         AssertResponses( responses );
-      }
-
-      [
-      DataTestMethod,
-      DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "", 10 ),
-      //Timeout( DEFAULT_TIMEOUT )
-      ]
-      public async Task TestHTTPRequestSendingInParallel( String host, Int32 port, Boolean isSecure, String path, Int32 requestCount )
-      {
-         var httpConnection = NetworkStreamFactory.Instance
-            .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
-            {
-               Host = host,
-               Port = port,
-               IsSecure = isSecure
-            }.CreateNetworkStreamFactoryConfiguration() )
-            .CreateOneTimeUseResourcePool()
-            .CreateNewHTTPConnection();
-
-         var responses = await httpConnection
-            .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ).CreateRepeater( requestCount ) )
-            .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response ) );
-
-         Assert.AreEqual( requestCount, responses.Count );
-         AssertResponses( responses );
-      }
-
-      [DataTestMethod,
-         DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "", 20, 10 )
-         //, Timeout( DEFAULT_TIMEOUT )
-         ]
-      public async Task TestHTTPWithLimitedPool(
-         String host, Int32 port, Boolean isSecure, String path, Int32 requestCount, Int32 poolLimit
-         )
-      {
-         ConcurrentBag<String> responseTexts;
-         Int32 streamsAcquired = 0;
-         using ( var pool = NetworkStreamFactory.Instance
-            .BindCreationParameters(
-               new HTTPConnectionEndPointConfigurationData()
+               Connection = new HTTPConnectionConfiguration()
                {
                   Host = host,
                   Port = port,
-                  IsSecure = isSecure
-               }.CreateNetworkStreamFactoryConfiguration()
-               )
-            .CreateTimeoutingAndLimitedResourcePool( poolLimit )
-            )
+                  ConnectionSSLMode = isSecure ? UtilPack.Configuration.NetworkStream.ConnectionSSLMode.Required : UtilPack.Configuration.NetworkStream.ConnectionSSLMode.NotRequired
+               }
+            } ) ).CreateOneTimeUseResourcePool();
+
+         var response = await pool.UseResourceAsync( async httpConn =>
          {
-            pool.AfterResourceCreationEvent += ( argz ) => Interlocked.Increment( ref streamsAcquired );
-            var httpConnection = pool.CreateNewHTTPConnection();
+            return await httpConn
+               .PrepareStatementForExecution( new HTTPRequestInfo<Int64>( HTTPMessageFactory.CreateGETRequest( path ), 1 ) )
+               .Select( async responseInfo => (responseInfo.RequestMetaData, await HTTPResponseInfo.CreateInfoAsync( responseInfo.Response )) )
+               .FirstAsync();
+         } );
 
-            // Send 20 requests in parallel and process each response
-            responseTexts = await httpConnection
-               .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( requestCount ) )
-               .ToConcurrentBagAsync( async response => Encoding.UTF8.GetString( await response.Content.ReadAllContentAsync() ) );
+         Assert.AreEqual( 1, response.RequestMetaData );
+         AssertResponse( response.Item2 );
 
-         }
 
-         Assert.AreEqual( requestCount, responseTexts.Count );
-         Assert.AreEqual( poolLimit, streamsAcquired );
+         //var httpConnection = NetworkStreamFactory.Instance
+         //   .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
+         //   {
+         //      Host = host,
+         //      Port = port,
+         //      IsSecure = isSecure
+         //   }.CreateNetworkStreamFactoryConfiguration() )
+         //   .CreateOneTimeUseResourcePool()
+         //   .CreateNewHTTPConnection();
 
+         //var responses = await httpConnection
+         //   .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ) )
+         //   .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response ) );
+
+         //Assert.AreEqual( 1, responses.Count );
+         //AssertResponses( responses );
       }
 
-      private static void AssertResponses( ConcurrentBag<HTTPResponseInfo> bag )
+      //[
+      //DataTestMethod,
+      //DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "", 10 ),
+      ////Timeout( DEFAULT_TIMEOUT )
+      //]
+      //public async Task TestHTTPRequestSendingInParallel( String host, Int32 port, Boolean isSecure, String path, Int32 requestCount )
+      //{
+      //   var httpConnection = NetworkStreamFactory.Instance
+      //      .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
+      //      {
+      //         Host = host,
+      //         Port = port,
+      //         IsSecure = isSecure
+      //      }.CreateNetworkStreamFactoryConfiguration() )
+      //      .CreateOneTimeUseResourcePool()
+      //      .CreateNewHTTPConnection();
+
+      //   var responses = await httpConnection
+      //      .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ).CreateRepeater( requestCount ) )
+      //      .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response ) );
+
+      //   Assert.AreEqual( requestCount, responses.Count );
+      //   AssertResponses( responses );
+      //}
+
+      //[DataTestMethod,
+      //   DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "", 20, 10 )
+      //   //, Timeout( DEFAULT_TIMEOUT )
+      //   ]
+      //public async Task TestHTTPWithLimitedPool(
+      //   String host, Int32 port, Boolean isSecure, String path, Int32 requestCount, Int32 poolLimit
+      //   )
+      //{
+      //   ConcurrentBag<String> responseTexts;
+      //   Int32 streamsAcquired = 0;
+      //   using ( var pool = NetworkStreamFactory.Instance
+      //      .BindCreationParameters(
+      //         new HTTPConnectionEndPointConfigurationData()
+      //         {
+      //            Host = host,
+      //            Port = port,
+      //            IsSecure = isSecure
+      //         }.CreateNetworkStreamFactoryConfiguration()
+      //         )
+      //      .CreateTimeoutingAndLimitedResourcePool( poolLimit )
+      //      )
+      //   {
+      //      pool.AfterResourceCreationEvent += ( argz ) => Interlocked.Increment( ref streamsAcquired );
+      //      var httpConnection = pool.CreateNewHTTPConnection();
+
+      //      // Send 20 requests in parallel and process each response
+      //      responseTexts = await httpConnection
+      //         .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( "/" ).CreateRepeater( requestCount ) )
+      //         .ToConcurrentBagAsync( async response => Encoding.UTF8.GetString( await response.Content.ReadAllContentAsync() ) );
+
+      //   }
+
+      //   Assert.AreEqual( requestCount, responseTexts.Count );
+      //   Assert.AreEqual( poolLimit, streamsAcquired );
+
+      //}
+
+      private static void AssertResponses( IEnumerable<HTTPResponseInfo> bag )
       {
-         Assert.IsTrue( bag.All( i => i.TextualContent != null ) );
+         Assert.IsTrue( bag.All( AssertResponse ) );
+      }
+
+      private static Boolean AssertResponse( HTTPResponseInfo info )
+      {
+         Assert.IsNotNull( info.TextualContent );
+
+         return true;
       }
    }
 }

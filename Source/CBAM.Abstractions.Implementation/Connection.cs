@@ -281,11 +281,8 @@ namespace CBAM.Abstractions.Implementation
    }
 
    /// <summary>
-   /// This class exists so that life would be a bit easier when using properties of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> that do not require any generic parameters.
+   /// This interface exists so that life would be a bit easier when using properties of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> that do not require any generic parameters.
    /// </summary>
-   /// <remarks>
-   /// This class can not be instantiated directly, use <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> with generic arguments instead.
-   /// </remarks>
    public interface PooledConnectionFunctionality
    {
       /// <summary>
@@ -389,7 +386,6 @@ namespace CBAM.Abstractions.Implementation
    public abstract class PooledConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, TEnumerable> : DefaultConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, TEnumerable>, PooledConnectionFunctionality //, Connection<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor, TEnumerable>
       where TStatement : TStatementInformation
       where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
-      //where TEnumerable : IAsyncEnumerable<TEnumerableItem>
    {
 
       private Object _cancellationToken;

@@ -19,62 +19,103 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using UtilPack;
 
 namespace CBAM.HTTP.Implementation
 {
-   internal sealed class HTTPStatementInformationImpl : HTTPStatementInformation
+   internal sealed class Reference<T>
    {
-      public HTTPStatementInformationImpl( Func<HTTPRequest> generator )
-      {
-         this.MessageGenerator = ArgumentValidator.ValidateNotNull( nameof( generator ), generator );
-      }
-
-      public Func<HTTPRequest> MessageGenerator { get; }
+      public T Value { get; set; }
    }
 
-   internal sealed class HTTPStatementImpl : HTTPStatement
+   internal sealed class HTTPStatementInformationImpl<TRequestMetaData> : HTTPStatementInformation<TRequestMetaData>
    {
-      private const Int32 INITIAL = 0;
-      private const Int32 RETURNING = 1;
-      private const Int32 DONE = 2;
-      public HTTPStatementImpl()
+      private readonly Reference<Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>>> _nextRequestGenerator;
+      private readonly HTTPRequestInfo<TRequestMetaData> _initialRequest;
+
+      public HTTPStatementInformationImpl(
+         HTTPRequestInfo<TRequestMetaData> initialRequest,
+         Reference<Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>>> generator
+         )
       {
-         var state = INITIAL;
-         this.Information = new HTTPStatementInformationImpl( () =>
-         {
-            var generator = this.MessageGenerator;
-
-            HTTPRequest retVal;
-            if ( generator != null )
-            {
-               retVal = generator();
-            }
-            else if ( Interlocked.CompareExchange( ref state, RETURNING, INITIAL ) == INITIAL )
-            {
-               try
-               {
-                  retVal = this.StaticMessage;
-               }
-               finally
-               {
-                  Interlocked.Exchange( ref state, DONE );
-               }
-            }
-            else
-            {
-               Interlocked.CompareExchange( ref state, DONE, INITIAL );
-               retVal = null;
-            }
-
-            return retVal;
-         } );
+         this._initialRequest = initialRequest;
+         ArgumentValidator.ValidateNotNull( nameof( initialRequest.Request ), initialRequest.Request );
+         this._nextRequestGenerator = ArgumentValidator.ValidateNotNull( nameof( generator ), generator );
       }
 
-      public HTTPRequest StaticMessage { get; set; }
-      public Func<HTTPRequest> MessageGenerator { get; set; }
+      public TRequestMetaData InitialRequestMetaData => this._initialRequest.RequestMetaData;
 
-      public HTTPStatementInformation Information { get; }
+      public HTTPRequest InitialRequest => this._initialRequest.Request;
+
+      //public HTTPRequestInfo<TRequestMetaData> InitialRequest { get; }
+
+      public Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>> NextRequestGenerator => this._nextRequestGenerator.Value;
+   }
+
+   internal sealed class HTTPStatementImpl<TRequestMetaData> : HTTPStatement<TRequestMetaData>
+   {
+      //private const Int32 INITIAL = 0;
+      //private const Int32 RETURNING = 1;
+      //private const Int32 DONE = 2;
+
+      private readonly Reference<Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>>> _nextRequestGenerator;
+
+      public HTTPStatementImpl(
+         HTTPRequestInfo<TRequestMetaData> initialRequest
+         )
+      {
+         //var state = INITIAL;
+         this.InitialRequest = initialRequest;
+         this.Information = new HTTPStatementInformationImpl<TRequestMetaData>(
+            initialRequest,
+            this._nextRequestGenerator = new Reference<Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>>>()
+            );
+
+         //   () =>
+         //{
+         //   var generator = this.MessageGenerator;
+
+         //   HTTPRequest retVal;
+         //   if ( generator != null )
+         //   {
+         //      retVal = generator();
+         //   }
+         //   else if ( Interlocked.CompareExchange( ref state, RETURNING, INITIAL ) == INITIAL )
+         //   {
+         //      try
+         //      {
+         //         retVal = this.StaticMessage;
+         //      }
+         //      finally
+         //      {
+         //         Interlocked.Exchange( ref state, DONE );
+         //      }
+         //   }
+         //   else
+         //   {
+         //      Interlocked.CompareExchange( ref state, DONE, INITIAL );
+         //      retVal = null;
+         //   }
+
+         //   return retVal;
+         //} );
+      }
+
+      public HTTPRequestInfo<TRequestMetaData> InitialRequest { get; }
+
+      public TRequestMetaData InitialRequestMetaData => this.InitialRequest.RequestMetaData;
+
+      public Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>> NextRequestGenerator
+      {
+         get => this._nextRequestGenerator.Value;
+         set => this._nextRequestGenerator.Value = value;
+      }
+
+      //public HTTPRequest StaticMessage { get; set; }
+      //public Func<HTTPRequest> MessageGenerator { get; set; }
+
+      public HTTPStatementInformation<TRequestMetaData> Information { get; }
 
       //Func<HTTPRequest> HTTPStatementInformation.MessageGenerator => this.MessageGenerator;
    }

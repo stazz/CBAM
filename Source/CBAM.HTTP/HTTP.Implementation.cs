@@ -18,48 +18,43 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
+using TRequestHeaderDictionary =
+#if NET40
+   CBAM.HTTP.DictionaryWithReadOnlyAPI<System.String, CBAM.HTTP.ListWithReadOnlyAPI<System.String>>
+#else
+   System.Collections.Generic.Dictionary<System.String, System.Collections.Generic.List<string>>
+#endif
+   ;
+
+
 namespace CBAM.HTTP
 {
-   internal abstract class HTTPMessageImpl<TContent> : HTTPMessage<TContent>
-      where TContent : HTTPMessageContent
-   {
-      protected HTTPMessageImpl(
-         IDictionary<String, List<String>> headers
-         )
-      {
-         this.Headers = headers ?? HTTPMessageFactory.CreateHeadersDictionary();
-      }
-
-      public IDictionary<String, List<String>> Headers { get; }
-
-      public abstract String Version { get; }
-      public abstract TContent Content { get; }
-   }
-
-   internal sealed class HTTPRequestImpl : HTTPMessageImpl<HTTPRequestContent>, HTTPRequest
+   internal sealed class HTTPRequestImpl : HTTPRequest
    {
       public HTTPRequestImpl()
-         : base( null )
       {
-
+         this.Headers = new TRequestHeaderDictionary();
       }
+
+      public TRequestHeaderDictionary Headers { get; }
+
       public String Method { get; set; }
       public String Path { get; set; }
 
-      public override String Version => ( (HTTPRequest) this ).Version;
+      public String Version { get; set; }
 
-      public override HTTPRequestContent Content => ( (HTTPRequest) this ).Content;
+      public HTTPRequestContent Content { get; set; }
 
-      String HTTPRequest.Version { get; set; }
-      HTTPRequestContent HTTPRequest.Content { get; set; }
+
    }
 
-   internal sealed class HTTPResponseImpl : HTTPMessageImpl<HTTPResponseContent>, HTTPResponse
+   internal sealed class HTTPResponseImpl : HTTPResponse
    {
       public HTTPResponseImpl(
          Int32 statusCode,
@@ -67,20 +62,34 @@ namespace CBAM.HTTP
          String version,
          IDictionary<String, List<String>> headers,
          HTTPResponseContent content
-         ) : base( headers )
+         )
       {
+         this.Headers = new System.Collections.ObjectModel.ReadOnlyDictionary<String, IReadOnlyList<String>>( headers.ToDictionary<KeyValuePair<String, List<String>>, String, IReadOnlyList<String>>(
+            kvp => kvp.Key,
+            kvp =>
+#if NET40
+            new ListWithReadOnlyAPI<String>
+#else
+            new System.Collections.ObjectModel.ReadOnlyCollection<String>
+#endif
+            ( kvp.Value )
+            ) );
          this.StatusCode = statusCode;
          this.StatusCodeMessage = statusCodeMessage;
          this.Version = ArgumentValidator.ValidateNotEmpty( nameof( version ), version );
          this.Content = ArgumentValidator.ValidateNotNull( nameof( content ), content );
       }
 
+      public IReadOnlyDictionary<String, IReadOnlyList<String>> Headers { get; }
+
       public Int32 StatusCode { get; }
       public String StatusCodeMessage { get; }
 
-      public override String Version { get; }
+      public String Version { get; }
 
-      public override HTTPResponseContent Content { get; }
+      public HTTPResponseContent Content { get; }
+
+
    }
 
    internal sealed class HTTPRequestContentFromString : HTTPRequestContent
@@ -115,30 +124,26 @@ namespace CBAM.HTTP
 
       private readonly Stream _stream;
       private readonly Byte[] _preReadData;
-      private Int32 _bufferOffset;
-      private Int32 _bufferTotal;
+      private readonly BufferAdvanceState _bufferAdvanceState;
+      private readonly CancellationToken _token;
       private Int64 _bytesRemaining;
       private Int32 _state;
-      private readonly Func<ValueTask<Boolean>> _onEnd;
-      private Int32 _onEndCalled;
 
 
       public HTTPResponseContentFromStream(
          Stream stream,
          Byte[] buffer,
-         Int32 bufferOffset,
-         Int32 bufferTotal,
+         BufferAdvanceState bufferAdvanceState,
          Int64? byteCount,
-         Func<ValueTask<Boolean>> onEnd
+         CancellationToken token
          )
       {
          this._stream = ArgumentValidator.ValidateNotNull( nameof( stream ), stream );
          this._preReadData = ArgumentValidator.ValidateNotNull( nameof( buffer ), buffer );
-         this._bufferOffset = bufferOffset;
-         this._bufferTotal = bufferTotal;
+         this._bufferAdvanceState = ArgumentValidator.ValidateNotNull( nameof( BufferAdvanceState ), bufferAdvanceState );
          this.ByteCount = byteCount;
          this._bytesRemaining = byteCount ?? -1;
-         this._onEnd = onEnd;
+         this._token = token;
       }
 
       public Boolean ContentEndIsKnown => this.ByteCount.HasValue;
@@ -150,14 +155,13 @@ namespace CBAM.HTTP
       public async ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count )
       {
          array.CheckArrayArguments( offset, count, true );
+         Int32 bytesRead;
          if ( Interlocked.CompareExchange( ref this._state, READING, INITIAL ) == INITIAL )
          {
             // TODO support for multi-part form stuff
             try
             {
                var remaining = this._bytesRemaining;
-
-               Int32 bytesRead;
 
                if ( remaining == 0 )
                {
@@ -170,43 +174,36 @@ namespace CBAM.HTTP
                      count = (Int32) Math.Min( count, remaining );
                   }
 
-                  var bufferRemaining = this._bufferTotal - this._bufferOffset;
+                  var aState = this._bufferAdvanceState;
+                  var bufferRemaining = aState.BufferTotal - aState.BufferOffset;
                   bytesRead = 0;
                   if ( bufferRemaining > 0 )
                   {
                      // We have some data in buffer
                      var bufferReadCount = Math.Min( bufferRemaining, count );
-                     this._preReadData.CopyTo( array, ref this._bufferOffset, offset, bufferReadCount );
+                     Array.Copy( this._preReadData, aState.BufferOffset, array, offset, bufferReadCount );
+                     aState.Advance( bufferReadCount );
                      if ( remaining > 0 )
                      {
                         this._bytesRemaining -= bufferReadCount;
                      }
-                     this._bufferTotal -= bufferReadCount;
                      count -= bufferReadCount;
                      offset += bufferReadCount;
                      bytesRead = bufferReadCount;
+
                   }
 
                   if ( count > 0 )
                   {
-                     var streamRead = await this._stream.ReadAsync( array, offset, count, default );
+                     var streamRead = await this._stream.ReadAsync( array, offset, count, this._token );
                      bytesRead += streamRead;
                      if ( remaining > 0 )
                      {
                         this._bytesRemaining -= streamRead;
                      }
                   }
+
                }
-
-
-               // No need to use CEX since we are inside CEX-mutex
-               if ( ( bytesRead <= 0 || this._bytesRemaining == 0 ) && this._onEndCalled == 0 )
-               {
-                  Interlocked.Exchange( ref this._onEndCalled, 1 );
-                  await CallOnEnd( this._onEnd );
-               }
-
-               return bytesRead;
             }
             finally
             {
@@ -217,18 +214,8 @@ namespace CBAM.HTTP
          {
             throw new InvalidOperationException( "Concurrent access" );
          }
-      }
 
-      public static async Task CallOnEnd( Func<ValueTask<Boolean>> onEnd )
-      {
-         try
-         {
-            await ( onEnd?.Invoke() ?? default );
-         }
-         catch
-         {
-            // Ignore
-         }
+         return bytesRead;
       }
    }
 
@@ -241,33 +228,31 @@ namespace CBAM.HTTP
       private const Int32 READING = 1;
 
       private readonly Stream _stream;
-      private readonly ResizableArray<Byte> _headerBuffer;
+      private readonly ResizableArray<Byte> _buffer;
+      private readonly BufferAdvanceState _advanceState;
       private readonly Int32 _streamReadCount;
-      private readonly Func<ValueTask<Boolean>> _onEnd;
+      private readonly CancellationToken _token;
+
 
       private Int32 _state;
       private Int32 _chunkRemaining;
-      private Int32 _bufferOffset;
-      private Int32 _bufferTotal;
 
       public HTTPResponseContentFromStream_Chunked(
          Stream stream,
          ResizableArray<Byte> buffer,
-         Int32 firstChunkLength,
-         Int32 bufferOffset,
-         Int32 bufferTotal,
+         BufferAdvanceState advanceState,
+         Int32 firstChunkCount,
          Int32 streamReadCount,
-         Func<ValueTask<Boolean>> onEnd
+         CancellationToken token
          )
       {
          this._state = INITIAL;
          this._stream = ArgumentValidator.ValidateNotNull( nameof( stream ), stream );
-         this._headerBuffer = ArgumentValidator.ValidateNotNull( nameof( buffer ), buffer );
-         this._chunkRemaining = firstChunkLength == 0 ? -1 : firstChunkLength;
-         this._onEnd = onEnd;
-         this._bufferOffset = bufferOffset;
-         this._bufferTotal = bufferTotal;
+         this._buffer = ArgumentValidator.ValidateNotNull( nameof( buffer ), buffer );
+         this._advanceState = ArgumentValidator.ValidateNotNull( nameof( advanceState ), advanceState );
+         this._token = token;
          this._streamReadCount = streamReadCount;
+         this._chunkRemaining = Math.Max( 0, firstChunkCount );
       }
 
 
@@ -292,39 +277,22 @@ namespace CBAM.HTTP
                }
                else
                {
-                  // Only read maximally the remaining amount of current chunk
+                  // Our whole chunk data has already been read to buffer.
                   retVal = Math.Min( this._chunkRemaining, count );
-                  var bufferRemaining = this._bufferTotal - this._bufferOffset;
-                  if ( bufferRemaining > 0 )
-                  {
-                     // We have some data in buffer
-                     var bufferReadCount = Math.Min( bufferRemaining, count );
-                     this._headerBuffer.Array.CopyTo( array, ref this._bufferOffset, offset, bufferReadCount );
-                     offset += bufferReadCount;
-                     count -= bufferReadCount;
-                  }
-
-                  if ( count > 0 )
-                  {
-                     await this._stream.ReadSpecificAmountAsync( array, offset, count, default );
-                  }
+                  Array.Copy( this._buffer.Array, this._advanceState.BufferOffset, array, offset, retVal );
+                  this._advanceState.Advance( retVal );
                   this._chunkRemaining -= retVal;
-                  if ( this._chunkRemaining <= 0 )
+
+                  if ( this._chunkRemaining == 0 )
                   {
-                     // Read next chunk header
-                     (this._chunkRemaining, this._bufferOffset, this._bufferTotal) = await ReadChunkHeader(
-                        this._stream,
-                        this._headerBuffer,
-                        0,
-                        EraseReadData( this._headerBuffer.Array, this._bufferOffset - 2, this._bufferTotal ), // 
-                        this._streamReadCount,
-                        false
-                        );
-                     if ( this._chunkRemaining == 0 )
+                     // We must read next chunk
+                     EraseReadData( this._advanceState, this._buffer );
+                     if ( ( this._chunkRemaining = await ReadNextChunk( this._stream, this._buffer, this._advanceState, this._streamReadCount, this._token ) ) < 0 )
                      {
-                        this._chunkRemaining = -1;
-                        await HTTPResponseContentFromStream.CallOnEnd( this._onEnd );
+                        // Clear data
+                        EraseReadData( this._advanceState, this._buffer );
                      }
+
                   }
                }
             }
@@ -341,60 +309,72 @@ namespace CBAM.HTTP
          return retVal;
       }
 
-      public static Int32 EraseReadData(
-         Byte[] array,
-         Int32 bufferOffset,
-         Int32 bufferTotal
+
+      public static void EraseReadData(
+         BufferAdvanceState aState,
+         ResizableArray<Byte> buffer
          )
       {
+         var end = aState.BufferOffset;
+         var preReadLength = aState.BufferTotal;
          // Messages end with CRLF
-         bufferOffset += 2;
-         var remainingData = bufferTotal - bufferOffset;
+         end += 2;
+         var remainingData = preReadLength - end;
          if ( remainingData > 0 )
          {
-            Array.Copy( array, bufferOffset, array, 0, remainingData );
+            var array = buffer.Array;
+            Array.Copy( array, end, array, 0, remainingData );
          }
-         return remainingData;
+         aState.Reset();
+         aState.ReadMore( remainingData );
       }
 
-      public static async Task<(Int32, Int32, Int32)> ReadChunkHeader(
+      // When this method is done, the buffer will have header + chunk (including terminating CRLF) in its contents
+      // It assumes that chunk headers starts at advanceState.BufferOffset
+      // Returns the chunk length (>0) or -1 if last chunk. Will be -1 if last chunk. The advanceState.BufferOffset will always be set after first LF.
+      public static async Task<Int32> ReadNextChunk(
          Stream stream,
-         ResizableArray<Byte> headerBuffer,
-         Int32 alreadyRead,
-         Int32 totalExisting,
+         ResizableArray<Byte> buffer,
+         BufferAdvanceState advanceState,
          Int32 streamReadCount,
-         Boolean isFirst
+         CancellationToken token
          )
       {
-         (var end, var preReadLength) = await stream.ReadUntilMaybeAsync( headerBuffer, alreadyRead, totalExisting, CRLF, streamReadCount );
-         if ( !isFirst )
-         {
-            alreadyRead = end + 2;
-            (end, preReadLength) = await stream.ReadUntilMaybeAsync( headerBuffer, end + 2, preReadLength, CRLF, streamReadCount );
-         }
-         var array = headerBuffer.Array;
+         var start = advanceState.BufferOffset;
+         await stream.ReadUntilMaybeAsync( buffer, advanceState, CRLF, streamReadCount );
+         var array = buffer.Array;
          const Int32 LAST_CHUNK_SIZE = 3;
-         var isLastChunk = ArrayEqualityComparer<Byte>.RangeEquality( TerminatingChunk, 0, LAST_CHUNK_SIZE, array, alreadyRead, end - alreadyRead );
-         var chunkLength = 0;
+         var isLastChunk = ArrayEqualityComparer<Byte>.RangeEquality( TerminatingChunk, 0, LAST_CHUNK_SIZE, array, start, advanceState.BufferOffset - start );
+         advanceState.Advance( 2 );
+         Int32 retVal;
          if ( isLastChunk )
          {
             // TODO trailers!
-            (end, preReadLength) = await stream.ReadUntilMaybeAsync( headerBuffer, end + 2, preReadLength, CRLF, streamReadCount );
+            await stream.ReadUntilMaybeAsync( buffer, advanceState, CRLF, streamReadCount );
+            retVal = -1;
          }
          else
          {
-            var idx = alreadyRead;
+            var idx = start;
+            retVal = 0;
             Int32 curHex;
             while ( ( curHex = ExtractASCIIHexValue( array, idx ) ) >= 0 )
             {
-               chunkLength = 0x10 * chunkLength + curHex;
+               retVal = 0x10 * retVal + curHex;
                ++idx;
             }
             // TODO extensions!
-
+            // Now read content.
+            streamReadCount = retVal + 2 - ( advanceState.BufferTotal - advanceState.BufferOffset );
+            if ( streamReadCount > 0 )
+            {
+               await stream.ReadSpecificAmountAsync( buffer, advanceState.BufferTotal, streamReadCount, token );
+               advanceState.ReadMore( streamReadCount );
+            }
          }
 
-         return (chunkLength, end + 2, preReadLength);
+         return retVal;
+
       }
 
       private static Int32 ExtractASCIIHexValue( Byte[] array, Int32 idx )

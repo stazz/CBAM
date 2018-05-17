@@ -36,11 +36,12 @@ namespace CBAM.NATS.Implementation
    {
 
       public const Byte CR = 0x0D;
+      public const Byte LF = 0x0A;
       public const Byte SPACE = 0x20;
       public const Byte TAB = 0x09;
-      public static readonly Byte[] CRLF = new Byte[] { CR, 0x0A };
+      public static readonly Byte[] CRLF = new Byte[] { CR, LF };
       public static readonly Byte[] LF_ARRAY = new Byte[] { CRLF[1] };
-      public static readonly Byte[] PONG = new Byte[] { 0x50, 0x4F, 0x4E, 0x47, 0x0D, 0x0A };
+      public static readonly Byte[] PONG = new Byte[] { 0x50, 0x4F, 0x4E, 0x47, 0x0D, LF };
 
       public static readonly Byte[] SUB_PREFIX = new Byte[] { 0x53, 0x55, 0x42, SPACE };
       public static readonly Byte[] PUB_PREFIX = new Byte[] { 0x50, 0x55, 0x42, SPACE };
@@ -210,11 +211,11 @@ namespace CBAM.NATS.Implementation
          public ReadState(
             ) : base()
          {
-            this.PreReadLength = 0;
             this.MessageSpaceIndices = new Int32[3];
+            this.BufferAdvanceState = new BufferAdvanceState();
          }
 
-         public Int32 PreReadLength { get; set; }
+         public BufferAdvanceState BufferAdvanceState { get; }
 
          public Int32[] MessageSpaceIndices { get; }
       }
@@ -578,7 +579,7 @@ namespace CBAM.NATS.Implementation
       private async Task PerformRead()
       {
          var states = this._subscriptionStates;
-         const Int32 MIN_MESSAGE_SIZE = 5;
+         //const Int32 MIN_MESSAGE_SIZE = 5;
 
          var state = this._state;
          var rState = state.ReadState;
@@ -587,31 +588,26 @@ namespace CBAM.NATS.Implementation
          var encodingInfo = state.Encoding;
          var stringPool = state.StringPool;
 
-         var preReadLength = rState.PreReadLength;
+         var advanceState = rState.BufferAdvanceState;
 
-         if ( preReadLength < MIN_MESSAGE_SIZE )
+         await stream.ReadUntilMaybeAsync( buffer, advanceState, ClientProtocolConsts.CRLF, ClientProtocolConsts.READ_COUNT );
+         var crIdx = advanceState.BufferOffset;
+         while ( crIdx >= 0 )
          {
-            preReadLength += await stream.ReadAtLeastAsync( rState.Buffer.SetCapacityAndReturnArray( ClientProtocolConsts.READ_COUNT * 2 ), preReadLength, MIN_MESSAGE_SIZE - preReadLength, ClientProtocolConsts.READ_COUNT );
-         }
-
-         while ( preReadLength > 0 )
-         {
-
             var array = buffer.Array;
             // First byte will be integer's uppermost byte, second byte second uppermost, etc
             var idx = 0;
             var msgHeader = array.ReadInt32BEFromBytes( ref idx );
             var additionalByte = array[idx++];
-            Int32 end;
+            // At the end of the following switch statement, advanceState.BufferOffset should point to the CR byte of the last CRLF of this message
             // Examine first byte
-            // x & 0x5F is in ASCII's letters (a-z) case same as making uppercase
+            // x & 0x5F is to make ASCII lowercase letters (a-z) into uppercase letters (A-Z)
             switch ( msgHeader & 0xFF000000 )
             {
                case 0x2B000000: // 2B = '+'
-                  if ( ( msgHeader & 0x005F5FFF ) == 0x004F4B0D && additionalByte == 0x0A ) // OK\r\n
+                  if ( ( msgHeader & 0x005F5FFF ) == 0x004F4B0D && additionalByte == 0x0A ) // +OK\r\n
                   {
-                     // +OK\r\n -message -> ignore
-                     end = 3;
+                     // OK -message -> ignore
                   }
                   else
                   {
@@ -622,9 +618,8 @@ namespace CBAM.NATS.Implementation
                   if ( ( msgHeader & 0x005F5F5F ) == 0x00455252 && ( additionalByte == ClientProtocolConsts.SPACE || additionalByte == ClientProtocolConsts.TAB ) )
                   {
                      // -ERR<space/tab> -message, read textual error message
-                     (end, preReadLength) = await stream.ReadUntilMaybeAsync( buffer, idx, preReadLength, ClientProtocolConsts.CRLF, ClientProtocolConsts.READ_COUNT );
                      // TODO close connection on errors that are fatal
-                     throw new Exception( "Protocol error: " + stringPool.GetString( buffer.Array, idx, end - idx ) );
+                     throw new Exception( "Protocol error: " + stringPool.GetString( buffer.Array, idx, advanceState.BufferOffset - idx ) );
                   }
                   else
                   {
@@ -636,14 +631,14 @@ namespace CBAM.NATS.Implementation
                      additionalByte = (Byte) ( msgHeader & 0x000000FF );
                      if ( additionalByte == ClientProtocolConsts.SPACE || additionalByte == ClientProtocolConsts.TAB )
                      {
-                        // Read the rest of the header (technically start should be 'idx - 1', but in this case it does not matter)
-                        (end, preReadLength) = await stream.ReadUntilMaybeAsync( buffer, idx, preReadLength, ClientProtocolConsts.CRLF, ClientProtocolConsts.READ_COUNT );
+                        // Read the rest of the header
                         array = buffer.Array;
 
                         // Count spaces/tabs (TODO make this treat multiple consecutive spaces as one)
                         var spacesSeen = 0;
                         var spaceIndices = rState.MessageSpaceIndices;
                         Array.Clear( spaceIndices, 0, spaceIndices.Length );
+                        var end = advanceState.BufferOffset;
                         for ( var i = idx; i < end; ++i )
                         {
                            if ( array[i] == ClientProtocolConsts.SPACE || array[i] == ClientProtocolConsts.TAB )
@@ -664,7 +659,6 @@ namespace CBAM.NATS.Implementation
                         // MSG <subject> <sid> [reply-to] <#bytes>\r\n[payload]\r\n
                         var subjStart = idx - 1;
                         var subjLen = spaceIndices[0] - subjStart;
-                        //var subject = stringPool.GetString( array, idx - 1, spaceIndices[0] - idx + 1 );
                         idx = spaceIndices[0] + 1;
                         var subID = encodingInfo.ParseInt64Textual( array, ref idx, (spaceIndices[1] - spaceIndices[0] - 1, true) );
                         var replyTo = spacesSeen > 2 ?
@@ -676,11 +670,11 @@ namespace CBAM.NATS.Implementation
                         {
                            throw new Exception( "Protocol error" );
                         }
-                        var readFromStreamCount = end + 2 + payloadSize + 2 - preReadLength;
+                        var readFromStreamCount = end + 2 + payloadSize + 2 - advanceState.BufferTotal;
                         if ( readFromStreamCount > 0 )
                         {
-                           await stream.ReadSpecificAmountAsync( buffer, preReadLength, readFromStreamCount, default );
-                           preReadLength += readFromStreamCount;
+                           await stream.ReadSpecificAmountAsync( buffer, advanceState.BufferTotal, readFromStreamCount, default );
+                           advanceState.ReadMore( readFromStreamCount );
                         }
                         if ( states.TryGetValue( subID, out var subState ) )
                         {
@@ -702,29 +696,6 @@ namespace CBAM.NATS.Implementation
                            }
 
 
-
-                           //else if ( subState.IsGlobal )
-                           //{
-                           //   // Rent data from pool, copy from messageData into rented data.
-                           //   messageData = buffer.Array.CreateArrayCopy( end + 2, payloadSize );
-                           //}
-                           //else
-                           //{
-                           //   messageData = subState.DataBuffer.SetCapacityAndReturnArray( payloadSize );
-                           //   Array.Copy( buffer.Array, end + 2, messageData, 0, payloadSize );
-                           //}
-
-                           //if ( subState.CachedMessage != null && replyTo == null )
-                           //{
-                           //   readMessage = subState.CachedMessage;
-                           //   readMessage.SetData( messageData, payloadSize );
-                           //}
-                           //else
-                           //{
-                           //   readMessage = new NATSMessageImpl( stringPool.GetString( array, subjStart, subjLen ), subID, replyTo, messageData, payloadSize );
-                           //}
-
-
                            if ( subState.IsGlobal )
                            {
                               this.GlobalSubscriptionMessageReceived?.Invoke( new GlobalSubscriptionEventArgs( readMessage ) );
@@ -735,8 +706,7 @@ namespace CBAM.NATS.Implementation
                            }
                         }
 
-
-                        end += payloadSize + 2;
+                        advanceState.Advance( payloadSize + 2 );
                      }
                      else
                      {
@@ -745,24 +715,16 @@ namespace CBAM.NATS.Implementation
                   }
                   else
                   {
+                     var additionalByte2 = array[idx++];
                      switch ( msgHeader & ClientProtocolConsts.UPPERCASE_MASK_FULL )
                      {
                         case 0x50494E47: // PING
-                           if ( additionalByte == ClientProtocolConsts.CR )
+                           if ( additionalByte == ClientProtocolConsts.CR && additionalByte2 == ClientProtocolConsts.LF )
                            {
-                              (end, preReadLength) = await stream.ReadUntilMaybeAsync( buffer, idx, preReadLength, ClientProtocolConsts.LF_ARRAY, ClientProtocolConsts.READ_COUNT );
-                              if ( end == idx )
-                              {
-                                 --end;
-                                 // Send back PONG ( we purposefully don't 'await' for this task)
+                              // Send back PONG ( we purposefully don't 'await' for this task)
 #pragma warning disable 4014
-                                 this.WritePong();
+                              this.WritePong();
 #pragma warning restore 4014
-                              }
-                              else
-                              {
-                                 throw new Exception( "Protocol error" );
-                              }
                            }
                            else
                            {
@@ -771,13 +733,8 @@ namespace CBAM.NATS.Implementation
                            break;
                         case 0x504F4E47: // PONG
                                          // Currently, unused, since client never sends pings.
-                           if ( additionalByte == ClientProtocolConsts.CR )
+                           if ( additionalByte == ClientProtocolConsts.CR && additionalByte2 == ClientProtocolConsts.LF )
                            {
-                              (end, preReadLength) = await stream.ReadUntilMaybeAsync( buffer, idx, preReadLength, ClientProtocolConsts.LF_ARRAY, ClientProtocolConsts.READ_COUNT );
-                              if ( end != idx + 1 )
-                              {
-                                 throw new Exception( "Protocol error" );
-                              }
                            }
                            else
                            {
@@ -787,8 +744,7 @@ namespace CBAM.NATS.Implementation
                         case ClientProtocolConsts.INFO_INT: // INFO
                            if ( additionalByte == ClientProtocolConsts.SPACE || additionalByte == ClientProtocolConsts.TAB )
                            {
-                              (end, preReadLength) = await stream.ReadUntilMaybeAsync( buffer, idx, preReadLength, ClientProtocolConsts.CRLF, ClientProtocolConsts.READ_COUNT );
-                              var info = DeserializeInfoMessage( buffer.Array, idx, end - idx, encodingInfo.Encoding );
+                              var info = DeserializeInfoMessage( buffer.Array, idx, advanceState.BufferOffset - idx, encodingInfo.Encoding );
                               // TODO implement dynamic handling of INFO message
                            }
                            else
@@ -805,12 +761,17 @@ namespace CBAM.NATS.Implementation
 
             // Remember to shift remaining data to the beginning of byte array
             // TODO optimize: we don't need to do this on every loop.
-            preReadLength = SetPreReadLength( rState, end, preReadLength );
+            SetPreReadLength( rState );
+            crIdx = array.IndexOfArray( 0, advanceState.BufferTotal, ClientProtocolConsts.CRLF );
+            advanceState.Advance( crIdx < 0 ? advanceState.BufferTotal : crIdx );
          }
       }
 
-      internal static Int32 SetPreReadLength( ReadState rState, Int32 end, Int32 preReadLength )
+      internal static void SetPreReadLength( ReadState rState )
       {
+         var aState = rState.BufferAdvanceState;
+         var end = aState.BufferOffset;
+         var preReadLength = aState.BufferTotal;
          // Messages end with CRLF
          end += 2;
          var remainingData = preReadLength - end;
@@ -819,8 +780,9 @@ namespace CBAM.NATS.Implementation
             var array = rState.Buffer.Array;
             Array.Copy( array, end, array, 0, remainingData );
          }
-         rState.PreReadLength = remainingData;
-         return remainingData;
+         aState.Reset();
+         aState.ReadMore( remainingData );
+
       }
 
       internal static ServerInformation DeserializeInfoMessage( Byte[] array, Int32 offset, Int32 count, Encoding encoding )

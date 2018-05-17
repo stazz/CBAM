@@ -384,6 +384,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
             inner => new PgSQLException( "Unable to start SSL client.", inner )
             );
+         this._networkStreamConfig.TransformStreamAfterCreation = stream => new DuplexBufferedAsyncStream( stream );
 #endif
 #endif
       }

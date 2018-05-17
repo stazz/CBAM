@@ -46,7 +46,7 @@ namespace CBAM.SQL.PostgreSQL
    /// See <see href="https://github.com/CometaSolutions/CBAM/tree/develop/Source/CBAM.SQL.PostgreSQL.Implementation"/> for small example on typical usecase of this class.
    /// </remarks>
    /// <seealso cref="PgSQLConnectionCreationInfo"/>
-   public class PgSQLConnectionCreationInfoData : NetworkConnectionCreationInfoData<PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
+   public class PgSQLConnectionCreationInfoData : NetworkConnectionCreationInfoData<PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLPoolingConfiguration, PgSQLAuthenticationConfiguration>
    {
 
 
@@ -62,7 +62,7 @@ namespace CBAM.SQL.PostgreSQL
    /// <summary>
    /// This class contains all passive configuration data related to initialization routine of new <see cref="PgSQLConnection"/> once the <see cref="Stream"/> used to communicate with backend has been initialized.
    /// </summary>
-   public class PgSQLInitializationConfiguration : NetworkInitializationConfiguration<PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
+   public class PgSQLInitializationConfiguration : NetworkInitializationConfiguration<PgSQLProtocolConfiguration, PgSQLPoolingConfiguration, PgSQLAuthenticationConfiguration>
    {
       /// <summary>
       /// Gets or sets the type containing passive configuration data about the database to connect to.
@@ -175,7 +175,7 @@ namespace CBAM.SQL.PostgreSQL
    /// <summary>
    /// This class binds together the passive configuration data of the <see cref="PgSQLConnectionCreationInfoData"/> and behaviour (callbacks) needed when creating and initializing <see cref="PgSQLConnection"/>s.
    /// </summary>
-   public sealed class PgSQLConnectionCreationInfo : NetworkConnectionCreationInfo<PgSQLConnectionCreationInfoData, PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLAuthenticationConfiguration, PgSQLPoolingConfiguration>
+   public sealed class PgSQLConnectionCreationInfo : NetworkConnectionCreationInfo<PgSQLConnectionCreationInfoData, PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLPoolingConfiguration, PgSQLAuthenticationConfiguration>
    {
       private const String SCRAM_SHA_256 = "SCRAM-SHA-256";
       private const String SCRAM_SHA_512 = "SCRAM-SHA-512";
