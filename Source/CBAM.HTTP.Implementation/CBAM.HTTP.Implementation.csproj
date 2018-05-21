@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.HTTP\CBAM.HTTP.csproj" />
   </ItemGroup>

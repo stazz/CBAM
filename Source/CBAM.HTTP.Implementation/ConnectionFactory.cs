@@ -1,4 +1,21 @@
-﻿using CBAM.Abstractions.Implementation;
+﻿/*
+ * Copyright 2018 Stanislav Muhametsin. All rights Reserved.
+ *
+ * Licensed  under the  Apache License,  Version 2.0  (the "License");
+ * you may not use  this file  except in  compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed  under the  License is distributed on an "AS IS" BASIS,
+ * WITHOUT  WARRANTIES OR CONDITIONS  OF ANY KIND, either  express  or
+ * implied.
+ *
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ */
+using CBAM.Abstractions.Implementation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +26,8 @@ using System.Threading.Tasks;
 using UtilPack;
 using UtilPack.ResourcePooling;
 using UtilPack.ResourcePooling.NetworkStream;
+using CBAM.Abstractions.Implementation.NetworkStream;
+using UtilPack.Configuration.NetworkStream;
 
 namespace CBAM.HTTP.Implementation
 {
@@ -69,142 +88,41 @@ namespace CBAM.HTTP.Implementation
 
    internal sealed class HTTPConnectionFactoryFactory<TRequestMetaData> : AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> //, AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPSimpleCreationInfo>
    {
-      public AsyncResourceFactory<HTTPConnection<TRequestMetaData>> BindCreationParameters( HTTPNetworkCreationInfo parameters )
+      public AsyncResourceFactory<HTTPConnection<TRequestMetaData>> BindCreationParameters( HTTPNetworkCreationInfo creationInfo )
       {
-         return new HTTPConnectionFactory<TRequestMetaData>( parameters );
-      }
-   }
-
-   internal sealed class HTTPConnectionFactory<TRequestMetaData> : ConnectionFactorySU<HTTPConnection<TRequestMetaData>, HTTPConnectionImpl<TRequestMetaData>, HTTPNetworkCreationInfo, HTTPConnectionFunctionalityImpl<TRequestMetaData>>
-   {
-      private readonly BinaryStringPool _stringPool;
-
-#if !NETSTANDARD1_0
-      private readonly ReadOnlyResettableAsyncLazy<IPAddress> _remoteAddress;
-      private readonly NetworkStreamFactoryConfiguration _networkStreamConfig;
-#endif
-
-      public HTTPConnectionFactory(
-         HTTPNetworkCreationInfo creationInfo
-         ) : base( creationInfo )
-      {
-         //this.Encoding = ArgumentValidator.ValidateNotNull( nameof( encoding ), encoding );
-         ArgumentValidator.ValidateNotNull( nameof( creationInfo ), creationInfo );
-         var encoding = Encoding.ASCII;
-
-#if NETSTANDARD1_0
-         if ( !( creationInfo.CreationData?.Initialization?.ConnectionPool?.ConnectionsOwnStringPool ?? default ) )
-         {
-            this._stringPool = BinaryStringPoolFactory.NewConcurrentBinaryStringPool( encoding );
-         }
-#else
-#if !NETSTANDARD1_0
-         (this._networkStreamConfig, this._remoteAddress, this._stringPool) = creationInfo.CreateNetworkStreamFactoryConfiguration(
-            //( socket, stream, token ) => this.CreateNetworkStreamInitState( token, stream ),
-            encoding,
-            () => TaskUtils.True,
-            null,
-            null,
-            null,
-            null,
-            null
-            );
-         this._networkStreamConfig.TransformStreamAfterCreation = stream => new DuplexBufferedAsyncStream( stream );
-#endif
-#endif
-      }
-
-      public override void ResetFactoryState()
-      {
-         this._stringPool.ClearPool();
-#if !NETSTANDARD1_0
-         this._remoteAddress.Reset();
-#endif
-      }
-
-      protected override ValueTask<HTTPConnectionImpl<TRequestMetaData>> CreateConnection( HTTPConnectionFunctionalityImpl<TRequestMetaData> functionality )
-      {
-         return new ValueTask<HTTPConnectionImpl<TRequestMetaData>>( new HTTPConnectionImpl<TRequestMetaData>( functionality ) );
-      }
-
-      protected override AsyncResourceAcquireInfo<HTTPConnectionImpl<TRequestMetaData>> CreateConnectionAcquireInfo(
-         HTTPConnectionFunctionalityImpl<TRequestMetaData> functionality,
-         HTTPConnectionImpl<TRequestMetaData> connection
-         )
-      {
-         return new HTTPConnectionAcquireInfo<TRequestMetaData>( connection, functionality );
-      }
-
-      protected override async ValueTask<HTTPConnectionFunctionalityImpl<TRequestMetaData>> CreateConnectionFunctionality( CancellationToken token )
-      {
-
-         var parameters = this.CreationParameters;
-         var streamFactory = parameters.StreamFactory;
-
-#if !NETSTANDARD1_0
-         System.Net.Sockets.Socket socket;
-#endif
-         Stream stream;
-         //TNetworkStreamInitState state;
-         if ( streamFactory == null )
-         {
-#if NETSTANDARD1_0
-            throw new ArgumentNullException( nameof( streamFactory ) );
-#else
-            (socket, stream) = await NetworkStreamFactory.AcquireNetworkStreamFromConfiguration(
-                  this._networkStreamConfig,
-                  token );
-#endif
-         }
-         else
-         {
-            (
-#if !NETSTANDARD1_0
-               socket,
-#endif
-               stream) = (
-#if !NETSTANDARD1_0
-               null,
-#endif
-               await streamFactory());
-         }
-
-         // TODO send http request to determine http 2.0 capability, and use 2.0 if possible.
-         // TODO set max size for buffers
-         return new HTTPConnectionFunctionalityImpl<TRequestMetaData>(
-            HTTPConnectionVendorImpl<TRequestMetaData>.Instance,
-            new ClientProtocolIOState(
-               stream,
-               this._stringPool,
+         return creationInfo
+            .NewFactoryParametrizer<HTTPNetworkCreationInfo, HTTPNetworkCreationInfoData, HTTPConnectionConfiguration, HTTPInitializationConfiguration, HTTPProtocolConfiguration, HTTPPoolingConfiguration>()
+            .BindPublicConnectionType<HTTPConnection<TRequestMetaData>>()
+            .CreateStatelessDelegatingConnectionFactory(
                Encoding.ASCII.CreateDefaultEncodingInfo(),
-               new WriteState(),
-               new ReadState()
-               ) );
-      }
-
-      protected override IDisposable ExtractStreamOnConnectionAcquirementError(
-         HTTPConnectionFunctionalityImpl<TRequestMetaData> functionality,
-         HTTPConnectionImpl<TRequestMetaData> connection,
-         CancellationToken token,
-         Exception error
-         )
-      {
-         return functionality.Stream;
+               ( parameters, encodingInfo, stringPool ) =>
+               {
+                  return TaskUtils.TaskFromBoolean( ( parameters.CreationData?.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired ) != ConnectionSSLMode.NotRequired );
+               },
+               null,
+               null,
+               null,
+               null,
+               null,
+               ( parameters, encodingInfo, stringPool, stream, socketOrNull, token ) =>
+               {
+                  return new ValueTask<HTTPConnectionFunctionalityImpl<TRequestMetaData>>(
+                     new HTTPConnectionFunctionalityImpl<TRequestMetaData>(
+                        HTTPConnectionVendorImpl<TRequestMetaData>.Instance,
+                        new ClientProtocolIOState(
+                           stream,
+                           stringPool,
+                           Encoding.ASCII.CreateDefaultEncodingInfo(),
+                           new WriteState(),
+                           new ReadState()
+                           ) )
+                        );
+               },
+               functionality => new ValueTask<HTTPConnectionImpl<TRequestMetaData>>( new HTTPConnectionImpl<TRequestMetaData>( functionality ) ),
+               ( functionality, connection ) => new StatelessConnectionAcquireInfol<HTTPConnectionImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>, Stream>( connection, functionality, functionality.Stream ),
+               ( functionality, connection, token, error ) => functionality?.Stream
+               );
       }
    }
 
-   internal sealed class HTTPConnectionAcquireInfo<TRequestMetaData> : ConnectionAcquireInfoImpl<HTTPConnectionImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>, System.IO.Stream>
-   {
-      public HTTPConnectionAcquireInfo( HTTPConnectionImpl<TRequestMetaData> connection, HTTPConnectionFunctionalityImpl<TRequestMetaData> functionality )
-         : base( connection, functionality, functionality.Stream )
-      {
-
-      }
-
-      protected override Task DisposeBeforeClosingChannel( CancellationToken token )
-      {
-         // Nothing to do as HTTP is not stateful protocol
-         return TaskUtils.CompletedTask;
-      }
-   }
 }

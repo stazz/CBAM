@@ -25,9 +25,7 @@ using UtilPack.ResourcePooling.NetworkStream;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
-   [TestClass,
-      Ignore // For now
-      ]
+   [TestClass]
    public class SSLTest : AbstractPostgreSQLTest
    {
       [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION_SSL ), Timeout( DEFAULT_TIMEOUT )]

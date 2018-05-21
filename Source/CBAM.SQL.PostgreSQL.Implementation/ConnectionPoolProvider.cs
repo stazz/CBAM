@@ -16,17 +16,23 @@
  * limitations under the License. 
  */
 using CBAM.Abstractions;
+using CBAM.Abstractions.Implementation.NetworkStream;
 using CBAM.SQL.Implementation;
 using CBAM.SQL.PostgreSQL;
 using CBAM.SQL.PostgreSQL.Implementation;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.Configuration.NetworkStream;
 using UtilPack.ResourcePooling;
 
 namespace CBAM.SQL.PostgreSQL
 {
+   using TIntermediateState = ValueTuple<BackendABIHelper, ResizableArray<Byte>, CancellationToken, Stream>;
    /// <summary>
    /// This is the entrypoint-class for using PostgreSQL connections.
    /// Use <see cref="Factory"/> static property to acquire <see cref="AsyncResourceFactory{TResource, TParams}"/> for <see cref="PgSQLConnection"/>, and then use <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> to obtain <see cref="AsyncResourceFactory{TResource}"/>.
@@ -46,7 +52,53 @@ namespace CBAM.SQL.PostgreSQL
       /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
       /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
       /// </remarks>
-      public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config => new PgSQLConnectionFactory( config, new UTF8EncodingInfo() ) );
+      public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config =>
+         config.NewFactoryParametrizer<PgSQLConnectionCreationInfo, PgSQLConnectionCreationInfoData, PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLPoolingConfiguration>()
+            .BindPublicConnectionType<PgSQLConnection>()
+            .CreateStatefulDelegatingConnectionFactory(
+               new UTF8EncodingInfo(),
+               ( parameters, encodingInfo, stringPool, socketOrNull, stream, token ) => new TIntermediateState( new BackendABIHelper( encodingInfo, stringPool ), new ResizableArray<Byte>( initialSize: 8, exponentialResize: true ), token, stream ),
+               async ( parameters, encodingInfo, stringPool, state ) =>
+               {
+                  var sslMode = parameters.CreationData?.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired;
+                  var retVal = sslMode == ConnectionSSLMode.Required || sslMode == ConnectionSSLMode.Preferred;
+                  if ( retVal )
+                  {
+                     await SSLRequestMessage.INSTANCE.SendMessageAsync( (state.Item1, state.Item4, state.Item3, state.Item2) );
+
+                     await state.Item4.ReadSpecificAmountAsync( state.Item2.Array, 0, 1, state.Item3 );
+                     retVal = state.Item2.Array[0] == (Byte) 'S';
+                  }
+
+                  return retVal;
+               },
+               () => new PgSQLException( "Server accepted SSL request, but the creation parameters did not have callback to create SSL stream" ),
+               () => new PgSQLException( "Server does not support SSL." ),
+               () => new PgSQLException( "SSL stream creation callback returned null." ),
+               () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
+               inner => new PgSQLException( "Unable to start SSL client.", inner ),
+               async ( parameters, encodingInfo, stringPool, stream, socketOrNull, token, state ) =>
+               {
+                  (var proto, var warnings) = await PostgreSQLProtocol.PerformStartup(
+                  new PgSQLConnectionVendorFunctionalityImpl(),
+                     parameters,
+                     token,
+                     stream,
+                     state.Item1,
+                     state.Item2
+#if !NETSTANDARD1_0
+                     , (System.Net.Sockets.Socket) socketOrNull
+#endif
+                  );
+
+                  return proto;
+               },
+               protocol => new ValueTask<PgSQLConnectionImpl>( new PgSQLConnectionImpl( protocol, new PgSQLDatabaseMetaData( protocol ) ) ),
+               ( protocol, connection ) => new PgSQLConnectionAcquireInfo( connection, protocol ),
+               ( functionality, connection, token, error ) => functionality?.Stream
+         ) );
+
+      //new PgSQLConnectionFactory( config, new UTF8EncodingInfo() ) );
 
       /// <summary>
       /// Creates a new instance of <see cref="PgSQLConnectionPoolProvider"/>.
@@ -94,71 +146,5 @@ namespace CBAM.SQL.PostgreSQL
       /// <returns>The value of <see cref="Factory"/> static property.</returns>
       protected override AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> CreateFactory()
          => Factory;
-
-
-
-      ///// <summary>
-      ///// This method will create a one-time-usage resource pool (which will close connection after each call to <see cref="AsyncResourcePool{TResource}.UseResourceAsync"/>) with given <see cref="PgSQLConnectionCreationInfo"/>.
-      ///// </summary>
-      ///// <param name="creationInfo">The <see cref="PgSQLConnectionCreationInfo"/> that the returned pool will use to create new connections.</param>
-      ///// <returns>A new <see cref="AsyncResourcePoolObservable{TResource}"/> which will use given <see cref="PgSQLConnectionCreationInfo"/> to create new connections.</returns>
-      ///// <exception cref="ArgumentNullException">If <paramref name="creationInfo"/> is <c>null</c>.</exception>
-      //public AsyncResourcePoolObservable<PgSQLConnection> CreateOneTimeUseResourcePool(
-      //   PgSQLConnectionCreationInfo creationInfo
-      //   )
-      //{
-      //   return new PgSQLConnectionFactory( Encoding, creationInfo )
-      //      .CreateOneTimeUseResourcePool( creationInfo )
-      //      .WithoutExplicitAPI();
-      //}
-
-      ///// <summary>
-      ///// This method will create timeouting resource pool (which can clear old connections using <see cref="AsyncResourcePoolCleanUp{TCleanUpParameter}.CleanUpAsync"/> method) with given <see cref="PgSQLConnectionCreationInfo"/>.
-      ///// </summary>
-      ///// <param name="creationInfo">The <see cref="PgSQLConnectionCreationInfo"/> that the returned pool will use to create new connections.</param>
-      ///// <returns>A new <see cref="AsyncResourcePoolObservable{TResource}"/> which will use given <see cref="PgSQLConnectionCreationInfo"/> to create new connections.</returns>
-      ///// <exception cref="ArgumentNullException">If <paramref name="creationInfo"/> is <c>null</c>.</exception>
-      //public AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> CreateTimeoutingResourcePool(
-      //   PgSQLConnectionCreationInfo creationInfo
-      //   )
-      //{
-      //   return new PgSQLConnectionFactory( Encoding, creationInfo )
-      //      .CreateTimeoutingResourcePool( creationInfo )
-      //      .WithoutExplicitAPI();
-      //}
-
-      //public AsyncResourcePoolObservable<PgSQLConnection, TimeSpan> CreateTimeoutingAndLimitedResourcePool(
-      //   PgSQLConnectionCreationInfo creationInfo,
-      //   Func<Int32> maxConcurrentConnections
-      //   )
-      //{
-      //   return new PgSQLConnectionFactory( Encoding, creationInfo )
-      //      .CreateTimeoutingAndLimitedResourcePool( creationInfo, maxConcurrentConnections )
-      //      .WithoutExplicitAPI();
-      //}
-
-      //private static PgSQLConnectionCreationInfo CheckCreationParameters( Object creationParameters )
-      //{
-      //   ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
-
-      //   PgSQLConnectionCreationInfo retVal;
-      //   if ( creationParameters is PgSQLConnectionCreationInfoData creationData )
-      //   {
-      //      retVal = new PgSQLConnectionCreationInfo( creationData );
-
-      //   }
-      //   else if ( creationParameters is PgSQLConnectionCreationInfo creationInfo )
-      //   {
-      //      retVal = creationInfo;
-      //   }
-      //   else
-      //   {
-      //      throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( PgSQLConnectionCreationInfoData ).FullName}." );
-      //   }
-
-      //   return retVal;
-      //}
-
-
    }
 }

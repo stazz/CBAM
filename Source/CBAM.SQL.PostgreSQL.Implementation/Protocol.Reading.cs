@@ -636,13 +636,6 @@ namespace CBAM.SQL.PostgreSQL.Implementation
 
 public static partial class E_CBAM
 {
-   internal static async ValueTask<Byte> ReadByte( this Stream stream, ResizableArray<Byte> array, CancellationToken token )
-   {
-      //array.CurrentMaxCapacity = sizeof( Byte );
-      await stream.ReadSpecificAmountAsync( array.Array, 0, 1, token );
-      return array.Array[0];
-   }
-
    internal static Int16 ReadPgInt16( this Byte[] array, ref Int32 index )
    {
       return array.ReadInt16BEFromBytes( ref index );

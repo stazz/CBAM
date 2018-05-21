@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+
   <PropertyGroup>
     <TargetFrameworks>netstandard1.0;netstandard1.3;netstandard2.0;netcoreapp1.1;net45;net40</TargetFrameworks>
   </PropertyGroup>
@@ -11,18 +12,10 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="UtilPack.Cryptography.SASL.SCRAM" Version="2.0.0" />
-  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions.Implementation.Tabular\CBAM.Abstractions.Implementation.Tabular.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
-    <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
-    <ProjectReference Include="..\CBAM.SQL.Implementation\CBAM.SQL.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.0'">
@@ -41,7 +34,7 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
     <Product>CBAM</Product>
-    <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL.PostgreSQL.Implementation assembly provides implementation and API in order to create connection pools which can create connections to PostgreSQL database backend. A good starting point is PgSQLConnectionPool class.</Description>
+    <Description>Provides skeleton implementation and ready solution for typical connection factory class operating on (network) stream..</Description>
     <Copyright>Stanislav Muhametsin</Copyright>
     <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
   </PropertyGroup>
@@ -65,9 +58,9 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>IMPORTANT: The configuration format has changed, now username and authentication are in separate "Authentication" section of "Initialization" section.</PackageReleaseNotes>
-    <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
-    <Title>CBAM PostgreSQL Implementation</Title>
+    <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous network stream connection factory skeleton</PackageTags>
+    <Title>CBAM NetworkStream Factory Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
     <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
     <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
@@ -77,4 +70,5 @@
     <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
   </PropertyGroup>
   <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" />
+
 </Project>

@@ -33,9 +33,9 @@ namespace CBAM.Abstractions.Implementation
    /// </summary>
    /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
    /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality"/>.</typeparam>
-   public abstract class DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality> : AsyncResourceFactory<TConnection>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   public abstract class DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : AsyncResourceFactory<TConnection>
       where TConnection : class
       where TPrivateConnection : class, TConnection
       where TConnectionFunctionality : class, PooledConnectionFunctionality
@@ -212,24 +212,43 @@ namespace CBAM.Abstractions.Implementation
 
    }
 
+   public sealed class StatelessConnectionAcquireInfol<TConnection, TConnectionFunctionality, TStream> : ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStream>
+      where TConnection : class
+      where TConnectionFunctionality : class, PooledConnectionFunctionality
+      where TStream : IDisposable
+   {
+      public StatelessConnectionAcquireInfol(
+         TConnection connection,
+         TConnectionFunctionality functionality,
+         TStream associatedStream
+         ) : base( connection, functionality, associatedStream )
+      {
+      }
+
+      protected override Task DisposeBeforeClosingChannel( CancellationToken token )
+      {
+         return TaskUtils.CompletedTask;
+      }
+   }
+
 
    /// <summary>
-   /// This class extends <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}"/> to provide functionality which is common for connections operating on a stream or other <see cref="IDisposable"/> object.
+   /// This class extends <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}"/> to provide functionality which is common for connections operating on a <see cref="System.IO.Stream"/> or other <see cref="IDisposable"/> object.
    /// </summary>
    /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
    /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   public abstract class ConnectionFactorySU<TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality> : DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   public abstract class ConnectionFactoryStream<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters>
       where TConnection : class
       where TPrivateConnection : class, TConnection
       where TConnectionFunctionality : class, PooledConnectionFunctionality
    {
       /// <summary>
-      /// Initializes a new instance of <see cref="ConnectionFactorySU{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}"/> with given connection creation parameters.
+      /// Initializes a new instance of <see cref="ConnectionFactoryStream{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}"/> with given connection creation parameters.
       /// </summary>
       /// <param name="creationParameters">The connection creation parameters.</param>
-      public ConnectionFactorySU(
+      public ConnectionFactoryStream(
          TConnectionCreationParameters creationParameters
          ) : base( creationParameters )
       {
