@@ -151,119 +151,6 @@ namespace CBAM.HTTP.Implementation
          return retVal;
       }
 
-
-
-      //private const Int32 MIN_BUFFER_SIZE = 1024;
-
-      //private readonly ExplicitAsyncResourcePool<Stream> _streamPool;
-
-      //// TODO Use AsyncResourcePool<ResizableArray<Byte>, TimeSpan> except that it should be Sync
-      //private readonly LocklessInstancePoolForClasses<ResizableArray<Byte>> _writeBuffers;
-      //private readonly LocklessInstancePoolForClasses<ResizableArray<Byte>> _readBuffers;
-      //private readonly Int32 _writerBufferLimit;
-      //private readonly Int32 _readerBufferLimit;
-      ////private readonly Encoding _encoding;
-
-      //public HTTPConnectionFunctionalityImpl(
-      //   HTTPConnectionVendorImpl vendorFunctionality,
-      //   ExplicitAsyncResourcePool<Stream> streamPool,
-      //   Int32? readerBufferLimit,
-      //   Int32? writerBufferLimit
-      //   //Encoding encoding
-      //   ) : base( vendorFunctionality )
-      //{
-      //   this._streamPool = ArgumentValidator.ValidateNotNull( nameof( streamPool ), streamPool );
-      //   this._writeBuffers = new DefaultLocklessInstancePoolForClasses<ResizableArray<Byte>>();
-      //   this._readBuffers = new DefaultLocklessInstancePoolForClasses<ResizableArray<Byte>>();
-      //   this._readerBufferLimit = readerBufferLimit.HasValue && readerBufferLimit.Value > 0 ? Math.Max( MIN_BUFFER_SIZE, readerBufferLimit.Value ) : -1;
-      //   this._writerBufferLimit = writerBufferLimit.HasValue && writerBufferLimit.Value > 0 ? Math.Max( MIN_BUFFER_SIZE, writerBufferLimit.Value ) : -1;
-      //   //this._encoding = encoding;
-      //}
-
-      //protected override IAsyncConcurrentEnumerable<HTTPResponse> CreateEnumerable(
-      //   HTTPStatementInformation metadata
-      //   )
-      //{
-      //   var list = new List<ExplicitResourceAcquireInfo<Stream>>();
-      //   var generator = ( (HTTPStatementInformationImpl) metadata ).MessageGenerator;
-      //   return AsyncEnumerationFactory.CreateConcurrentEnumerable( () => AsyncEnumerationFactory.CreateConcurrentStartInfo(
-      //      () =>
-      //      {
-      //         var request = generator();
-      //         return (request != null, request);
-      //      },
-      //      async ( request ) =>
-      //      {
-      //         var token = default( CancellationToken ); // this.CurrentCancellationToken; TODO get token from HTTPStatementInformation (since we are not pooled)
-
-      //         var streamInstance = await this._streamPool.TakeResourceAsync( token );
-      //         try
-      //         {
-      //            var stream = streamInstance.Resource;
-
-      //            // Send request
-      //            var requestMethod = await stream.SendRequest(
-      //               request,
-      //               this._writeBuffers,
-      //               MIN_BUFFER_SIZE,
-      //               this._writerBufferLimit,
-      //               Encoding.ASCII, // this._encoding,
-      //               token
-      //               );
-
-      //            // Then, wait for response to arrive, but don't deserialize body, if the request has one
-      //            var response = await stream.ReceiveResponse(
-      //               requestMethod,
-      //               this._readBuffers,
-      //               MIN_BUFFER_SIZE,
-      //               this._readerBufferLimit,
-      //               Encoding.ASCII, // this._encoding,
-      //               list,
-      //               streamInstance,
-      //               this._streamPool,
-      //               token
-      //               );
-
-      //            return response;
-      //         }
-      //         catch
-      //         {
-      //            streamInstance.Resource.DisposeSafely();
-      //            throw;
-      //         }
-      //      },
-      //      () =>
-      //      {
-      //         var streamPool = this._streamPool;
-      //         ExplicitResourceAcquireInfo<Stream>[] array;
-      //         lock ( list )
-      //         {
-      //            array = list.ToArray();
-      //            list.Clear();
-      //         }
-
-      //         foreach ( var stream in array )
-      //         {
-      //            // If any stream is opened at this point, the content was not read till the end -> we are in inconsistent state (mid-transport of content).
-      //            // Just close the stream (TODO in future, see if we know the content size of the stream, and read it till the end instead of closing (if feasible))
-      //            // TODO for streams with unknown size, and which are left opened after all data sent, we need some mechanism to explicitly signal that the user of the HTTPResponseContent has reached the end of stream.
-      //            stream.Resource.DisposeSafely();
-      //         }
-
-      //         return TaskUtils.CompletedTask;
-      //      } ) );
-      //}
-
-      //protected override HTTPStatementInformation GetInformationFromStatement( HTTPStatement statement )
-      //{
-      //   return statement.Information;
-      //}
-
-      //protected override void ValidateStatementOrThrow( HTTPStatementInformation statement )
-      //{
-      //   ArgumentValidator.ValidateNotNull( nameof( statement ), statement );
-      //}
-
    }
 
    public abstract class AbstractIOState
@@ -293,18 +180,10 @@ namespace CBAM.HTTP.Implementation
       public ReadState(
          ) : base()
       {
-         //this.PreReadLength = 0;
-         //this.MessageSpaceIndices = new Int32[3];
          this.BufferAdvanceState = new BufferAdvanceState();
       }
 
       public BufferAdvanceState BufferAdvanceState { get; }
-
-      //public Int32 BufferOffset { get; set; }
-
-      //public Int32 PreReadLength { get; set; }
-
-      //public Int32[] MessageSpaceIndices { get; }
    }
 
    public sealed class ClientProtocolIOState
@@ -375,7 +254,7 @@ namespace CBAM.HTTP.Implementation
 
 }
 
-public static partial class E_HTTP
+public static partial class E_CBAM
 {
    private const Byte CR = 0x0D; // \r
    private const Byte LF = 0x0A; // \n
@@ -640,51 +519,6 @@ public static partial class E_HTTP
       // Response: 1XX, 204, and 304 never have content
       return !( String.Equals( requestMethod, "HEAD" ) || ( statusCode >= 100 && statusCode < 200 ) || statusCode == 204 || statusCode == 304 );
    }
-
-   //private static async ValueTask<Int32> ReadUntilCRLF( this BufferedStream stream, ResizableArray<Byte> buffer, CancellationToken token )
-   //{
-   //   const Int32 INITIAL = 0;
-   //   const Int32 CRLF_SEEN = 1;
-   //   const Int32 END_SEEN = 2;
-   //   var cur = 0;
-   //   var endEncountered = INITIAL;
-   //   do
-   //   {
-   //      buffer.CurrentMaxCapacity = cur + 1;
-   //      // The implementation of BufferedStream is optimized to return cached task when reading from buffer using same count
-   //      if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
-   //      {
-   //         ++cur;
-   //         if ( buffer.Array[cur - 1] == CR )
-   //         {
-   //            buffer.CurrentMaxCapacity = cur + 1;
-   //            if ( await stream.ReadAsync( buffer.Array, cur, 1, token ) == 1 )
-   //            {
-   //               ++cur;
-   //               if ( buffer.Array[cur - 1] == LF )
-   //               {
-   //                  endEncountered = CRLF_SEEN;
-   //               }
-   //            }
-   //            else
-   //            {
-   //               endEncountered = END_SEEN;
-   //            }
-   //         }
-   //      }
-   //      else
-   //      {
-   //         endEncountered = END_SEEN;
-   //      }
-   //   } while ( endEncountered == INITIAL );
-
-   //   if ( endEncountered == END_SEEN )
-   //   {
-   //      throw new EndOfStreamException();
-   //   }
-
-   //   return cur;
-   //}
 
    private static void TrimBeginAndEnd( Byte[] array, ref Int32 start, ref Int32 count, Boolean trimEnd )
    {

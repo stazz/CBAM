@@ -21,6 +21,8 @@ using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using UtilPack;
+using CBAM.HTTP;
+using System.Text;
 
 namespace CBAM.HTTP
 {
@@ -72,4 +74,67 @@ namespace CBAM.HTTP
       public TRequestMetaData RequestMetaData { get; }
    }
 
+   public sealed class HTTPTextualResponseInfo
+   {
+      private static readonly Encoding TextEncoding = new UTF8Encoding( false, false );
+
+      private HTTPTextualResponseInfo(
+         HTTPResponse response,
+         Byte[] content
+         )
+      {
+         this.Version = response.Version;
+         this.StatusCode = response.StatusCode;
+         this.Message = response.StatusCodeMessage;
+         this.Headers = response.Headers;
+         if ( content != null )
+         {
+            String cType; Int32 charsetIndex; Int32 charsetEndIdx;
+            var encoding = response.Headers.TryGetValue( "Content-Type", out var cTypes ) && cTypes.Count > 0 && ( charsetIndex = ( cType = cTypes[0] ).IndexOf( "charset=" ) ) >= 0 ?
+               Encoding.GetEncoding( cType.Substring( charsetIndex + 8, ( ( charsetEndIdx = cType.IndexOf( ';', charsetIndex + 9 ) ) > 0 ? charsetEndIdx : cType.Length ) - charsetIndex - 8 ) ) :
+               TextEncoding;
+            this.TextualContent = encoding.GetString( content, 0, content.Length );
+         }
+      }
+
+      public String Version { get; }
+      public Int32 StatusCode { get; }
+      public String Message { get; }
+
+      public IReadOnlyDictionary<String, IReadOnlyList<String>> Headers { get; }
+
+      public String TextualContent { get; }
+
+      public static async ValueTask<HTTPTextualResponseInfo> CreateInfoAsync( HTTPResponse response )
+      {
+         var content = response.Content;
+         Byte[] bytes;
+         if ( content != null )
+         {
+            bytes = await content.ReadAllContentAsync();
+         }
+         else
+         {
+            bytes = null;
+         }
+
+         return new HTTPTextualResponseInfo( response, bytes );
+      }
+   }
+
+}
+
+public static partial class E_CBAM
+{
+   public static ValueTask<HTTPTextualResponseInfo> ReceiveOneResponse<TRequestMetaData>(
+      this HTTPConnection<TRequestMetaData> connection,
+      HTTPRequest request,
+      TRequestMetaData metaData = default
+      )
+   {
+      return connection
+         .PrepareStatementForExecution( new HTTPRequestInfo<TRequestMetaData>( request, metaData ) )
+         .Select( async responseInfo => await HTTPTextualResponseInfo.CreateInfoAsync( responseInfo.Response ) )
+         .FirstAsync();
+   }
 }

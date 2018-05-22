@@ -409,7 +409,7 @@ namespace CBAM.HTTP
 /// <summary>
 /// This class contains extensions methods for types defined in this assembly.
 /// </summary>
-public static partial class E_HTTP
+public static partial class E_CBAM
 {
    /// <summary>
    /// Helper method to invoke <see cref="HTTPWriter.FlushBufferContents"/> with <c>0</c> as first argument to offset.

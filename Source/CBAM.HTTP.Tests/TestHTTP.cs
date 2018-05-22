@@ -32,102 +32,26 @@ namespace CBAM.HTTP.Tests
    [TestClass]
    public partial class TestHTTP
    {
-      private sealed class HTTPResponseInfo
-      {
-         private static readonly Encoding TextEncoding = new UTF8Encoding( false, false );
-         private HTTPResponseInfo(
-            HTTPResponse response,
-            Byte[] content
-            )
-         {
-            this.Version = response.Version;
-            this.StatusCode = response.StatusCode;
-            this.Message = response.StatusCodeMessage;
-            this.Headers = response.Headers;
-            if ( content != null )
-            {
-               String cType; Int32 charsetIndex; Int32 charsetEndIdx;
-               var encoding = response.Headers.TryGetValue( "Content-Type", out var cTypes ) && cTypes.Count > 0 && ( charsetIndex = ( cType = cTypes[0] ).IndexOf( "charset=" ) ) >= 0 ?
-                  Encoding.GetEncoding( cType.Substring( charsetIndex + 8, ( ( charsetEndIdx = cType.IndexOf( ';', charsetIndex + 9 ) ) > 0 ? charsetEndIdx : cType.Length ) - charsetIndex - 8 ) ) :
-                  TextEncoding;
-               this.TextualContent = encoding.GetString( content );
-            }
-         }
 
-         public String Version { get; }
-         public Int32 StatusCode { get; }
-         public String Message { get; }
-
-         public IReadOnlyDictionary<String, IReadOnlyList<String>> Headers { get; }
-
-         public String TextualContent { get; }
-
-         public static async ValueTask<HTTPResponseInfo> CreateInfoAsync( HTTPResponse response )
-         {
-            var content = response.Content;
-            Byte[] bytes;
-            if ( content != null )
-            {
-               bytes = await content.ReadAllContentAsync();
-            }
-            else
-            {
-               bytes = null;
-            }
-
-            return new HTTPResponseInfo( response, bytes );
-         }
-      }
 
       public const Int32 DEFAULT_TIMEOUT = 10000;
 
       [
       DataTestMethod,
       DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "" ),
-      //DataRow( ENCRYPTED_HOST, ENCRYPTED_PORT, true, "" ),
-      //Timeout( DEFAULT_TIMEOUT )
+      DataRow( ENCRYPTED_HOST, ENCRYPTED_PORT, true, "" ),
+      Timeout( DEFAULT_TIMEOUT )
       ]
       public async Task TestHTTPRequestSending( String host, Int32 port, Boolean isSecure, String path )
       {
-         var pool = HTTPNetworkConnectionPoolProvider<Int64>.Factory
-            .BindCreationParameters( new HTTPNetworkCreationInfo( new HTTPNetworkCreationInfoData()
-            {
-               Connection = new HTTPConnectionConfiguration()
-               {
-                  Host = host,
-                  Port = port,
-                  ConnectionSSLMode = isSecure ? UtilPack.Configuration.NetworkStream.ConnectionSSLMode.Required : UtilPack.Configuration.NetworkStream.ConnectionSSLMode.NotRequired
-               }
-            } ) ).CreateOneTimeUseResourcePool();
-
-         var response = await pool.UseResourceAsync( async httpConn =>
+         var response = await new SimpleHTTPConfiguration()
          {
-            return await httpConn
-               .PrepareStatementForExecution( new HTTPRequestInfo<Int64>( HTTPMessageFactory.CreateGETRequest( path ), 1 ) )
-               .Select( async responseInfo => (responseInfo.RequestMetaData, await HTTPResponseInfo.CreateInfoAsync( responseInfo.Response )) )
-               .FirstAsync();
-         } );
+            Host = host,
+            Port = port,
+            IsSecure = isSecure
+         }.CreatePoolAndReceiveTextualResponseAsync( HTTPMessageFactory.CreateGETRequest( path ) );
 
-         Assert.AreEqual( 1, response.RequestMetaData );
-         AssertResponse( response.Item2 );
-
-
-         //var httpConnection = NetworkStreamFactory.Instance
-         //   .BindCreationParameters( new HTTPConnectionEndPointConfigurationData()
-         //   {
-         //      Host = host,
-         //      Port = port,
-         //      IsSecure = isSecure
-         //   }.CreateNetworkStreamFactoryConfiguration() )
-         //   .CreateOneTimeUseResourcePool()
-         //   .CreateNewHTTPConnection();
-
-         //var responses = await httpConnection
-         //   .PrepareStatementForExecution( HTTPMessageFactory.CreateGETRequest( path ) )
-         //   .ToConcurrentBagAsync( async response => await HTTPResponseInfo.CreateInfoAsync( response ) );
-
-         //Assert.AreEqual( 1, responses.Count );
-         //AssertResponses( responses );
+         AssertResponse( response );
       }
 
       //[
@@ -192,12 +116,12 @@ namespace CBAM.HTTP.Tests
 
       //}
 
-      private static void AssertResponses( IEnumerable<HTTPResponseInfo> bag )
+      private static void AssertResponses( IEnumerable<HTTPTextualResponseInfo> bag )
       {
          Assert.IsTrue( bag.All( AssertResponse ) );
       }
 
-      private static Boolean AssertResponse( HTTPResponseInfo info )
+      private static Boolean AssertResponse( HTTPTextualResponseInfo info )
       {
          Assert.IsNotNull( info.TextualContent );
 

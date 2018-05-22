@@ -28,6 +28,8 @@ using UtilPack.ResourcePooling;
 using UtilPack.ResourcePooling.NetworkStream;
 using CBAM.Abstractions.Implementation.NetworkStream;
 using UtilPack.Configuration.NetworkStream;
+using CBAM.HTTP;
+using CBAM.HTTP.Implementation;
 
 namespace CBAM.HTTP.Implementation
 {
@@ -35,62 +37,14 @@ namespace CBAM.HTTP.Implementation
    {
 
       /// <summary>
-      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.
+      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/>s.
       /// </summary>
-      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.</value>
+      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/>s.</value>
       /// <remarks>
       /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
       /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
       /// </remarks>
-      public static AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> Factory { get; } = new HTTPConnectionFactoryFactory<TRequestMetaData>(); // DefaultAsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo>( config => new PgSQLConnectionFactory( config, new UTF8EncodingInfo() ) );
-
-      /// <summary>
-      /// Creates a new instance of <see cref="HTTPNetworkConnectionPoolProvider{TRequestMetaData}"/>.
-      /// </summary>
-      /// <remarks>
-      /// This constructor is not intended to be used directly, but a generic scenarios like MSBuild task dynamically loading this type.
-      /// </remarks>
-      public HTTPNetworkConnectionPoolProvider()
-         : base( typeof( HTTPNetworkCreationInfoData ) )
-      {
-      }
-
-
-      protected override HTTPNetworkCreationInfo TransformFactoryParameters( Object creationParameters )
-      {
-         ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
-
-         HTTPNetworkCreationInfo retVal;
-         if ( creationParameters is HTTPNetworkCreationInfoData creationData )
-         {
-            retVal = new HTTPNetworkCreationInfo( creationData );
-
-         }
-         else if ( creationParameters is HTTPNetworkCreationInfo creationInfo )
-         {
-            retVal = creationInfo;
-         }
-         else
-         {
-            throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( HTTPNetworkCreationInfoData ).FullName}." );
-         }
-
-         return retVal;
-      }
-
-      /// <summary>
-      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TFactoryResource, TCreationParameters}.CreateFactory"/> by returning static property <see cref="Factory"/>.
-      /// </summary>
-      /// <returns>The value of <see cref="Factory"/> static property.</returns>
-      protected override AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> CreateFactory()
-         => Factory;
-   }
-
-   internal sealed class HTTPConnectionFactoryFactory<TRequestMetaData> : AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> //, AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPSimpleCreationInfo>
-   {
-      public AsyncResourceFactory<HTTPConnection<TRequestMetaData>> BindCreationParameters( HTTPNetworkCreationInfo creationInfo )
-      {
-         return creationInfo
+      public static AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo>( config => config
             .NewFactoryParametrizer<HTTPNetworkCreationInfo, HTTPNetworkCreationInfoData, HTTPConnectionConfiguration, HTTPInitializationConfiguration, HTTPProtocolConfiguration, HTTPPoolingConfiguration>()
             .BindPublicConnectionType<HTTPConnection<TRequestMetaData>>()
             .CreateStatelessDelegatingConnectionFactory(
@@ -112,7 +66,7 @@ namespace CBAM.HTTP.Implementation
                         new ClientProtocolIOState(
                            stream,
                            stringPool,
-                           Encoding.ASCII.CreateDefaultEncodingInfo(),
+                           encodingInfo,
                            new WriteState(),
                            new ReadState()
                            ) )
@@ -121,8 +75,101 @@ namespace CBAM.HTTP.Implementation
                functionality => new ValueTask<HTTPConnectionImpl<TRequestMetaData>>( new HTTPConnectionImpl<TRequestMetaData>( functionality ) ),
                ( functionality, connection ) => new StatelessConnectionAcquireInfol<HTTPConnectionImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>, Stream>( connection, functionality, functionality.Stream ),
                ( functionality, connection, token, error ) => functionality?.Stream
-               );
+               ) );
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPNetworkConnectionPoolProvider{TRequestMetaData}"/>.
+      /// </summary>
+      /// <remarks>
+      /// This constructor is not intended to be used directly, but a generic scenarios like MSBuild task dynamically loading this type.
+      /// </remarks>
+      public HTTPNetworkConnectionPoolProvider()
+         : base( typeof( HTTPNetworkCreationInfoData ) )
+      {
       }
+
+
+      protected override HTTPNetworkCreationInfo TransformFactoryParameters( Object creationParameters )
+      {
+         ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
+
+         HTTPNetworkCreationInfo retVal;
+         switch ( creationParameters )
+         {
+            case HTTPNetworkCreationInfoData creationData:
+               retVal = new HTTPNetworkCreationInfo( creationData );
+               break;
+            case HTTPNetworkCreationInfo creationInfo:
+               retVal = creationInfo;
+               break;
+            case SimpleHTTPConfiguration simpleConfig:
+               retVal = simpleConfig.CreateNetworkCreationInfo();
+               break;
+            default:
+               throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of {typeof( HTTPNetworkCreationInfoData ).FullName} or { typeof( SimpleHTTPConfiguration ).FullName }." );
+         }
+         return retVal;
+      }
+
+      /// <summary>
+      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TFactoryResource, TCreationParameters}.CreateFactory"/> by returning static property <see cref="Factory"/>.
+      /// </summary>
+      /// <returns>The value of <see cref="Factory"/> static property.</returns>
+      protected override AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> CreateFactory()
+         => Factory;
    }
 
+   public sealed class HTTPSimpleConfigurationPoolProvider<TRequestMetaData> : AbstractAsyncResourceFactoryProvider<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration>
+   {
+      public static AsyncResourceFactory<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration> Factory { get; } = new DefaultAsyncResourceFactory<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration>( config => HTTPNetworkConnectionPoolProvider<TRequestMetaData>.Factory.BindCreationParameters( config.CreateNetworkCreationInfo() ) );
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPSimpleConfigurationPoolProvider{TRequestMetaData}"/>.
+      /// </summary>
+      /// <remarks>
+      /// This constructor is not intended to be used directly, but a generic scenarios like MSBuild task dynamically loading this type.
+      /// </remarks>
+      public HTTPSimpleConfigurationPoolProvider()
+         : base( typeof( SimpleHTTPConfiguration ) )
+      {
+      }
+
+
+      protected override SimpleHTTPConfiguration TransformFactoryParameters( Object creationParameters )
+      {
+         ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
+
+         SimpleHTTPConfiguration retVal;
+         switch ( creationParameters )
+         {
+            case SimpleHTTPConfiguration simpleConfig:
+               retVal = simpleConfig;
+               break;
+            default:
+               throw new ArgumentException( $"The {nameof( creationParameters )} must be instance of { typeof( SimpleHTTPConfiguration ).FullName }." );
+         }
+         return retVal;
+      }
+
+      /// <summary>
+      /// This method implements <see cref="AbstractAsyncResourceFactoryProvider{TFactoryResource, TCreationParameters}.CreateFactory"/> by returning static property <see cref="Factory"/>.
+      /// </summary>
+      /// <returns>The value of <see cref="Factory"/> static property.</returns>
+      protected override AsyncResourceFactory<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration> CreateFactory()
+         => Factory;
+   }
+
+
+}
+
+public static partial class E_CBAM
+{
+   public static Task<HTTPTextualResponseInfo> CreatePoolAndReceiveTextualResponseAsync( this SimpleHTTPConfiguration config, HTTPRequest request )
+   {
+      return HTTPSimpleConfigurationPoolProvider<Int64>
+         .Factory
+         .BindCreationParameters( config )
+         .CreateOneTimeUseResourcePool()
+         .UseResourceAsync( async conn => { return await conn.ReceiveOneResponse( request ); } );
+   }
 }

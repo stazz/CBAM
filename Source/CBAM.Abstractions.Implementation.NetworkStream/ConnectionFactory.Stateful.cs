@@ -223,47 +223,47 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
 
 }
 
-public static partial class E_CBAM
-{
-   //public static DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration> CreateStatefulDelegatingConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
-   //      this TConnectionCreationParameters creationInfo,
-   //      IEncodingInfo encodingInfo,
-   //      CreateIntermediateStateDelegate<TIntermediateState> createIntermediateState,
-   //      Func<TIntermediateState, Task<Boolean>> isSSLPossible,
-   //      Func<Exception> noSSLStreamProvider,
-   //      Func<Exception> remoteNoSSLSupport,
-   //      Func<Exception> sslStreamProviderNoStream,
-   //      Func<Exception> sslStreamProviderNoAuthenticationCallback,
-   //      Func<Exception, Exception> sslStreamOtherError,
-   //      CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters> createFunctionality,
-   //      CreatePrivateConnectionDelegate<TPrivateConnection, TConnectionFunctionality> createConnection,
-   //      CreateConnectionAcquireInfo<TConnectionFunctionality, TPrivateConnection> createConnectionAcquireInfo,
-   //      ExtractStreamOnConnectionAcquirementErrorDelegate<TConnectionFunctionality, TPrivateConnection> extractStreamOnConnectionAcquirementError,
-   //      TypeMarker<TConnection> marker
-   //   )
-   //   where TConnection : class
-   //   where TPrivateConnection : class, TConnection
-   //   where TConnectionFunctionality : class, PooledConnectionFunctionality
-   //   where TConnectionCreationParameters : NetworkConnectionCreationInfo<TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
-   //   where TCreationData : NetworkConnectionCreationInfoData<TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
-   //   where TConnectionConfiguration : NetworkConnectionConfiguration
-   //   where TInitializationConfiguration : NetworkInitializationConfiguration<TProtocolConfiguration, TPoolingConfiguration>
-   //   where TPoolingConfiguration : NetworkPoolingConfiguration
-   //{
-   //   return new DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
-   //      creationInfo,
-   //      encodingInfo,
-   //      createIntermediateState,
-   //      isSSLPossible,
-   //      noSSLStreamProvider,
-   //      remoteNoSSLSupport,
-   //      sslStreamProviderNoStream,
-   //      sslStreamProviderNoAuthenticationCallback,
-   //      sslStreamOtherError,
-   //      createFunctionality,
-   //      createConnection,
-   //      createConnectionAcquireInfo,
-   //      extractStreamOnConnectionAcquirementError
-   //      );
-   //}
-}
+//public static partial class E_CBAM
+//{
+//   public static DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration> CreateStatefulDelegatingConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
+//         this TConnectionCreationParameters creationInfo,
+//         IEncodingInfo encodingInfo,
+//         CreateIntermediateStateDelegate<TIntermediateState> createIntermediateState,
+//         Func<TIntermediateState, Task<Boolean>> isSSLPossible,
+//         Func<Exception> noSSLStreamProvider,
+//         Func<Exception> remoteNoSSLSupport,
+//         Func<Exception> sslStreamProviderNoStream,
+//         Func<Exception> sslStreamProviderNoAuthenticationCallback,
+//         Func<Exception, Exception> sslStreamOtherError,
+//         CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters> createFunctionality,
+//         CreatePrivateConnectionDelegate<TPrivateConnection, TConnectionFunctionality> createConnection,
+//         CreateConnectionAcquireInfo<TConnectionFunctionality, TPrivateConnection> createConnectionAcquireInfo,
+//         ExtractStreamOnConnectionAcquirementErrorDelegate<TConnectionFunctionality, TPrivateConnection> extractStreamOnConnectionAcquirementError,
+//         TypeMarker<TConnection> marker
+//      )
+//      where TConnection : class
+//      where TPrivateConnection : class, TConnection
+//      where TConnectionFunctionality : class, PooledConnectionFunctionality
+//      where TConnectionCreationParameters : NetworkConnectionCreationInfo<TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
+//      where TCreationData : NetworkConnectionCreationInfoData<TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
+//      where TConnectionConfiguration : NetworkConnectionConfiguration
+//      where TInitializationConfiguration : NetworkInitializationConfiguration<TProtocolConfiguration, TPoolingConfiguration>
+//      where TPoolingConfiguration : NetworkPoolingConfiguration
+//   {
+//      return new DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
+//         creationInfo,
+//         encodingInfo,
+//         createIntermediateState,
+//         isSSLPossible,
+//         noSSLStreamProvider,
+//         remoteNoSSLSupport,
+//         sslStreamProviderNoStream,
+//         sslStreamProviderNoAuthenticationCallback,
+//         sslStreamOtherError,
+//         createFunctionality,
+//         createConnection,
+//         createConnectionAcquireInfo,
+//         extractStreamOnConnectionAcquirementError
+//         );
+//   }
+//}
