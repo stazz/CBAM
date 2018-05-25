@@ -35,7 +35,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality"/>.</typeparam>
    /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
-   public abstract class DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : AsyncResourceFactory<TConnection>
+   public abstract class DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : DefaultBoundAsyncResourceFactory<TConnection, TConnectionCreationParameters> // AsyncResourceFactory<TConnection>
       where TConnection : class
       where TPrivateConnection : class, TConnection
       where TConnectionFunctionality : class, PooledConnectionFunctionality
@@ -46,16 +46,11 @@ namespace CBAM.Abstractions.Implementation
       /// <param name="creationParameters">The connection creation parameters.</param>
       public DefaultConnectionFactory(
          TConnectionCreationParameters creationParameters
-         )
+         ) : base( creationParameters )
       {
-         this.CreationParameters = creationParameters;
+
       }
 
-      /// <summary>
-      /// Gets the bound <typeparamref name="TConnectionCreationParameters"/> that this <see cref="PooledConnectionFunctionality"/> uses.
-      /// </summary>
-      /// <value>The bound <typeparamref name="TConnectionCreationParameters"/> that this <see cref="PooledConnectionFunctionality"/> uses.</value>
-      protected TConnectionCreationParameters CreationParameters { get; }
 
       /// <summary>
       /// This method implements <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/> by calling a number of abstract methods in this class.
@@ -72,7 +67,7 @@ namespace CBAM.Abstractions.Implementation
       /// 
       /// In case of an error, the <see cref="OnConnectionAcquirementError(TConnectionFunctionality, TPrivateConnection, CancellationToken, Exception)"/> will be called.
       /// </remarks>
-      public async ValueTask<AsyncResourceAcquireInfo<TConnection>> AcquireResourceAsync( CancellationToken token )
+      protected override async ValueTask<AsyncResourceAcquireInfo<TConnection>> AcquireResourceAsync( CancellationToken token )
       {
          TConnectionFunctionality functionality = null;
          TPrivateConnection connection = null;
@@ -101,8 +96,6 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      /// <inheritdoc/>
-      public abstract void ResetFactoryState();
 
       /// <summary>
       /// This method is called by <see cref="AcquireResourceAsync(CancellationToken)"/> initially, to create <see cref="PooledConnectionFunctionality"/> for the <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.
