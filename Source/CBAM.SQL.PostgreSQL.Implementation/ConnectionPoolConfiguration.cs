@@ -139,7 +139,7 @@ namespace CBAM.SQL.PostgreSQL
       /// Gets or sets the name of the database that the <see cref="PgSQLConnection"/> should be connected to.
       /// </summary>
       /// <value>The name of the database that the <see cref="PgSQLConnection"/> should be connected to.</value>
-      public String Database { get; set; }
+      public String Name { get; set; }
 
       /// <summary>
       /// Gets the search path (<see href="https://www.postgresql.org/docs/current/static/runtime-config-client.html"/>) to use for the database.
@@ -283,7 +283,7 @@ public static partial class E_CBAM
          {
             Database = new PgSQLDatabaseConfiguration()
             {
-               Database = db?.Database,
+               Name = db?.Name,
                SearchPath = db?.SearchPath
             },
             Authentication = new PgSQLAuthenticationConfiguration()

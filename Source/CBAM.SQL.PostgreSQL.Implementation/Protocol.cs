@@ -973,7 +973,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          var username = authConfig.Username ?? throw new ArgumentException( "Please specify username in authentication configuration." );
          var parameters = new Dictionary<String, String>()
          {
-            { SERVER_PARAMETER_DATABASE, dbConfig.Database ?? throw new ArgumentException("Please specify database name in database configuration.") },
+            { SERVER_PARAMETER_DATABASE, dbConfig.Name ?? throw new ArgumentException("Please specify database name in database configuration.") },
             { "user",username },
             { "DateStyle", "ISO" },
             { "client_encoding", encoding.WebName  },
