@@ -34,10 +34,6 @@ using UtilPack.Configuration.NetworkStream;
 namespace CBAM.NATS.Implementation
 {
 
-
-
-   using TNetworkStreamInitState = ValueTuple<ClientProtocol.ReadState, Reference<ServerInformation>, CancellationToken, Stream>;
-
    internal sealed class ClientProtocolPoolInfo : PooledConnectionFunctionality
    {
 

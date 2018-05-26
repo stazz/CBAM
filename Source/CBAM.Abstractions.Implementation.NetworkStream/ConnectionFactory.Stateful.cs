@@ -33,10 +33,20 @@ using UtilPack.ResourcePooling.NetworkStream;
 
 namespace CBAM.Abstractions.Implementation.NetworkStream
 {
-   public delegate TIntermediateState CreateIntermediateStateDelegate<TConnectionCreationParameters, TIntermediateState>( TConnectionCreationParameters creationParameters, IEncodingInfo encodingInfo, BinaryStringPool stringPool, Object socketOrNull, Stream stream, CancellationToken token );
-
-   public delegate Task<Boolean> IsSSLPossibleDelegate<TConnectionCreationParameters, TIntermediateState>( TConnectionCreationParameters creationParameters, IEncodingInfo encoding, BinaryStringPool stringPool, TIntermediateState intermediateState );
-
+   /// <summary>
+   /// This class extends <see cref="ConnectionFactoryStream{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}"/> in order to implement socket and stream creation using <see cref="T:UtilPack.ResourcePooling.NetworkStream.NetworkStreamFactory`1"/>, such that there is some intermediate state used during connection initialization.
+   /// Notice that this need for state does not always correlate whether the underlying protocol itself is stateless or stateful.
+   /// </summary>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
+   /// <typeparam name="TIntermediateState">The type of the intermediate state used during connection initialization.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TCreationData">The type holding passive data about the remote endpoint and protocol configuration.</typeparam>
+   /// <typeparam name="TConnectionConfiguration">The type holding passive data about the socket connection.</typeparam>
+   /// <typeparam name="TInitializationConfiguration">The type holding passive data about protocol initialization.</typeparam>
+   /// <typeparam name="TProtocolConfiguration">The type holding passive data about protocol.</typeparam>
+   /// <typeparam name="TPoolingConfiguration">The type holding passive data about pooling behaviour.</typeparam>
    public abstract class StatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration> : ConnectionFactoryStream<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters>
       where TConnection : class
       where TPrivateConnection : class, TConnection
@@ -50,6 +60,21 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
       private readonly CreateIntermediateStateDelegate<TConnectionCreationParameters, TIntermediateState> _createIntermediateState;
       private readonly Boolean _dedicatedStringPoolNeedsToBeConcurrent;
 
+
+      /// <summary>
+      /// Creates a new instance of <see cref="StatelessProtocolConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/>.
+      /// </summary>
+      /// <param name="creationInfo">The connection creation parameters.</param>
+      /// <param name="encodingInfo">The <see cref="IEncodingInfo"/> to use when (de)serializing strings.</param>
+      /// <param name="createIntermediateState">The callback to create intermediate state to hold during connection initialization.</param>
+      /// <param name="isSSLPossible">The callback to check if remote end supports SSL.</param>
+      /// <param name="noSSLStreamProvider">The callback to create an exception when there was not possible to create SSL stream. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="remoteNoSSLSupport">The callback to create an exception when the remote does not support SSL. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamProviderNoStream">The callback to create an exception when the SSL stream creation callback did not return SSL stream. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamProviderNoAuthenticationCallback">The callback to create an exception when the SSL stream creation callback did not return authentication validation callback. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamOtherError">The callback to create an exception when other error occurs during SSL stream initialization. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="dedicatedStringPoolNeedsToBeConcurrent">A boolean indicating whether per-connection dedicated string pools, if used, need to be concurrent.</param>
+      /// <exception cref="ArgumentNullException">If any of the <paramref name="creationInfo"/>, <paramref name="encodingInfo"/>, or <paramref name="createIntermediateState"/> is <c>null</c>.</exception>
       public StatefulProtocolConnectionFactory(
          TConnectionCreationParameters creationInfo,
          IEncodingInfo encodingInfo,
@@ -80,10 +105,10 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
             {
                var stringPool = this.GetStringPoolForNewConnection();
 
-               return (stringPool, this._createIntermediateState( this.CreationParameters, this.Encoding, stringPool, socket, stream, token ));
+               return (stringPool, this._createIntermediateState( this.CreationParameters, this.Encoding, stringPool, this.IsDedicatedStringPool( stringPool ), socket, stream, token ));
             },
             encoding,
-            state => isSSLPossible?.Invoke( this.CreationParameters, this.Encoding, state.Item1, state.Item2 ),
+            state => isSSLPossible?.Invoke( this.CreationParameters, this.Encoding, state.Item1, this.IsDedicatedStringPool( state.Item1 ), state.Item2 ),
             noSSLStreamProvider,
             remoteNoSSLSupport,
             sslStreamProviderNoStream,
@@ -94,21 +119,54 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
 #endif
       }
 
+      /// <summary>
+      /// Gets the <see cref="IEncodingInfo"/> used to (de)serialize strings.
+      /// </summary>
+      /// <value>The <see cref="IEncodingInfo"/> used to (de)serialize strings.</value>
       protected IEncodingInfo Encoding { get; }
 
-      private BinaryStringPool GlobalStringPool { get; }
+      /// <summary>
+      /// Gets the <see cref="BinaryStringPool"/> shared between all connections created by this factory. May be <c>null</c>.
+      /// </summary>
+      /// <value>the <see cref="BinaryStringPool"/> shared between all connections created by this factory.</value>
+      protected BinaryStringPool GlobalStringPool { get; }
+
+      /// <summary>
+      /// Helper method to check whether the <see cref="BinaryStringPool"/> is not <c>null</c> and is dedicated to the connection.
+      /// </summary>
+      /// <param name="stringPool">The <see cref="BinaryStringPool"/> to check.</param>
+      /// <returns><c>true</c> if given <paramref name="stringPool"/> is not <c>null</c> and is dedicated to the connection, <c>false</c> otherwise.</returns>
+      protected Boolean IsDedicatedStringPool( BinaryStringPool stringPool )
+      {
+         return stringPool != null && !ReferenceEquals( this.GlobalStringPool, stringPool );
+      }
 
 #if !NETSTANDARD1_0
-      protected ReadOnlyResettableAsyncLazy<IPAddress> RemoteAddress;
-      protected NetworkStreamFactoryConfiguration<(BinaryStringPool, TIntermediateState)> NetworkStreamConfiguration;
+
+      /// <summary>
+      /// Gets the lazily asynchronous <see cref="IPAddress"/> of the remote endpoint. May be <c>null</c> (if e.g. connection to Unix domain socket).
+      /// </summary>
+      /// <value>The lazily asynchronous <see cref="IPAddress"/> of the remote endpoint.</value>
+      protected ReadOnlyResettableAsyncLazy<IPAddress> RemoteAddress { get; }
+
+      /// <summary>
+      /// Gets the <see cref="NetworkStreamFactoryConfiguration{TState}"/> that is used by the factory when creating new connections.
+      /// </summary>
+      /// <value>The <see cref="NetworkStreamFactoryConfiguration{TState}"/> that is used by the factory when creating new connections.</value>
+      /// <remarks>
+      /// This configuration has different state than <typeparamref name="TIntermediateState"/>, because the factory needs to hold on possibly connection-specific <see cref="BinaryStringPool"/> during initialization.
+      /// </remarks>
+      protected NetworkStreamFactoryConfiguration<(BinaryStringPool, TIntermediateState)> NetworkStreamConfiguration { get; }
 #endif
 
-
+      /// <summary>
+      /// Implements <see cref="ResourceFactoryInformation.ResetFactoryState"/> and resets this string pool, and remote address lazy, if these are in use.
+      /// </summary>
       public override void ResetFactoryState()
       {
          this.GlobalStringPool?.ClearPool();
 #if !NETSTANDARD1_0
-         this.RemoteAddress.Reset();
+         this.RemoteAddress?.Reset();
 #endif
       }
 
@@ -117,6 +175,11 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
          return this.GlobalStringPool ?? ( this._dedicatedStringPoolNeedsToBeConcurrent ? BinaryStringPoolFactory.NewNotConcurrentBinaryStringPool() : BinaryStringPoolFactory.NewNotConcurrentBinaryStringPool() );
       }
 
+      /// <summary>
+      /// Implements <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}.CreateConnectionFunctionality(CancellationToken)"/> by utilizing <see cref="M:UtilPack.ResourcePooling.NetworkStream.NetworkStreamFactory`1.AcquireNetworkStreamFromConfiguration(UtilPack.ResourcePooling.NetworkStream.NetworkStreamFactoryConfiguration{`0},System.Threading.CancellationToken)"/> method, or using <see cref="NetworkConnectionCreationInfo{TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}.StreamFactory"/> callback.
+      /// </summary>
+      /// <param name="token">The cancellation token to use during initialization process.</param>
+      /// <returns>Potentially asynchronously returns an instance of <typeparamref name="TConnectionFunctionality"/>.</returns>
       protected override async ValueTask<TConnectionFunctionality> CreateConnectionFunctionality( CancellationToken token )
       {
 
@@ -145,7 +208,8 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
          {
             socket = null;
             stream = await streamFactory();
-            state = (this.GetStringPoolForNewConnection(), this._createIntermediateState( this.CreationParameters, this.Encoding, this.GetStringPoolForNewConnection(), null, stream, token ));
+            var stringPool = this.GetStringPoolForNewConnection();
+            state = (stringPool, this._createIntermediateState( this.CreationParameters, this.Encoding, stringPool, this.IsDedicatedStringPool( stringPool ), null, stream, token ));
          }
 
          return await this.CreateFunctionality(
@@ -157,6 +221,15 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
             );
       }
 
+      /// <summary>
+      /// Derived classes should implement this in order to create <typeparamref name="TConnectionFunctionality"/> from given parameters.
+      /// </summary>
+      /// <param name="stringPool">The possibly dedicated string pool to use for the connection being created.</param>
+      /// <param name="acquiredStream">The <see cref="Stream"/> that has been acquired and is ready to use.</param>
+      /// <param name="socketOrNull">A socket that has been acquired, or <c>null</c> if <see cref="NetworkConnectionCreationInfo{TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}.StreamFactory"/> was used to create stream.</param>
+      /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
+      /// <param name="intermediateState">The intermediate state used during connection initialization.</param>
+      /// <returns>Potentially asynchronously creates an instance of <typeparamref name="TConnectionFunctionality"/>.</returns>
       protected abstract ValueTask<TConnectionFunctionality> CreateFunctionality(
          BinaryStringPool stringPool,
          Stream acquiredStream,
@@ -166,8 +239,20 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
          );
    }
 
-   public delegate ValueTask<TConnectionFunctionality> CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters>( TConnectionCreationParameters creationParameters, IEncodingInfo encoding, BinaryStringPool stringPool, Stream stream, Object socketOrNull, CancellationToken token, TIntermediateState intermediateState );
 
+   /// <summary>
+   /// This class extends and implements all missing functionality from <see cref="StatefulProtocolConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/> by using callbacks that are passed to constructor.
+   /// </summary>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
+   /// <typeparam name="TIntermediateState">The type of the intermediate state used during connection initialization.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TCreationData">The type holding passive data about the remote endpoint and protocol configuration.</typeparam>
+   /// <typeparam name="TConnectionConfiguration">The type holding passive data about the socket connection.</typeparam>
+   /// <typeparam name="TInitializationConfiguration">The type holding passive data about protocol initialization.</typeparam>
+   /// <typeparam name="TProtocolConfiguration">The type holding passive data about protocol.</typeparam>
+   /// <typeparam name="TPoolingConfiguration">The type holding passive data about pooling behaviour.</typeparam>
    public sealed class DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration> : StatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
       where TConnection : class
       where TPrivateConnection : class, TConnection
@@ -178,10 +263,29 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
       where TInitializationConfiguration : NetworkInitializationConfiguration<TProtocolConfiguration, TPoolingConfiguration>
       where TPoolingConfiguration : NetworkPoolingConfiguration
    {
-      private readonly CreatePrivateConnectionDelegate<TPrivateConnection, TConnectionFunctionality> _createConnection;
+      private readonly CreatePrivateConnectionDelegate<TConnectionFunctionality, TPrivateConnection> _createConnection;
       private readonly CreateConnectionAcquireInfo<TConnectionFunctionality, TPrivateConnection> _createConnectionAcquireInfo;
       private readonly CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters> _createFunctionality;
       private readonly ExtractStreamOnConnectionAcquirementErrorDelegate<TConnectionFunctionality, TPrivateConnection> _extractStreamOnConnectionAcquirementError;
+
+      /// <summary>
+      /// Creates a new instance of <see cref="DelegatingStatefulProtocolConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/> with given parameters.
+      /// </summary>
+      /// <param name="creationInfo">The connection creation parameters.</param>
+      /// <param name="encodingInfo">The <see cref="IEncodingInfo"/> to use when (de)serializing strings.</param>
+      /// <param name="createIntermediateState">The callback to create intermediate state to hold during connection initialization.</param>
+      /// <param name="isSSLPossible">The callback to check if remote end supports SSL.</param>
+      /// <param name="noSSLStreamProvider">The callback to create an exception when there was not possible to create SSL stream. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="remoteNoSSLSupport">The callback to create an exception when the remote does not support SSL. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamProviderNoStream">The callback to create an exception when the SSL stream creation callback did not return SSL stream. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamProviderNoAuthenticationCallback">The callback to create an exception when the SSL stream creation callback did not return authentication validation callback. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="sslStreamOtherError">The callback to create an exception when other error occurs during SSL stream initialization. May be <c>null</c>, then <see cref="InvalidOperationException"/> is used with default message.</param>
+      /// <param name="dedicatedStringPoolNeedsToBeConcurrent">A boolean indicating whether per-connection dedicated string pools, if used, need to be concurrent.</param>
+      /// <param name="createFunctionality">The callback for <see cref="StatelessProtocolConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}.CreateFunctionality"/> implementation.</param>
+      /// <param name="createConnection">The callback for <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}.CreateConnection"/> implementation.</param>
+      /// <param name="createConnectionAcquireInfo">The callback for <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}.CreateConnectionAcquireInfo"/> implementation.</param>
+      /// <param name="extractStreamOnConnectionAcquirementError">The callback for <see cref="ConnectionFactoryStream{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}.ExtractStreamOnConnectionAcquirementError"/> implementation.</param>
+      /// <exception cref="ArgumentNullException">If any of the <paramref name="creationInfo"/>, <paramref name="encodingInfo"/>, <paramref name="createIntermediateState"/>, <paramref name="createFunctionality"/>, <paramref name="createConnection"/>, <paramref name="createConnectionAcquireInfo"/>, or <paramref name="extractStreamOnConnectionAcquirementError"/> is <c>null</c>.</exception>
 
       public DelegatingStatefulProtocolConnectionFactory(
          TConnectionCreationParameters creationInfo,
@@ -195,7 +299,7 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
          Func<Exception, Exception> sslStreamOtherError,
          Boolean dedicatedStringPoolNeedsToBeConcurrent,
          CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters> createFunctionality,
-         CreatePrivateConnectionDelegate<TPrivateConnection, TConnectionFunctionality> createConnection,
+         CreatePrivateConnectionDelegate<TConnectionFunctionality, TPrivateConnection> createConnection,
          CreateConnectionAcquireInfo<TConnectionFunctionality, TPrivateConnection> createConnectionAcquireInfo,
          ExtractStreamOnConnectionAcquirementErrorDelegate<TConnectionFunctionality, TPrivateConnection> extractStreamOnConnectionAcquirementError
          ) : base( creationInfo, encodingInfo, createIntermediateState, isSSLPossible, noSSLStreamProvider, remoteNoSSLSupport, sslStreamProviderNoStream, sslStreamProviderNoAuthenticationCallback, sslStreamOtherError, dedicatedStringPoolNeedsToBeConcurrent )
@@ -206,64 +310,91 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
          this._extractStreamOnConnectionAcquirementError = ArgumentValidator.ValidateNotNull( nameof( extractStreamOnConnectionAcquirementError ), extractStreamOnConnectionAcquirementError );
       }
 
+      /// <inheritdoc />
       protected override ValueTask<TPrivateConnection> CreateConnection( TConnectionFunctionality functionality )
          => this._createConnection( functionality );
 
+      /// <inheritdoc />
       protected override AsyncResourceAcquireInfo<TPrivateConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TPrivateConnection connection )
          => this._createConnectionAcquireInfo( functionality, connection );
 
+      /// <inheritdoc />
       protected override ValueTask<TConnectionFunctionality> CreateFunctionality( BinaryStringPool stringPool, Stream acquiredStream, Object socketOrNull, CancellationToken token, TIntermediateState intermediateState )
-         => this._createFunctionality( this.CreationParameters, this.Encoding, stringPool, acquiredStream, socketOrNull, token, intermediateState );
+         => this._createFunctionality( this.CreationParameters, this.Encoding, stringPool, !ReferenceEquals( this.GlobalStringPool, stringPool ), acquiredStream, socketOrNull, token, intermediateState );
 
+      /// <inheritdoc />
       protected override IDisposable ExtractStreamOnConnectionAcquirementError( TConnectionFunctionality functionality, TPrivateConnection connection, CancellationToken token, Exception error )
          => this._extractStreamOnConnectionAcquirementError( functionality, connection, token, error );
    }
 
+   /// <summary>
+   /// This callback is used to create intermediate state used throughout various stages of asynchronous remote connection initialization.
+   /// </summary>
+   /// <typeparam name="TConnectionCreationParameters">The type of connection cration parameters.</typeparam>
+   /// <typeparam name="TIntermediateState">The type of the intermediate state.</typeparam>
+   /// <param name="creationParameters">The connection creation parameters.</param>
+   /// <param name="encoding">The <see cref="IEncodingInfo"/> used to (de)serialize strings.</param>
+   /// <param name="stringPool">The <see cref="BinaryStringPool"/> to use when deserializing strings.</param>
+   /// <param name="stringPoolIsDedicated"><c>true</c> if the <paramref name="stringPool"/> is dedicated to this connection; <c>false</c> if the string pool is shared by all connections created by the same factory.</param>
+   /// <param name="stream">The <see cref="Stream"/> to the remote endpoint.</param>
+   /// <param name="socketOrNull">The socket to the remote endpoint, or <c>null</c>, if stream was created via <see cref="NetworkConnectionCreationInfo{TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}.StreamFactory"/> callback.</param>
+   /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
+   /// <returns>An intermediate state to use throughout various stages of asynchronous remote connection initialization.</returns>
+   public delegate TIntermediateState CreateIntermediateStateDelegate<TConnectionCreationParameters, TIntermediateState>(
+      TConnectionCreationParameters creationParameters,
+      IEncodingInfo encoding,
+      BinaryStringPool stringPool,
+      Boolean stringPoolIsDedicated,
+      Object socketOrNull,
+      Stream stream,
+      CancellationToken token
+      );
 
+   /// <summary>
+   /// This delegate is used to check whether remote end supports SSL, when there is no intermediate state used during connection initialization.
+   /// </summary>
+   /// <typeparam name="TConnectionCreationParameters">The type of connection creation parameters.</typeparam>
+   /// <typeparam name="TIntermediateState">The type of the intermediate state.</typeparam>
+   /// <param name="creationParameters">The connection creation parameters.</param>
+   /// <param name="encoding">The <see cref="IEncodingInfo"/> used to (de)serialize strings.</param>
+   /// <param name="stringPool">The <see cref="BinaryStringPool"/> to use when deserializing strings.</param>
+   /// <param name="stringPoolIsDedicated"><c>true</c> if the <paramref name="stringPool"/> is dedicated to this connection; <c>false</c> if the string pool is shared by all connections created by the same factory.</param>
+   /// <param name="intermediateState">The intermediate state created previously.</param>
+   /// <returns>Asynchronously checks whether remote endpoint supports using SSL.</returns>
+   /// <seealso cref="TaskUtils.False"/>
+   /// <seealso cref="TaskUtils.True"/>
+   public delegate Task<Boolean> IsSSLPossibleDelegate<TConnectionCreationParameters, TIntermediateState>(
+      TConnectionCreationParameters creationParameters,
+      IEncodingInfo encoding,
+      BinaryStringPool stringPool,
+      Boolean stringPoolIsDedicated,
+      TIntermediateState intermediateState
+      );
+
+   /// <summary>
+   /// This delegate is used to create close-to-protocol connection functionality object.
+   /// </summary>
+   /// <typeparam name="TConnectionFunctionality">The type of close-to-protocol connection functionality.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of connection cration parameters.</typeparam>
+   /// <typeparam name="TIntermediateState">The type of the intermediate state.</typeparam>
+   /// <param name="creationParameters">The connection creation parameters.</param>
+   /// <param name="encoding">The <see cref="IEncodingInfo"/> used to (de)serialize strings.</param>
+   /// <param name="stringPool">The <see cref="BinaryStringPool"/> to use when deserializing strings.</param>
+   /// <param name="stringPoolIsDedicated"><c>true</c> if the <paramref name="stringPool"/> is dedicated to this connection; <c>false</c> if the string pool is shared by all connections created by the same factory.</param>
+   /// <param name="stream">The <see cref="Stream"/> to the remote endpoint.</param>
+   /// <param name="socketOrNull">The socket to the remote endpoint, or <c>null</c>, if stream was created via <see cref="NetworkConnectionCreationInfo{TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}.StreamFactory"/> callback.</param>
+   /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
+   /// <param name="intermediateState">The intermediate state created previously.</param>
+   /// <returns>Potentially asynchronously creates the close-to-protocol connection functionality object.</returns>
+   public delegate ValueTask<TConnectionFunctionality> CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters>(
+      TConnectionCreationParameters creationParameters,
+      IEncodingInfo encoding,
+      BinaryStringPool stringPool,
+      Boolean stringPoolIsDedicated,
+      Stream stream,
+      Object socketOrNull,
+      CancellationToken token,
+      TIntermediateState intermediateState
+      );
 
 }
-
-//public static partial class E_CBAM
-//{
-//   public static DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration> CreateStatefulDelegatingConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
-//         this TConnectionCreationParameters creationInfo,
-//         IEncodingInfo encodingInfo,
-//         CreateIntermediateStateDelegate<TIntermediateState> createIntermediateState,
-//         Func<TIntermediateState, Task<Boolean>> isSSLPossible,
-//         Func<Exception> noSSLStreamProvider,
-//         Func<Exception> remoteNoSSLSupport,
-//         Func<Exception> sslStreamProviderNoStream,
-//         Func<Exception> sslStreamProviderNoAuthenticationCallback,
-//         Func<Exception, Exception> sslStreamOtherError,
-//         CreateConnectionFunctionality<TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters> createFunctionality,
-//         CreatePrivateConnectionDelegate<TPrivateConnection, TConnectionFunctionality> createConnection,
-//         CreateConnectionAcquireInfo<TConnectionFunctionality, TPrivateConnection> createConnectionAcquireInfo,
-//         ExtractStreamOnConnectionAcquirementErrorDelegate<TConnectionFunctionality, TPrivateConnection> extractStreamOnConnectionAcquirementError,
-//         TypeMarker<TConnection> marker
-//      )
-//      where TConnection : class
-//      where TPrivateConnection : class, TConnection
-//      where TConnectionFunctionality : class, PooledConnectionFunctionality
-//      where TConnectionCreationParameters : NetworkConnectionCreationInfo<TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
-//      where TCreationData : NetworkConnectionCreationInfoData<TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>
-//      where TConnectionConfiguration : NetworkConnectionConfiguration
-//      where TInitializationConfiguration : NetworkInitializationConfiguration<TProtocolConfiguration, TPoolingConfiguration>
-//      where TPoolingConfiguration : NetworkPoolingConfiguration
-//   {
-//      return new DelegatingStatefulProtocolConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TIntermediateState, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration>(
-//         creationInfo,
-//         encodingInfo,
-//         createIntermediateState,
-//         isSSLPossible,
-//         noSSLStreamProvider,
-//         remoteNoSSLSupport,
-//         sslStreamProviderNoStream,
-//         sslStreamProviderNoAuthenticationCallback,
-//         sslStreamOtherError,
-//         createFunctionality,
-//         createConnection,
-//         createConnectionAcquireInfo,
-//         extractStreamOnConnectionAcquirementError
-//         );
-//   }
-//}

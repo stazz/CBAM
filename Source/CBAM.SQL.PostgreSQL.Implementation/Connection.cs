@@ -35,8 +35,6 @@ using UtilPack.ResourcePooling.NetworkStream;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   using TNetworkStreamInitState = ValueTuple<BackendABIHelper, ResizableArray<Byte>, CancellationToken, Stream>;
-
    internal sealed class PgSQLConnectionImpl : SQLConnectionImpl<PostgreSQLProtocol, PgSQLConnectionVendorFunctionality>, PgSQLConnection
    {
       private const String TRANSACTION_ISOLATION_PREFIX = "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL ";

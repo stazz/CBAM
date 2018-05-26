@@ -37,8 +37,8 @@ namespace CBAM.NATS.Implementation
             .BindPublicConnectionType<NATSConnection>()
             .CreateStatefulDelegatingConnectionFactory(
                Encoding.ASCII.CreateDefaultEncodingInfo(),
-               ( parameters, encodingInfo, stringPool, socketOrNull, stream, token ) => new TIntermediateState( new ClientProtocol.ReadState(), new Reference<ServerInformation>(), token, stream ),
-               async ( parameters, encodingInfo, stringPool, state ) =>
+               ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, socketOrNull, stream, token ) => new TIntermediateState( new ClientProtocol.ReadState(), new Reference<ServerInformation>(), token, stream ),
+               async ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, state ) =>
                {
                   // First, read the INFO message from server
                   var rState = state.Item1;
@@ -86,7 +86,7 @@ namespace CBAM.NATS.Implementation
                () => new NATSException( "SSL stream creation callback returned null." ),
                () => new NATSException( "Authentication callback given by SSL stream creation callback was null." ),
                inner => new NATSException( "Unable to start SSL client.", inner ),
-               async ( parameters, encodingInfo, stringPool, stream, socketOrNull, token, state ) =>
+               async ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, stream, socketOrNull, token, state ) =>
                {
                   var paramData = parameters.CreationData;
                   var initConfig = paramData.Initialization;
@@ -116,7 +116,7 @@ namespace CBAM.NATS.Implementation
                      ), serverInfo ) );
                },
                protocol => new ValueTask<NATSConnectionImpl>( new NATSConnectionImpl( NATSConnectionVendorFunctionalityImpl.Instance, protocol.Protocol ) ),
-               ( protocol, connection ) => new CBAM.Abstractions.Implementation.StatelessConnectionAcquireInfol<NATSConnectionImpl, ClientProtocolPoolInfo, Stream>( connection, protocol, protocol.Protocol.Stream ),
+               ( protocol, connection ) => new CBAM.Abstractions.Implementation.StatelessConnectionAcquireInfo<NATSConnectionImpl, ClientProtocolPoolInfo, Stream>( connection, protocol, protocol.Protocol.Stream ),
                ( functionality, connection, token, error ) => functionality.Protocol?.Stream
                ) );
 

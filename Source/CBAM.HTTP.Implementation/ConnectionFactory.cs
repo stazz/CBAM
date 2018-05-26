@@ -49,7 +49,7 @@ namespace CBAM.HTTP.Implementation
             .BindPublicConnectionType<HTTPConnection<TRequestMetaData>>()
             .CreateStatelessDelegatingConnectionFactory(
                Encoding.ASCII.CreateDefaultEncodingInfo(),
-               ( parameters, encodingInfo, stringPool ) =>
+               ( parameters, encodingInfo, stringPool, stringPoolIsDedicated ) =>
                {
                   return TaskUtils.TaskFromBoolean( ( parameters.CreationData?.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired ) != ConnectionSSLMode.NotRequired );
                },
@@ -58,7 +58,7 @@ namespace CBAM.HTTP.Implementation
                null,
                null,
                null,
-               ( parameters, encodingInfo, stringPool, stream, socketOrNull, token ) =>
+               ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, stream, socketOrNull, token ) =>
                {
                   return new ValueTask<HTTPConnectionFunctionalityImpl<TRequestMetaData>>(
                      new HTTPConnectionFunctionalityImpl<TRequestMetaData>(
@@ -73,7 +73,7 @@ namespace CBAM.HTTP.Implementation
                         );
                },
                functionality => new ValueTask<HTTPConnectionImpl<TRequestMetaData>>( new HTTPConnectionImpl<TRequestMetaData>( functionality ) ),
-               ( functionality, connection ) => new StatelessConnectionAcquireInfol<HTTPConnectionImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>, Stream>( connection, functionality, functionality.Stream ),
+               ( functionality, connection ) => new StatelessConnectionAcquireInfo<HTTPConnectionImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>, Stream>( connection, functionality, functionality.Stream ),
                ( functionality, connection, token, error ) => functionality?.Stream
                ) );
 

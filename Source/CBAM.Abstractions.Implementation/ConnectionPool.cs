@@ -53,7 +53,7 @@ namespace CBAM.Abstractions.Implementation
 
 
       /// <summary>
-      /// This method implements <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/> by calling a number of abstract methods in this class.
+      /// This method implements <see cref="DefaultBoundAsyncResourceFactory{TConnection, TConnectionCreationParameters}.AcquireResourceAsync"/> by calling a number of abstract methods in this class.
       /// </summary>
       /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
       /// <returns>Potentially asynchronously returns <see cref="AsyncResourceAcquireInfo{TResource}"/> for given resource.</returns>
@@ -175,16 +175,6 @@ namespace CBAM.Abstractions.Implementation
          }
       }
 
-      ///// <summary>
-      ///// This method forwards the disposing for <see cref="DisposeBeforeClosingStream(CancellationToken, TConnectionFunctionality)"/> and giving <see cref="ConnectionImpl{TConnectionFunctionality}.ConnectionFunctionality"/> as second parameter to the method.
-      ///// </summary>
-      ///// <param name="token">The <see cref="CancellationToken"/> to use.</param>
-      ///// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
-      //protected override Task DisposeBeforeClosingChannel( CancellationToken token )
-      //{
-      //   return this.DisposeBeforeClosingStream( token );
-      //}
-
       /// <summary>
       /// Overrides the abstract <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.PublicResourceCanBeReturnedToPool"/> method and forwards the call to <see cref="PooledConnectionFunctionality.CanBeReturnedToPool"/>.
       /// </summary>
@@ -194,23 +184,27 @@ namespace CBAM.Abstractions.Implementation
          return this.Functionality.CanBeReturnedToPool;
       }
 
-      ///// <summary>
-      ///// Derived classes should implement the disposing functionality, see <see cref="AsyncResourceAcquireInfoImpl{TConnection, TStream}.DisposeBeforeClosingChannel(CancellationToken)"/>.
-      ///// </summary>
-      ///// <param name="token">The cancellation token to use.</param>
-      ///// <param name="connectionFunctionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</param>
-      ///// <returns>A task which performs disposing asynchronously, or <c>null</c> if disposing has been done synchronously.</returns>
-      //protected abstract Task DisposeBeforeClosingStream( CancellationToken token );
-
-
    }
 
-   public sealed class StatelessConnectionAcquireInfol<TConnection, TConnectionFunctionality, TStream> : ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStream>
+   /// <summary>
+   /// This class extends <see cref="ConnectionAcquireInfoImpl{TConnection, TConnectionFunctionality, TStream}"/> for situations when there is no need to send anything to remote when disconnect occurs (usually stateless protocols, e.g. HTTP).
+   /// </summary>
+   /// <typeparam name="TConnection">The actual type of <see cref="ConnectionImpl{TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality"/>.</typeparam>
+   /// <typeparam name="TStream">The actual type of underlying stream or other disposable resource.</typeparam>
+   public sealed class StatelessConnectionAcquireInfo<TConnection, TConnectionFunctionality, TStream> : ConnectionAcquireInfoImpl<TConnection, TConnectionFunctionality, TStream>
       where TConnection : class
       where TConnectionFunctionality : class, PooledConnectionFunctionality
       where TStream : IDisposable
    {
-      public StatelessConnectionAcquireInfol(
+      /// <summary>
+      /// Creates a new instance of <see cref="StatelessConnectionAcquireInfo{TConnection, TConnectionFunctionality, TStream}"/> with given parameters.
+      /// </summary>
+      /// <param name="connection">The <typeparamref name="TConnection"/>.</param>
+      /// <param name="functionality">The <typeparamref name="TConnectionFunctionality"/>.</param>
+      /// <param name="associatedStream">The underlying stream or other disposable resource.</param>
+      /// <exception cref="ArgumentNullException">If <paramref name="connection"/> is <c>null</c>.</exception>
+      public StatelessConnectionAcquireInfo(
          TConnection connection,
          TConnectionFunctionality functionality,
          TStream associatedStream
@@ -218,6 +212,11 @@ namespace CBAM.Abstractions.Implementation
       {
       }
 
+      /// <summary>
+      /// This method does nothing and returns completed task, since there should be nothing to do.
+      /// </summary>
+      /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
+      /// <returns>Always returns completed task.</returns>
       protected override Task DisposeBeforeClosingChannel( CancellationToken token )
       {
          return TaskUtils.CompletedTask;
@@ -248,7 +247,7 @@ namespace CBAM.Abstractions.Implementation
       }
 
       /// <summary>
-      /// This task overrides <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.OnConnectionAcquirementError(TConnectionFunctionality, TPrivateConnection, CancellationToken, Exception)"/> and calls <see cref="ExtractStreamOnConnectionAcquirementError(TConnectionFunctionality, TPrivateConnection, CancellationToken, Exception)"/> in order to then safely synchronously dispose it.
+      /// This task overrides <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.OnConnectionAcquirementError(TConnectionCreationParameters, TPrivateConnection, CancellationToken, Exception)"/> and calls <see cref="ExtractStreamOnConnectionAcquirementError(TConnectionFunctionality, TPrivateConnection, CancellationToken, Exception)"/> in order to then safely synchronously dispose it.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnectionFunctionality"/> method.</param>
       /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnection"/>.</param>

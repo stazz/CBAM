@@ -57,8 +57,8 @@ namespace CBAM.SQL.PostgreSQL
             .BindPublicConnectionType<PgSQLConnection>()
             .CreateStatefulDelegatingConnectionFactory(
                new UTF8EncodingInfo(),
-               ( parameters, encodingInfo, stringPool, socketOrNull, stream, token ) => new TIntermediateState( new BackendABIHelper( encodingInfo, stringPool ), new ResizableArray<Byte>( initialSize: 8, exponentialResize: true ), token, stream ),
-               async ( parameters, encodingInfo, stringPool, state ) =>
+               ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, socketOrNull, stream, token ) => new TIntermediateState( new BackendABIHelper( encodingInfo, stringPool ), new ResizableArray<Byte>( initialSize: 8, exponentialResize: true ), token, stream ),
+               async ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, state ) =>
                {
                   var sslMode = parameters.CreationData?.Connection?.ConnectionSSLMode ?? ConnectionSSLMode.NotRequired;
                   var retVal = sslMode == ConnectionSSLMode.Required || sslMode == ConnectionSSLMode.Preferred;
@@ -77,7 +77,7 @@ namespace CBAM.SQL.PostgreSQL
                () => new PgSQLException( "SSL stream creation callback returned null." ),
                () => new PgSQLException( "Authentication callback given by SSL stream creation callback was null." ),
                inner => new PgSQLException( "Unable to start SSL client.", inner ),
-               async ( parameters, encodingInfo, stringPool, stream, socketOrNull, token, state ) =>
+               async ( parameters, encodingInfo, stringPool, stringPoolIsDedicated, stream, socketOrNull, token, state ) =>
                {
                   (var proto, var warnings) = await PostgreSQLProtocol.PerformStartup(
                   new PgSQLConnectionVendorFunctionalityImpl(),
