@@ -45,12 +45,12 @@ namespace CBAM.SQL.PostgreSQL
    {
 
       /// <summary>
-      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.
+      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create pools that provide instances of <see cref="PgSQLConnection"/> to use.
       /// </summary>
-      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/>s.</value>
+      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="PgSQLConnection"/> to use.</value>
       /// <remarks>
       /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
-      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
+      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.CreateAcquireResourceContext"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
       /// </remarks>
       public static AsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<PgSQLConnection, PgSQLConnectionCreationInfo>( config =>
          config.NewFactoryParametrizer<PgSQLConnectionCreationInfo, PgSQLConnectionCreationInfoData, PgSQLConnectionConfiguration, PgSQLInitializationConfiguration, PgSQLProtocolConfiguration, PgSQLPoolingConfiguration>()

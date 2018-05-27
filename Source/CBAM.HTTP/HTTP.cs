@@ -28,20 +28,38 @@ namespace CBAM.HTTP
 {
 
 #if NET40
+
+   /// <summary>
+   /// This class exists only in .NET 4 version, and provides easy implementation for mutable <see cref="Dictionary{TKey, TValue}"/>, which also implements <see cref="IReadOnlyDictionary{TKey, TValue}"/>.
+   /// </summary>
+   /// <typeparam name="TKey">The type of keys in this dictionary.</typeparam>
+   /// <typeparam name="TValue">The type of values in this dictionary.</typeparam>
    public sealed class DictionaryWithReadOnlyAPI<TKey, TValue> : Dictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
    {
+
       IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => this.Keys;
 
       IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => this.Values;
    }
 
+   /// <summary>
+   /// This class exists only in .NET 4 version, and provides easy implementation for mutable <see cref="List{T}"/>, which also implements <see cref="IReadOnlyList{T}"/>.
+   /// </summary>
+   /// <typeparam name="TValue">The type of items in this list.</typeparam>
    public sealed class ListWithReadOnlyAPI<TValue> : List<TValue>, IReadOnlyList<TValue>
    {
+      /// <summary>
+      /// Creates a new instance of <see cref="ListWithReadOnlyAPI{TValue}"/> with no values.
+      /// </summary>
       public ListWithReadOnlyAPI()
          : base()
       {
       }
 
+      /// <summary>
+      /// Creates a new instance of <see cref="ListWithReadOnlyAPI{TValue}"/> with given values.
+      /// </summary>
+      /// <param name="collection">The values for this list to have.</param>
       public ListWithReadOnlyAPI(
          IEnumerable<TValue> collection
          )
@@ -54,7 +72,7 @@ namespace CBAM.HTTP
    /// <summary>
    /// This interface describes a HTTP request, which client sends to server, from client's point of view.
    /// </summary>
-   /// <seealso cref="HTTPMessageFactory"/>
+   /// <seealso cref="HTTPFactory"/>
    public interface HTTPRequest : HTTPMessage<HTTPRequestContent,
 #if NET40
       DictionaryWithReadOnlyAPI<String, ListWithReadOnlyAPI<String>>
@@ -97,7 +115,7 @@ namespace CBAM.HTTP
    /// <summary>
    /// This interface describes a HTTP response, which server sends to the client, from client's point of view.
    /// </summary>
-   /// <seealso cref="HTTPMessageFactory"/>
+   /// <seealso cref="HTTPFactory"/>
    public interface HTTPResponse : HTTPMessage<HTTPResponseContent, IReadOnlyDictionary<String, IReadOnlyList<String>>, IReadOnlyList<String>>
    {
       /// <summary>
@@ -117,7 +135,9 @@ namespace CBAM.HTTP
    /// This is common interface for <see cref="HTTPRequest"/> and <see cref="HTTPResponse"/>.
    /// </summary>
    /// <typeparam name="TContent"></typeparam>
-   public interface HTTPMessage<TContent, TDictionary, TList>
+   /// <typeparam name="TDictionary">The type of dictionary holding headers.</typeparam>
+   /// <typeparam name="TList">The type of list holding values for single header.</typeparam>
+   public interface HTTPMessage<out TContent, out TDictionary, out TList>
       where TContent : HTTPMessageContent
       where TDictionary : IReadOnlyDictionary<String, TList>
       where TList : IReadOnlyList<String>
@@ -152,13 +172,13 @@ namespace CBAM.HTTP
       /// <value>The amount of bytes this content takes, if the amount is known.</value>
       Int64? ByteCount { get; }
 
-      Boolean ContentEndIsKnown { get; } // TODO not sure if we should even allow situation when this is true??
+
    }
 
    /// <summary>
    /// This is the content object for <see cref="HTTPRequest"/>.
    /// </summary>
-   /// <seealso cref="HTTPMessageFactory"/>
+   /// <seealso cref="HTTPFactory"/>
    public interface HTTPRequestContent : HTTPMessageContent
    {
       /// <summary>
@@ -173,7 +193,7 @@ namespace CBAM.HTTP
    /// <summary>
    /// This is content object for <see cref="HTTPResponse"/>.
    /// </summary>
-   /// <seealso cref="HTTPMessageFactory"/>
+   /// <seealso cref="HTTPFactory"/>
    public interface HTTPResponseContent : HTTPMessageContent
    {
       /// <summary>
@@ -190,6 +210,8 @@ namespace CBAM.HTTP
       /// <param name="count">The maximum amount of bytes to write.</param>
       /// <returns>Potentially asynchronously returns amount of bytes read. The return value of <c>0</c> means that end of content has been reached.</returns>
       ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count );
+
+      //Boolean ContentEndIsKnown { get; } // TODO not sure if we should even allow situation when this is true??
    }
 
    /// <summary>
@@ -232,7 +254,7 @@ namespace CBAM.HTTP
 
       }
 
-      public Boolean ContentEndIsKnown => true;
+      //public Boolean ContentEndIsKnown => true;
 
       /// <summary>
       /// Implements <see cref="HTTPMessageContent.ByteCount"/> and always returns <c>0</c>.
@@ -252,7 +274,6 @@ namespace CBAM.HTTP
       /// <param name="array">The byte array.</param>
       /// <param name="offset">The offset in byte array, ignored.</param>
       /// <param name="count">The maximum amount of bytes to read, ignored.</param>
-      /// <param name="token">The <see cref="CancellationToken"/>, ignored.</param>
       /// <returns>Always returns <c>0</c> synchronously.</returns>
       public ValueTask<Int32> ReadToBuffer( Byte[] array, Int32 offset, Int32 count )
       {
@@ -265,54 +286,95 @@ namespace CBAM.HTTP
    /// <summary>
    /// This static class provides methods to create instances of <see cref="HTTPRequest"/>, <see cref="HTTPResponse"/>, <see cref="HTTPRequestContent"/>, and <see cref="HTTPResponseContent"/> types.
    /// </summary>
-   public static class HTTPMessageFactory
+   public static class HTTPFactory
    {
-      public const String HTTP1_1 = "HTTP/1.1";
 
+      /// <summary>
+      /// This is string constant for HTTP version 1.1.
+      /// </summary>
+      public const String VERSION_HTTP1_1 = "HTTP/1.1";
+
+      /// <summary>
+      /// This is string constant for HTTP method GET.
+      /// </summary>
       public const String METHOD_GET = "GET";
+
+      /// <summary>
+      /// This is string constant for HTTP method POST.
+      /// </summary>
       public const String METHOD_POST = "POST";
 
-      private static String DefaultIfNullOrEmpty( this String str, String defaultString )
-      {
-         return String.IsNullOrEmpty( str ) ? defaultString : str;
-      }
+      /// <summary>
+      /// This is string constant for HTTP method HEAD.
+      /// </summary>
+      public const String METHOD_HEAD = "HEAD";
+
+      /// <summary>
+      /// This is string constant for HTTP method PUT.
+      /// </summary>
+      public const String METHOD_PUT = "PUT";
+
+      /// <summary>
+      /// This is string constant for HTTP method DELETE.
+      /// </summary>
+      public const String METHOD_DELETE = "DELETE";
+
+      /// <summary>
+      /// This is string constant for HTTP method CONNECT.
+      /// </summary>
+      public const String METHOD_CONNECT = "CONNECT";
+
+      /// <summary>
+      /// This is string constant for HTTP method OPTIONS.
+      /// </summary>
+      public const String METHOD_OPTIONS = "OPTIONS";
+
+      /// <summary>
+      /// This is string constant for HTTP method TRACE.
+      /// </summary>
+      public const String METHOD_TRACE = "TRACE";
+
+      /// <summary>
+      /// This is string constant for HTTP method PATCH.
+      /// </summary>
+      public const String METHOD_PATCH = "PATCH";
 
       /// <summary>
       /// Creates a <see cref="HTTPRequest"/> with <c>"GET"</c> method and given path and version.
       /// </summary>
       /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
-      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
       /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
       public static HTTPRequest CreateGETRequest(
          String path,
-         String version = HTTP1_1
+         String version = VERSION_HTTP1_1
          ) => CreateRequest( path, method: METHOD_GET, version: version, content: null );
 
       /// <summary>
       /// Creates a <see cref="HTTPRequest"/> with <c>"POST"</c> method and given path, content, and version.
       /// </summary>
       /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
-      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/>.</param>
-      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Content"/>.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
       /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
       public static HTTPRequest CreatePOSTRequest(
          String path,
          HTTPRequestContent content,
-         String version = HTTP1_1
+         String version = VERSION_HTTP1_1
          ) => CreateRequest( path, method: METHOD_POST, version: version, content: content );
 
       /// <summary>
       /// Creates a <see cref="HTTPRequest"/> with <c>"POST"</c> method and given path, textual content, and version.
       /// </summary>
       ///<param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
-      /// <param name="textualContent">The content for <see cref="HTTPMessage{TContent}.Content"/> as string.</param>
-      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <param name="textualContent">The content for <see cref="HTTPMessage{TContent, TDictionary, TList}.Content"/> as string.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
       /// <param name="encoding">The optional <see cref="Encoding"/> to use when sending <paramref name="textualContent"/>, is <see cref="Encoding.UTF8"/> by default.</param>
       /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
       public static HTTPRequest CreatePOSTRequest(
          String path,
          String textualContent,
-         String version = HTTP1_1,
+         String version = VERSION_HTTP1_1,
          Encoding encoding = null
          ) => CreateRequest( path, METHOD_POST, CreateRequestContentFromString( textualContent, encoding ), version: version );
 
@@ -321,14 +383,14 @@ namespace CBAM.HTTP
       /// </summary>
       /// <param name="path">The value for <see cref="HTTPRequest.Path"/>.</param>
       /// <param name="method">The value for <see cref="HTTPRequest.Method"/>.</param>
-      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/>.</param>
-      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Content"/>.</param>
+      /// <param name="version">The optional value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Version"/>, is <c>"HTTP/1.1"</c> by default.</param>
       /// <returns>A new instance of <see cref="HTTPRequest"/> with no headers and properties set to given values.</returns>
       public static HTTPRequest CreateRequest(
          String path,
          String method,
          HTTPRequestContent content,
-         String version = HTTP1_1
+         String version = VERSION_HTTP1_1
          )
       {
          HTTPRequest retVal = new HTTPRequestImpl()
@@ -337,7 +399,7 @@ namespace CBAM.HTTP
             Path = path
          };
 
-         retVal.Version = DefaultIfNullOrEmpty( version, HTTP1_1 );
+         retVal.Version = String.IsNullOrEmpty( version ) ? VERSION_HTTP1_1 : version;
          retVal.Content = content;
          return retVal;
       }
@@ -357,10 +419,11 @@ namespace CBAM.HTTP
       /// <summary>
       /// Creates a new instance of <see cref="HTTPResponse"/> with given parameters.
       /// </summary>
-      /// <param name="version">The value for <see cref="HTTPMessage{TContent}.Version"/> property.</param>
+      /// <param name="version">The value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Version"/> property.</param>
       /// <param name="statusCode">The value for <see cref="HTTPResponse.StatusCode"/> property.</param>
       /// <param name="statusMessage">The value for <see cref="HTTPResponse.StatusCodeMessage"/> property.</param>
-      /// <param name="content">The value for <see cref="HTTPMessage{TContent}.Content"/> property.</param>
+      /// <param name="headers">The value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Headers"/>.</param>
+      /// <param name="content">The value for <see cref="HTTPMessage{TContent, TDictionary, TList}.Content"/> property.</param>
       /// <returns>A new instance of <see cref="HTTPResponse"/> with no headers and properties set to given values.</returns>
       public static HTTPResponse CreateResponse(
          String version,
@@ -379,9 +442,66 @@ namespace CBAM.HTTP
             );
       }
 
+      /// <summary>
+      /// Helper method to create mutable dictionary to hold headers.
+      /// </summary>
+      /// <returns>A new instance of headers dictionary</returns>
       public static IDictionary<String, List<String>> CreateHeadersDictionary()
       {
          return new Dictionary<String, List<String>>( StringComparer.OrdinalIgnoreCase );
+      }
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPResponseContent"/> reading its contents from <see cref="Stream"/> when the content length is known.
+      /// </summary>
+      /// <param name="stream">The <see cref="Stream"/> where to read contents from.</param>
+      /// <param name="buffer">The buffer containing pre-read data, this will be used before <paramref name="stream"/> until all data is read.</param>
+      /// <param name="bufferAdvanceState">The advance state of the buffer.</param>
+      /// <param name="byteCount">The content size in bytes.</param>
+      /// <param name="token">The <see cref="CancellationToken"/> to use in asynchronous method calls.</param>
+      /// <returns>A <see cref="HTTPResponseContent"/> which has pre-determined content length and reads its contents from <see cref="Stream"/>.</returns>
+      public static HTTPResponseContent CreateResponseContentWithKnownByteCount(
+         Stream stream,
+         Byte[] buffer,
+         BufferAdvanceState bufferAdvanceState,
+         Int64 byteCount,
+         CancellationToken token
+         )
+      {
+         return byteCount <= 0 ? (HTTPResponseContent) EmptyHTTPResponseContent.Instance : new HTTPResponseContentFromStream_KnownLength(
+            stream,
+            buffer,
+            bufferAdvanceState,
+            byteCount,
+            token
+            );
+      }
+
+      /// <summary>
+      /// Creates a new instance of <see cref="HTTPResponseContent"/> that utilizes chunked transfer encoding when it reads data.
+      /// </summary>
+      /// <param name="stream">The <see cref="Stream"/> where to read contents from.</param>
+      /// <param name="buffer">The buffer containing pre-read data, this will be used before <paramref name="stream"/> until all data is read.</param>
+      /// <param name="bufferAdvanceState">The advance state of the buffer.</param>
+      /// <param name="singleStreamReadCount">The amount of bytes to read from underlying stream at once.</param>
+      /// <param name="token">The <see cref="CancellationToken"/> to use in asynchronous method calls.</param>
+      /// <returns>A <see cref="HTTPResponseContent"/> which reads data using chunked transfer encoding.</returns>
+      public static async ValueTask<HTTPResponseContent> CreateResponseContentWithChunkedEncoding(
+         Stream stream,
+         ResizableArray<Byte> buffer,
+         BufferAdvanceState bufferAdvanceState,
+         Int32 singleStreamReadCount,
+         CancellationToken token
+         )
+      {
+         return new HTTPResponseContentFromStream_Chunked(
+               stream,
+               buffer,
+               bufferAdvanceState,
+               await HTTPResponseContentFromStream_Chunked.ReadNextChunk( stream, buffer, bufferAdvanceState, singleStreamReadCount, token ),
+               singleStreamReadCount,
+               token
+               );
       }
 
       ///// <summary>
@@ -404,6 +524,36 @@ namespace CBAM.HTTP
       //   Func<ValueTask<Boolean>> onEnd
       //   ) => new HTTPResponseContentFromStream_Chunked(  new HTTPResponseContentFromStream( stream, byteCount, onEnd );
    }
+
+   /// <summary>
+   /// This class contains various utility methods.
+   /// </summary>
+   public static class HTTPUtils
+   {
+      /// <summary>
+      /// Helper method to erase data that has been read (starting from index 0 and having <see cref="BufferAdvanceState.BufferOffset"/> amount of bytes) from current buffer.
+      /// </summary>
+      /// <param name="aState">The <see cref="BufferAdvanceState"/>.</param>
+      /// <param name="buffer">The <see cref="ResizableArray{T}"/> buffer.</param>
+      public static void EraseReadData(
+         BufferAdvanceState aState,
+         ResizableArray<Byte> buffer
+         )
+      {
+         var end = aState.BufferOffset;
+         var preReadLength = aState.BufferTotal;
+         // Messages end with CRLF
+         end += 2;
+         var remainingData = preReadLength - end;
+         if ( remainingData > 0 )
+         {
+            var array = buffer.Array;
+            Array.Copy( array, end, array, 0, remainingData );
+         }
+         aState.Reset();
+         aState.ReadMore( remainingData );
+      }
+   }
 }
 
 /// <summary>
@@ -424,15 +574,13 @@ public static partial class E_CBAM
    }
 
    /// <summary>
-   /// Helper method to add header with given name and value to this <see cref="HTTPMessage{TContent}"/> and return it.
+   /// Helper method to add header with given name and value to this <see cref="HTTPMessage{TContent, TDictionary, TList}"/> and return it.
    /// </summary>
-   /// <typeparam name="T">The type of this <see cref="HTTPMessage{TContent}"/></typeparam>
-   /// <typeparam name="TContent">The type of the <see cref="HTTPMessageContent"/>.</typeparam>
-   /// <param name="message">This <see cref="HTTPMessage{TContent}"/>.</param>
+   /// <param name="message">This <see cref="HTTPMessage{TContent, TDictionary, TList}"/>.</param>
    /// <param name="headerName">The name of the header.</param>
    /// <param name="headerValue">The value of the header.</param>
-   /// <returns>This <see cref="HTTPMessage{TContent}"/>.</returns>
-   /// <exception cref="NullReferenceException">If this <see cref="HTTPMessage{TContent}"/> is <c>null</c>.</exception>
+   /// <returns>This <see cref="HTTPMessage{TContent, TDictionary, TList}"/>.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="HTTPMessage{TContent, TDictionary, TList}"/> is <c>null</c>.</exception>
    public static HTTPRequest WithHeader( this HTTPRequest message, String headerName, String headerValue )
    {
       message.Headers
@@ -452,17 +600,16 @@ public static partial class E_CBAM
    /// Helper method to read all content of this <see cref="HTTPResponseContent"/> into single byte array, if the byte size of this <see cref="HTTPResponseContent"/> is known.
    /// </summary>
    /// <param name="content">This <see cref="HTTPResponseContent"/>.</param>
-   /// <param name="token">The <see cref="CancellationToken"/>.</param>
    /// <returns>Potentially asynchronously returns a new byte array with the contents read from this <see cref="HTTPResponseContent"/>.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="HTTPResponseContent"/> is <c>null</c>.</exception>
-   /// <exception cref="InvalidOperationException">If this <see cref="HTTPResponseContent"/> does not know its byte size, that is, its <see cref="HTTPResponseContent.BytesRemaining"/> is <c>null</c>.</exception>
+   ///// <exception cref="InvalidOperationException">If this <see cref="HTTPResponseContent"/> does not know its byte size, that is, its <see cref="HTTPResponseContent.BytesRemaining"/> is <c>null</c>.</exception>
    public static ValueTask<Byte[]> ReadAllContentAsync( this HTTPResponseContent content )
    {
-      ArgumentValidator.ValidateNotNullReference( content );
-      if ( !content.ContentEndIsKnown )
-      {
-         throw new InvalidOperationException( "The response content does not know where the data ends." );
-      }
+      //ArgumentValidator.ValidateNotNullReference( content );
+      //if ( !content.ContentEndIsKnown )
+      //{
+      //   throw new InvalidOperationException( "The response content does not know where the data ends." );
+      //}
 
       var length = content.ByteCount;
       return length.HasValue ?

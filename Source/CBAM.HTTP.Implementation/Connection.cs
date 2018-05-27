@@ -48,7 +48,7 @@ namespace CBAM.HTTP.Implementation
          return enumerable.AsObservable( info );
       }
 
-      public String ProtocolVersion => HTTPMessageFactory.HTTP1_1;
+      public String ProtocolVersion => HTTPFactory.VERSION_HTTP1_1;
    }
 
    internal sealed class HTTPConnectionFunctionalityImpl<TRequestMetaData> : ConnectionFunctionalitySU<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorImpl<TRequestMetaData>> // DefaultConnectionFunctionality<HTTPStatement, HTTPStatementInformation, TCreationParameter, HTTPConnectionVendorImpl, IAsyncConcurrentEnumerable<HTTPResponse>>
@@ -153,7 +153,7 @@ namespace CBAM.HTTP.Implementation
 
    }
 
-   public abstract class AbstractIOState
+   internal abstract class AbstractIOState
    {
 
       public AbstractIOState()
@@ -167,7 +167,7 @@ namespace CBAM.HTTP.Implementation
       //public AsyncLock Lock { get; }
    }
 
-   public sealed class WriteState : AbstractIOState
+   internal sealed class WriteState : AbstractIOState
    {
       public WriteState(
          ) : base()
@@ -175,7 +175,7 @@ namespace CBAM.HTTP.Implementation
       }
    }
 
-   public sealed class ReadState : AbstractIOState
+   internal sealed class ReadState : AbstractIOState
    {
       public ReadState(
          ) : base()
@@ -186,7 +186,7 @@ namespace CBAM.HTTP.Implementation
       public BufferAdvanceState BufferAdvanceState { get; }
    }
 
-   public sealed class ClientProtocolIOState
+   internal sealed class ClientProtocolIOState
    {
 
       public ClientProtocolIOState(
@@ -254,6 +254,9 @@ namespace CBAM.HTTP.Implementation
 
 }
 
+/// <summary>
+/// This class contains extension methods for types defined in this assembly.
+/// </summary>
 public static partial class E_CBAM
 {
    private const Byte CR = 0x0D; // \r
@@ -396,7 +399,7 @@ public static partial class E_CBAM
       // Read first line
       if ( aState.BufferTotal > 0 )
       {
-         HTTPResponseContentFromStream_Chunked.EraseReadData( aState, buffer );
+         HTTPUtils.EraseReadData( aState, buffer );
       }
       await stream.ReadUntilMaybeAsync( buffer, aState, CRLF_BYTES, streamReadCount );
       var array = buffer.Array;
@@ -412,8 +415,8 @@ public static partial class E_CBAM
       var statusMessage = UnescapeHTTPComponentString( strings.GetString( array, idx + 1, aState.BufferOffset - idx - 1 ) );
       // Read headers - one line at a time
       // TODO max header count limit (how many fieldname:fieldvalue lines)
-      var headers = HTTPMessageFactory.CreateHeadersDictionary();
-      HTTPResponseContentFromStream_Chunked.EraseReadData( aState, buffer );
+      var headers = HTTPFactory.CreateHeadersDictionary();
+      HTTPUtils.EraseReadData( aState, buffer );
       Int32 bufferOffset;
       do
       {
@@ -450,7 +453,7 @@ public static partial class E_CBAM
             }
          }
 
-         HTTPResponseContentFromStream_Chunked.EraseReadData( aState, buffer );
+         HTTPUtils.EraseReadData( aState, buffer );
       } while ( bufferOffset > 0 );
 
       // Now we can set the content, if it is present
@@ -459,49 +462,35 @@ public static partial class E_CBAM
       HTTPResponseContent responseContent;
       if ( hasContent )
       {
-         var hasXferEncoding = headers.TryGetValue( "Transfer-Encoding", out var xferEncodingStrings );
-         var contentLengthStrings = xferEncodingStrings;
-         Int64? contentLength;
-         if (
-            ( hasXferEncoding || headers.TryGetValue( "Content-Length", out contentLengthStrings ) )
-            && contentLengthStrings.Count > 0
-            && Int64.TryParse( contentLengthStrings[0], out var contentLengthInt )
+         if ( headers.TryGetValue( "Content-Length", out var headerValues )
+            && headerValues.Count > 0
+            && Int64.TryParse( headerValues[0], out var contentLengthInt )
             )
          {
-            contentLength = contentLengthInt;
+            responseContent = HTTPFactory.CreateResponseContentWithKnownByteCount(
+               stream,
+               buffer.Array,
+               aState,
+               contentLengthInt,
+               token
+               );
          }
-         else
+         else if ( headers.TryGetValue( "Transfer-Encoding", out headerValues )
+          && headerValues.Count > 0
+          && headerValues.Any( xferEncoding => String.Equals( xferEncoding, "chunked", StringComparison.OrdinalIgnoreCase ) )
+          )
          {
-            contentLength = null;
-         }
-
-         hasContent = contentLength.HasValue && contentLength.Value > 0;
-
-         if ( contentLength.HasValue
-            || ( xferEncodingStrings?.All( xferEncoding => !String.Equals( xferEncoding, "chunked", StringComparison.OrdinalIgnoreCase ) ) ?? true )
-            )
-         {
-            if ( contentLength.HasValue && contentLength.Value == 0 )
-            {
-               responseContent = EmptyHTTPResponseContent.Instance;
-            }
-            else
-            {
-               responseContent = new HTTPResponseContentFromStream( stream, buffer.Array, aState, contentLength, token );
-            }
-         }
-         else
-         {
-            // Chunked encoding
-            hasContent = true;
-            responseContent = new HTTPResponseContentFromStream_Chunked(
+            responseContent = await HTTPFactory.CreateResponseContentWithChunkedEncoding(
                stream,
                buffer,
                aState,
-               await HTTPResponseContentFromStream_Chunked.ReadNextChunk( stream, buffer, aState, streamReadCount, token ),
                streamReadCount,
                token
                );
+         }
+         else
+         {
+            throw new InvalidOperationException( "Response did not have content length nor recognizable transfer encoding." );
          }
       }
       else
@@ -509,7 +498,7 @@ public static partial class E_CBAM
          responseContent = EmptyHTTPResponseContent.Instance;
       }
 
-      return HTTPMessageFactory.CreateResponse( version, statusCodeInt, statusMessage, headers, responseContent );
+      return HTTPFactory.CreateResponse( version, statusCodeInt, statusMessage, headers, responseContent );
    }
 
 

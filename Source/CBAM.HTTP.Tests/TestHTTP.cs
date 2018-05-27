@@ -49,7 +49,7 @@ namespace CBAM.HTTP.Tests
             Host = host,
             Port = port,
             IsSecure = isSecure
-         }.CreatePoolAndReceiveTextualResponseAsync( HTTPMessageFactory.CreateGETRequest( path ) );
+         }.CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( path ) );
 
          AssertResponse( response );
       }

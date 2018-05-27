@@ -117,7 +117,7 @@ namespace CBAM.HTTP
       public Boolean ContentEndIsKnown => true;
    }
 
-   public sealed class HTTPResponseContentFromStream : HTTPResponseContent
+   internal sealed class HTTPResponseContentFromStream_KnownLength : HTTPResponseContent
    {
       private const Int32 INITIAL = 0;
       private const Int32 READING = 1;
@@ -126,29 +126,30 @@ namespace CBAM.HTTP
       private readonly Byte[] _preReadData;
       private readonly BufferAdvanceState _bufferAdvanceState;
       private readonly CancellationToken _token;
+      private readonly Int64 _byteCount;
       private Int64 _bytesRemaining;
       private Int32 _state;
 
 
-      public HTTPResponseContentFromStream(
+      public HTTPResponseContentFromStream_KnownLength(
          Stream stream,
          Byte[] buffer,
          BufferAdvanceState bufferAdvanceState,
-         Int64? byteCount,
+         Int64 byteCount,
          CancellationToken token
          )
       {
          this._stream = ArgumentValidator.ValidateNotNull( nameof( stream ), stream );
          this._preReadData = ArgumentValidator.ValidateNotNull( nameof( buffer ), buffer );
          this._bufferAdvanceState = ArgumentValidator.ValidateNotNull( nameof( BufferAdvanceState ), bufferAdvanceState );
-         this.ByteCount = byteCount;
-         this._bytesRemaining = byteCount ?? -1;
+         this._byteCount = byteCount;
+         this._bytesRemaining = byteCount;
          this._token = token;
       }
 
       public Boolean ContentEndIsKnown => this.ByteCount.HasValue;
 
-      public Int64? ByteCount { get; }
+      public Int64? ByteCount => this._byteCount;
 
       public Int64? BytesRemaining => this._bytesRemaining < 0 ? default : Interlocked.Read( ref this._bytesRemaining );
 
@@ -219,7 +220,7 @@ namespace CBAM.HTTP
       }
    }
 
-   public sealed class HTTPResponseContentFromStream_Chunked : HTTPResponseContent
+   internal sealed class HTTPResponseContentFromStream_Chunked : HTTPResponseContent
    {
       private static readonly Byte[] CRLF = new[] { (Byte) '\r', (Byte) '\n' };
       private static readonly Byte[] TerminatingChunk = new[] { (Byte) '0', (Byte) '\r', (Byte) '\n' }; //, (Byte) '\r', (Byte) '\n' };
@@ -286,11 +287,11 @@ namespace CBAM.HTTP
                   if ( this._chunkRemaining == 0 )
                   {
                      // We must read next chunk
-                     EraseReadData( this._advanceState, this._buffer );
+                     HTTPUtils.EraseReadData( this._advanceState, this._buffer );
                      if ( ( this._chunkRemaining = await ReadNextChunk( this._stream, this._buffer, this._advanceState, this._streamReadCount, this._token ) ) < 0 )
                      {
                         // Clear data
-                        EraseReadData( this._advanceState, this._buffer );
+                        HTTPUtils.EraseReadData( this._advanceState, this._buffer );
                      }
 
                   }
@@ -310,24 +311,7 @@ namespace CBAM.HTTP
       }
 
 
-      public static void EraseReadData(
-         BufferAdvanceState aState,
-         ResizableArray<Byte> buffer
-         )
-      {
-         var end = aState.BufferOffset;
-         var preReadLength = aState.BufferTotal;
-         // Messages end with CRLF
-         end += 2;
-         var remainingData = preReadLength - end;
-         if ( remainingData > 0 )
-         {
-            var array = buffer.Array;
-            Array.Copy( array, end, array, 0, remainingData );
-         }
-         aState.Reset();
-         aState.ReadMore( remainingData );
-      }
+
 
       // When this method is done, the buffer will have header + chunk (including terminating CRLF) in its contents
       // It assumes that chunk headers starts at advanceState.BufferOffset

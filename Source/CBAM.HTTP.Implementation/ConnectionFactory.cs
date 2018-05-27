@@ -33,16 +33,24 @@ using CBAM.HTTP.Implementation;
 
 namespace CBAM.HTTP.Implementation
 {
+   /// <summary>
+   /// This class provides static <see cref="Factory"/> property to create connection pools that provide instances of <see cref="HTTPConnection{TRequestMetaData}"/> to use.
+   /// This class also can be used dynamically by some other code, and then use <see cref="AsyncResourceFactoryProvider.BindCreationParameters"/> to obtain same <see cref="AsyncResourceFactory{TResource}"/> as the one by calling <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> for the static property <see cref="Factory"/> of this class.
+   /// The configuration type for this factory class is <see cref="HTTPNetworkCreationInfo"/>.
+   /// For simpler configuration support, see <see cref="HTTPSimpleConfigurationPoolProvider{TRequestMetaData}"/>
+   /// </summary>
+   /// <typeparam name="TRequestMetaData">The type of metadata associated with each request, used in identifying the request that response is associated with. Typically this is <see cref="Guid"/> or <see cref="Int64"/>.</typeparam>
+   /// <seealso cref="HTTPSimpleConfigurationPoolProvider{TRequestMetaData}"/>
    public sealed class HTTPNetworkConnectionPoolProvider<TRequestMetaData> : AbstractAsyncResourceFactoryProvider<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo>
    {
 
       /// <summary>
-      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/>s.
+      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create pools that provide instances of <see cref="HTTPConnection{TRequestMetaData}"/> to use.
       /// </summary>
-      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/>s.</value>
+      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/> to use.</value>
       /// <remarks>
       /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
-      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.AcquireResourceAsync"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
+      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.CreateAcquireResourceContext"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
       /// </remarks>
       public static AsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo> Factory { get; } = new DefaultAsyncResourceFactory<HTTPConnection<TRequestMetaData>, HTTPNetworkCreationInfo>( config => config
             .NewFactoryParametrizer<HTTPNetworkCreationInfo, HTTPNetworkCreationInfoData, HTTPConnectionConfiguration, HTTPInitializationConfiguration, HTTPProtocolConfiguration, HTTPPoolingConfiguration>()
@@ -88,7 +96,7 @@ namespace CBAM.HTTP.Implementation
       {
       }
 
-
+      /// <inheritdoc />
       protected override HTTPNetworkCreationInfo TransformFactoryParameters( Object creationParameters )
       {
          ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
@@ -119,8 +127,24 @@ namespace CBAM.HTTP.Implementation
          => Factory;
    }
 
+   /// <summary>
+   /// This class provides static <see cref="Factory"/> property to create connection pools that provide instances of <see cref="HTTPConnection{TRequestMetaData}"/> to use.
+   /// This class also can be used dynamically by some other code, and then use <see cref="AsyncResourceFactoryProvider.BindCreationParameters"/> to obtain same <see cref="AsyncResourceFactory{TResource}"/> as the one by calling <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/> for the static property <see cref="Factory"/> of this class.
+   /// The configuration type for this factory class is <see cref="SimpleHTTPConfiguration"/>.
+   /// For more advanced and customizable configuration support, see <see cref="HTTPNetworkConnectionPoolProvider{TRequestMetaData}"/>
+   /// </summary>
+   /// <typeparam name="TRequestMetaData">The type of metadata associated with each request, used in identifying the request that response is associated with. Typically this is <see cref="Guid"/> or <see cref="Int64"/>.</typeparam>
+   /// <seealso cref="HTTPNetworkConnectionPoolProvider{TRequestMetaData}"/>
    public sealed class HTTPSimpleConfigurationPoolProvider<TRequestMetaData> : AbstractAsyncResourceFactoryProvider<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration>
    {
+      /// <summary>
+      /// Gets the <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create pools that provide instances of <see cref="HTTPConnection{TRequestMetaData}"/> to use.
+      /// </summary>
+      /// <value>The <see cref="AsyncResourceFactory{TResource, TParams}"/> which can create <see cref="HTTPConnection{TRequestMetaData}"/> to use.</value>
+      /// <remarks>
+      /// By invoking <see cref="AsyncResourceFactory{TResource, TParams}.BindCreationParameters"/>, one gets the bound version <see cref="AsyncResourceFactory{TResource}"/>, with only one generic parameter.
+      /// Instead of directly using <see cref="AsyncResourceFactory{TResource}.CreateAcquireResourceContext"/>, typical scenario would involve creating an instance <see cref="AsyncResourcePool{TResource}"/> by invoking one of various extension methods for <see cref="AsyncResourceFactory{TResource}"/>.
+      /// </remarks>
       public static AsyncResourceFactory<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration> Factory { get; } = new DefaultAsyncResourceFactory<HTTPConnection<TRequestMetaData>, SimpleHTTPConfiguration>( config => HTTPNetworkConnectionPoolProvider<TRequestMetaData>.Factory.BindCreationParameters( config.CreateNetworkCreationInfo() ) );
 
       /// <summary>
@@ -134,7 +158,7 @@ namespace CBAM.HTTP.Implementation
       {
       }
 
-
+      /// <inheritdoc />
       protected override SimpleHTTPConfiguration TransformFactoryParameters( Object creationParameters )
       {
          ArgumentValidator.ValidateNotNull( nameof( creationParameters ), creationParameters );
@@ -164,12 +188,23 @@ namespace CBAM.HTTP.Implementation
 
 public static partial class E_CBAM
 {
-   public static Task<HTTPTextualResponseInfo> CreatePoolAndReceiveTextualResponseAsync( this SimpleHTTPConfiguration config, HTTPRequest request )
+   /// <summary>
+   /// This is ease-of-life method to asynchronously create <see cref="HTTPConnection{TRequestMetaData}"/> pool, send one HTTP request, and receive and return first HTTP response, with its contents completely stringified.
+   /// </summary>
+   /// <param name="config">This <see cref="SimpleHTTPConfiguration"/>.</param>
+   /// <param name="request">The request to send.</param>
+   /// <param name="defaultEncoding">The default encoding to use when stringifying the response contents. If not specified, a <see cref="UTF8Encoding"/> will be used.</param>
+   /// <returns>Asynchronously returns the <see cref="HTTPTextualResponseInfo"/> of the first response that server sends.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="SimpleHTTPConfiguration"/> is <c>null</c>.</exception>
+   /// <exception cref="ArgumentNullException">If <paramref name="request"/> is <c>null</c>.</exception>
+   public static Task<HTTPTextualResponseInfo> CreatePoolAndReceiveTextualResponseAsync( this SimpleHTTPConfiguration config, HTTPRequest request, Encoding defaultEncoding = null )
    {
+      ArgumentValidator.ValidateNotNullReference( config );
+      ArgumentValidator.ValidateNotNull( nameof( request ), request );
       return HTTPSimpleConfigurationPoolProvider<Int64>
          .Factory
          .BindCreationParameters( config )
          .CreateOneTimeUseResourcePool()
-         .UseResourceAsync( async conn => { return await conn.ReceiveOneResponse( request ); } );
+         .UseResourceAsync( async conn => { return await conn.ReceiveOneTextualResponse( request, defaultEncoding: defaultEncoding ); } );
    }
 }

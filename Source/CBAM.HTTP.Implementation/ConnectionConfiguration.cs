@@ -25,8 +25,16 @@ using UtilPack.Configuration.NetworkStream;
 
 namespace CBAM.HTTP
 {
+   /// <summary>
+   /// This class extends <see cref="NetworkConnectionCreationInfo{TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/> to provide detailed and highly customizable configuration for HTTP connection.
+   /// </summary>
    public sealed class HTTPNetworkCreationInfo : NetworkConnectionCreationInfo<HTTPNetworkCreationInfoData, HTTPConnectionConfiguration, HTTPInitializationConfiguration, HTTPProtocolConfiguration, HTTPPoolingConfiguration>
    {
+      /// <summary>
+      /// Creates new instance of <see cref="HTTPNetworkCreationInfo"/> with given <see cref="HTTPNetworkCreationInfoData"/>.
+      /// </summary>
+      /// <param name="data">The <see cref="HTTPNetworkCreationInfoData"/>.</param>
+      /// <exception cref="ArgumentNullException">If <paramref name="data"/> is <c>null</c>.</exception>
       public HTTPNetworkCreationInfo(
          HTTPNetworkCreationInfoData data
          ) : base( data )
@@ -35,25 +43,40 @@ namespace CBAM.HTTP
 
    }
 
+   /// <summary>
+   /// This class extends <see cref="NetworkConnectionCreationInfoData{TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/> to provide detailed and highly customizable configuration for HTTP connection.
+   /// </summary>
    public sealed class HTTPNetworkCreationInfoData : NetworkConnectionCreationInfoData<HTTPConnectionConfiguration, HTTPInitializationConfiguration, HTTPProtocolConfiguration, HTTPPoolingConfiguration>
    {
 
    }
 
+   /// <summary>
+   /// This class extends <see cref="NetworkConnectionConfiguration"/> to provide detailed and highly customizable configuration for HTTP connection.
+   /// </summary>
    public sealed class HTTPConnectionConfiguration : NetworkConnectionConfiguration
    {
 
    }
 
+   /// <summary>
+   /// This class extends <see cref="NetworkInitializationConfiguration{TProtocolConfiguration, TPoolingConfiguration}"/> to provide detailed and highly customizable configuration for HTTP protocol and pooling initialization.
+   /// </summary>
    public sealed class HTTPInitializationConfiguration : NetworkInitializationConfiguration<HTTPProtocolConfiguration, HTTPPoolingConfiguration>
    {
 
    }
 
+   /// <summary>
+   /// This class contains information about HTTP protocol initialization.
+   /// </summary>
    public sealed class HTTPProtocolConfiguration
    {
    }
 
+   /// <summary>
+   /// This class extends <see cref="NetworkPoolingConfiguration"/>.
+   /// </summary>
    public sealed class HTTPPoolingConfiguration : NetworkPoolingConfiguration
    {
 
@@ -63,7 +86,7 @@ namespace CBAM.HTTP
    /// This class contains properties for simplistic HTTP configuration.
    /// This class may also be used when (de)serializing configuration.
    /// </summary>
-   /// <seealso cref="HTTPSimpleConfigurationPoolProvider{TRequestMetaData}"/>
+   /// <seealso cref="Implementation.HTTPSimpleConfigurationPoolProvider{TRequestMetaData}"/>
    public class SimpleHTTPConfiguration
    {
       /// <summary>
@@ -93,6 +116,12 @@ namespace CBAM.HTTP
 
 public static partial class E_CBAM
 {
+   /// <summary>
+   /// This is helper method to create a new <see cref="HTTPNetworkCreationInfo"/> from this <see cref="SimpleHTTPConfiguration"/>.
+   /// </summary>
+   /// <param name="simpleConfig">This <see cref="SimpleHTTPConfiguration"/>.</param>
+   /// <returns>A new instance of <see cref="HTTPNetworkCreationInfo"/> which is configured as this <see cref="SimpleHTTPConfiguration"/>.</returns>
+   /// <exception cref="NullReferenceException">If this <see cref="SimpleHTTPConfiguration"/> is <c>null</c>.</exception>
    public static HTTPNetworkCreationInfo CreateNetworkCreationInfo( this SimpleHTTPConfiguration simpleConfig )
    {
       var isSecure = simpleConfig.IsSecure;

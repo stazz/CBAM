@@ -23,22 +23,36 @@ using System.Threading.Tasks;
 namespace CBAM.HTTP
 {
    /// <summary>
-   /// This is read-only interface for <see cref="HTTPStatement"/>. Right now, it has no public API.
+   /// This is read-only interface for <see cref="HTTPStatement{TRequestMetaData}"/>. Right now, it has no public API.
    /// </summary>
+   /// <typeparam name="TRequestMetaData">The type of metadata associated with each request, used in identifying the request that response is associated with. Typically this is <see cref="Guid"/> or <see cref="Int64"/>.</typeparam>
    public interface HTTPStatementInformation<out TRequestMetaData>
    {
       // This interface is exposed via async enumerator observability, so we probably don't want to expose generator here.
       //Func<HTTPRequest> MessageGenerator { get; }
+
+      /// <summary>
+      /// Gets the metadata of the initial request.
+      /// </summary>
       TRequestMetaData InitialRequestMetaData { get; }
    }
 
    /// <summary>
-   /// This is read-write API for controlling how <see cref="HTTPConnection"/> will send HTTP requests.
+   /// This is read-write API for controlling how <see cref="HTTPConnection{TRequestMetaData}"/> will send HTTP requests.
    /// </summary>
+   /// <typeparam name="TRequestMetaData">The type of metadata associated with each request, used in identifying the request that response is associated with. Typically this is <see cref="Guid"/> or <see cref="Int64"/>.</typeparam>
    public interface HTTPStatement<TRequestMetaData> : HTTPStatementInformation<TRequestMetaData>
    {
+      /// <summary>
+      /// Gets or sets the callback, used when enumerating, to generate next request after seeing response from previous request.
+      /// </summary>
+      /// <value>The callback, used when enumerating, to generate next request after seeing response from previous request.</value>
       Func<HTTPResponseInfo<TRequestMetaData>, ValueTask<HTTPRequestInfo<TRequestMetaData>>> NextRequestGenerator { get; set; }
 
+      /// <summary>
+      /// Gets the <see cref="HTTPRequestInfo{TRequestMetaData}"/> of the first request to send when starting enumeration of this statement.
+      /// </summary>
+      /// <value>The <see cref="HTTPRequestInfo{TRequestMetaData}"/> of the first request to send when starting enumeration of this statement.</value>
       HTTPRequestInfo<TRequestMetaData> InitialRequest { get; }
 
       ///// <summary>
@@ -61,9 +75,9 @@ namespace CBAM.HTTP
       //Func<HTTPRequest> MessageGenerator { get; set; }
 
       /// <summary>
-      /// Gets the read-only API of this <see cref="HTTPStatement"/>.
+      /// Gets the read-only API of this <see cref="HTTPStatement{TRequestMetaData}"/>.
       /// </summary>
-      /// <value>The read-only API of this <see cref="HTTPStatement"/>.</value>
+      /// <value>The read-only API of this <see cref="HTTPStatement{TRequestMetaData}"/>.</value>
       HTTPStatementInformation<TRequestMetaData> Information { get; }
    }
 }
