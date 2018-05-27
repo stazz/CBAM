@@ -22,13 +22,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 using UtilPack.ResourcePooling;
-using UtilPack.ResourcePooling.NetworkStream;
 using UtilPack.Configuration.NetworkStream;
 
 namespace CBAM.NATS.Implementation

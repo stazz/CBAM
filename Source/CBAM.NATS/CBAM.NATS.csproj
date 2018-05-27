@@ -49,7 +49,7 @@
       <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
       <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
       <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
-      <Title>API for NATS protcol using CBAM abstractions</Title>
+      <Title>CBAM NATS Client API</Title>
       <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
       <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
       <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
