@@ -8,7 +8,78 @@ The `Connection` interface allows to prepare a statement for execution: e.g. str
 This prepared statement is exposed as [`IAsyncEnumerable<T>`](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.AsyncEnumeration), which can be asynchronously enumerated using e.g. `EnumerateSequentiallyAsync` extension method.
 Each item encountered during enumeration may be e.g. SQL statement execution result (statement execution information, or data row), or HTTP response (with all headers read, but content not read).
 
-# Example
+# Examples
+With CBAM as common framework, it is possible to interact with remote in various protocols.
+
+[HTTP](./Source/CBAM.HTTP.Implementation) example:
+```csharp
+var response = await new SimpleHTTPConfiguration()
+{
+  Host = "www.google.com",
+  Port = 443,
+  IsSecure = true
+}.CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( "/" ) );
+// Access content as string
+var stringContents = response.TextualContent
+// Access headers
+var headerDictionary = response.Headers
+```
+
+[PostgreSQL](./Source/CBAM.SQL.PostgreSQL.Implementation) example:
+```csharp
+// SQL example
+using Microsoft.Extensions.Configuration; // For configuration
+using CBAM.SQL.PostgreSQL; // For CBAM PostgreSQL types
+
+var configData = new ConfigurationBuilder() // This line requires reference to Microsoft.Extensions.Configuration NuGet package
+  .AddJsonFile( System.IO.Path.GetFullPath( "path/to/config/jsonfile" ) ) // This line requires reference to Microsoft.Extensions.Configuration.Json NuGet package
+  .Build()
+  .Get<PgSQLConnectionCreationInfoData>(); // This line requires reference to Microsoft.Extensions.Configuration.Binder NuGet package
+
+// Create connection pool
+Int32[] integers;
+using ( var pool = PgSQLConnectionPoolProvider.Factory
+  .BindCreationParameters( new PgSQLConnectionCreationInfo( configData ) )
+  .CreateTimeoutingResourcePool()) 
+{
+  // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
+  // The prepared statements are also fully supported, but out of scope from this example
+  // The code below only requires CBAM.SQL.PostgreSQL project, the CBAM.SQL.PostgreSQL.Implementation is only for access of PgSQLConnectionPoolProvider.Factory
+  integers = await pool.UseResourceAsync( async pgConnection =>
+  {
+     return await pgConnection
+        .PrepareStatementForExecution( "SELECT 1" )
+        .IncludeDataRowsOnly()
+        .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+        .ToArrayAsync();
+  } );
+}
+
+// Elsewhere, e.g. maybe in a separate background thread/loop:
+// This will close all connections that has been idle in a pool for over one minute
+await pool.CleanUpAsync( TimeSpan.FromMinutes( 1 ) );
+```
+
+[NATS](./Source/CBAM.NATS.Implementation) example:
+```csharp
+var pool = NATSConnectionPoolProvider.Factory.BindCreationParameters( new NATSConnectionCreationInfo( new NATSConnectionCreationInfoData()
+{
+  Connection = new NATSConnectionConfiguration()
+  {
+    Host = "localhost",
+    Port = 4222,
+    ConnectionSSLMode = ConnectionSSLMode.NotRequired
+  }
+} ) ).CreateOneTimeUseResourcePool().WithoutExplicitAPI();
+
+var messageContentsByteArray = await pool.UseResourceAsync( async natsConnection =>
+{
+return await natsConnection.SubscribeAsync( "MySubject" )
+  .Select( message => message.CreateDataArray() )
+  .FirstAsync();
+} );
+```
+
 
 The [CBAM.SQL.PostgreSQL.Implementation](#cbamsqlpostgresqlimplementation) project allows one to do this:
 ```csharp

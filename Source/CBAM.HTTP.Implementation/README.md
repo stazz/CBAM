@@ -2,7 +2,7 @@
 
 This project provides API to create instances of types defined in [CBAM.HTTP](../CBAM.HTTP) project.
 Unlike [CBAM.SQL.PostgreSQL.Implementation](../CBAM.SQL.PostgreSQL.Implementation), the `HTTPConnection`s are not oriented to be used by [resource pools](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.ResourcePooling), instead their management is manual.
-The `HTTPConnection` itself will use the [network resource pool](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.ResourcePooling.NetworkStream) when sending and receiving HTTP messages.
+<!--The `HTTPConnection` itself will use the [network resource pool](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.ResourcePooling.NetworkStream) when sending and receiving HTTP messages.
 This is why the creation of `HTTPConnection` objects is provided via extension method on `ExplicitAsyncResourcePool<Stream>` type, and extension method is located in `CBAM.HTTP.HTTPExtensions` class of this project.
 
 # Code example
@@ -41,7 +41,7 @@ using ( var pool = new NetworkStreamFactory()
 }
 
 // Now the responseTexts bag will contain 20 HTTP responses as text.
-```
+```-->
 
 # Distribution
 See [NuGet package](http://www.nuget.org/packages/CBAM.HTTP.Implementation) for binary distribution.
