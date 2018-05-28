@@ -74,9 +74,9 @@ var pool = NATSConnectionPoolProvider.Factory.BindCreationParameters( new NATSCo
 
 var messageContentsByteArray = await pool.UseResourceAsync( async natsConnection =>
 {
-return await natsConnection.SubscribeAsync( "MySubject" )
-  .Select( message => message.CreateDataArray() )
-  .FirstAsync();
+  return await natsConnection.SubscribeAsync( "MySubject" )
+    .Select( message => message.CreateDataArray() )
+    .FirstAsync();
 } );
 ```
 
@@ -92,7 +92,7 @@ var configData = new ConfigurationBuilder() // This line requires reference to M
   .Get<PgSQLConnectionCreationInfoData>(); // This line requires reference to Microsoft.Extensions.Configuration.Binder NuGet package
 
 // Create connection pool
-Int32[] integers;
+(Int32, String)[] results;
 using ( var pool = PgSQLConnectionPoolProvider.Factory
   .BindCreationParameters( new PgSQLConnectionCreationInfo( configData ) )
   .CreateTimeoutingResourcePool()) 
@@ -100,12 +100,12 @@ using ( var pool = PgSQLConnectionPoolProvider.Factory
   // Quick example on using connection pool to execute "SELECT 1" statement, and print the result (number "1") to console
   // The prepared statements are also fully supported, but out of scope from this example
   // The code below only requires CBAM.SQL.PostgreSQL project, the CBAM.SQL.PostgreSQL.Implementation is only for access of PgSQLConnectionPoolProvider.Factory
-  integers = await pool.UseResourceAsync( async pgConnection =>
+  results = await pool.UseResourceAsync( async pgConnection =>
   {
      return await pgConnection
-        .PrepareStatementForExecution( "SELECT 1" )
+        .PrepareStatementForExecution( "SELECT 1, 'some_string_value'" )
         .IncludeDataRowsOnly()
-        .Select( async row => await row.GetValueAsync<Int32>( 0 ) )
+        .Select( async row => await row.TransformToTuple<Int32, String>( ) )
         .ToArrayAsync();
   } );
 }
