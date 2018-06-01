@@ -509,6 +509,7 @@ namespace CBAM.NATS
          {
             const Int32 INITIAL = 0;
             const Int32 STARTED = 1;
+            const Int32 PENDING_NEXT = 2;
             var protocol = this._protocol;
             var dpFactory = metadata.DataProducerFactory;
 
@@ -522,8 +523,8 @@ namespace CBAM.NATS
                      if ( state == INITIAL )
                      {
                         dp = dpFactory?.Invoke();
-                        Interlocked.Exchange( ref state, STARTED );
                      }
+                     Interlocked.Exchange( ref state, STARTED );
                      var datas = dp == null ? default : await dp();
                      if ( datas != null )
                      {
@@ -533,7 +534,11 @@ namespace CBAM.NATS
                   },
                   ( out Boolean success ) =>
                   {
-                     success = false;
+                     success = state == STARTED;
+                     if ( success )
+                     {
+                        Interlocked.Exchange( ref state, PENDING_NEXT );
+                     }
                      return default( NATSPublishCompleted );
                   },
                   null

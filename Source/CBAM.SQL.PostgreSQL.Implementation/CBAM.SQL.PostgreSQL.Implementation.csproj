@@ -18,23 +18,12 @@
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj" />
     <ProjectReference Include="..\CBAM.Abstractions.Implementation.Tabular\CBAM.Abstractions.Implementation.Tabular.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
-    <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
     <ProjectReference Include="..\CBAM.SQL.Implementation\CBAM.SQL.Implementation.csproj" />
     <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.0'">
-    <PackageReference Include="UtilPack.Configuration.NetworkStream" Version="1.0.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard1.0'">
-    <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0" />
-  </ItemGroup>
-  
   <PropertyGroup>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.5.1</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -65,7 +54,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>IMPORTANT: The configuration format has changed, now username and authentication are in separate "Authentication" section of "Initialization" section.</PackageReleaseNotes>
+    <PackageReleaseNotes>Patch release for typo in class name.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

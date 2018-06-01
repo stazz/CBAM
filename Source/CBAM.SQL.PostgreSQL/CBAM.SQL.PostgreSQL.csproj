@@ -23,7 +23,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.5.1</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -54,7 +54,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Replaced event-based notifications with separate method to return IAsyncEnumerable that can be used to read notifications.</PackageReleaseNotes>
+    <PackageReleaseNotes>Patch release for typo in class name.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
     <Title>CBAM PostgreSQL API</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

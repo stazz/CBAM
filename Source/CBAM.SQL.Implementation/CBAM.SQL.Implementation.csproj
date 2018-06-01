@@ -17,12 +17,11 @@
   
   <ItemGroup>
     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
-    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
     <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.5.1</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -53,7 +52,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Tracking dependant packages releases.</PackageReleaseNotes>
+    <PackageReleaseNotes>Patch release for typo in class name.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection tabular sql data</PackageTags>
     <Title>Skeleton Implementations for CBAM SQL API</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

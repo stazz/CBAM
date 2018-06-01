@@ -32,7 +32,9 @@ namespace CBAM.NATS
 
       Int32 DataLength { get; }
 
-      Int32 CopyDataTo( Byte[] array, Int32 offset, Int32 count = -1 );
+      Int32 CopyDataTo( Byte[] array, Int32 offsetInMessage, Int32 offsetInArray, Int32 count = -1 );
+
+      Byte GetSingleByteAt( Int32 offsetInMessage );
    }
 
    public interface NATSPublishCompleted
@@ -51,7 +53,7 @@ public static partial class E_CBAM
       if ( len > 0 )
       {
          retVal = new Byte[obj.DataLength];
-         obj.CopyDataTo( retVal, 0 );
+         obj.CopyDataTo( retVal, 0, 0 );
       }
       else
       {
@@ -62,5 +64,5 @@ public static partial class E_CBAM
 
    }
 
-   public static void CopyDataTo( this NATSMessage message, Byte[] array ) => message.CopyDataTo( array, 0 );
+   public static void CopyAllDataTo( this NATSMessage message, Byte[] array ) => message.CopyDataTo( array, 0, 0 );
 }

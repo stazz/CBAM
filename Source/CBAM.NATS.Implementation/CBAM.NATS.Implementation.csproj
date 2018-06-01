@@ -15,18 +15,13 @@
      <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
    </ItemGroup>
    
-   <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard1.0'">
-      <PackageReference Include="UtilPack.ResourcePooling.NetworkStream" Version="1.0.0" />
-   </ItemGroup>
-
    <ItemGroup>
      <ProjectReference Include="..\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj" />
-     <ProjectReference Include="..\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj" />
      <ProjectReference Include="..\CBAM.NATS\CBAM.NATS.csproj" />
    </ItemGroup>
 
    <PropertyGroup>
-      <VersionPrefix>0.5.0</VersionPrefix>
+      <VersionPrefix>0.5.2</VersionPrefix>
       <VersionSuffix></VersionSuffix>
       <Authors>Stanislav Muhametsin</Authors>
       <Company>Cometa Solutions Ltd</Company>
@@ -57,7 +52,7 @@
       <PackageVersion>$(VersionPrefix)</PackageVersion>
       <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
       <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-      <PackageReleaseNotes>Initial release.</PackageReleaseNotes>
+      <PackageReleaseNotes>Made publishing enumerable actually enumerate items, so far they are just nulls though.</PackageReleaseNotes>
       <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
       <Title>CBAM NATS Client</Title>
       <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

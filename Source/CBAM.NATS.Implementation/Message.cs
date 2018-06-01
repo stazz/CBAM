@@ -51,16 +51,34 @@ namespace CBAM.NATS.Implementation
 
       public Int32 DataLength => this._data.Length;
 
-      public Int32 CopyDataTo( Byte[] array, Int32 offset, Int32 count = -1 )
+      public Int32 CopyDataTo( Byte[] array, Int32 offsetInMessage, Int32 offsetInArray, Int32 count )
       {
-         if ( count < 0 || count > this._dataLength )
+         if ( offsetInMessage < 0 )
          {
-            count = this.DataLength;
+            offsetInMessage = 0;
          }
-         var dummy = 0;
-         this._data.CopyTo( array, ref dummy, offset, count );
+         else if ( offsetInMessage >= this._dataLength )
+         {
+            offsetInMessage = this._dataLength - 1;
+         }
+
+         if ( count < 0 || count > this._dataLength - offsetInMessage )
+         {
+            count = this._dataLength - offsetInMessage;
+         }
+
+         this._data.CopyTo( array, ref offsetInMessage, offsetInArray, count );
 
          return count;
+      }
+
+      public Byte GetSingleByteAt( Int32 offsetInMessage )
+      {
+         if ( offsetInMessage < 0 || offsetInMessage >= this._dataLength )
+         {
+            throw new ArgumentException( nameof( offsetInMessage ) );
+         }
+         return this._data[offsetInMessage];
       }
 
       internal void SetData( Byte[] data, Int32 dataLength )
