@@ -21,7 +21,7 @@
    </ItemGroup>
 
    <PropertyGroup>
-      <VersionPrefix>0.5.2</VersionPrefix>
+      <VersionPrefix>0.5.3</VersionPrefix>
       <VersionSuffix></VersionSuffix>
       <Authors>Stanislav Muhametsin</Authors>
       <Company>Cometa Solutions Ltd</Company>
@@ -41,8 +41,8 @@
 
    <!-- Disable all debug information in release mode-->
    <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
-      <DebugType>none</DebugType>
-      <DebugSymbols>False</DebugSymbols>
+      <DebugType>full</DebugType>
+      <DebugSymbols>True</DebugSymbols>
       <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
    </PropertyGroup>
 
@@ -52,7 +52,7 @@
       <PackageVersion>$(VersionPrefix)</PackageVersion>
       <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
       <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-      <PackageReleaseNotes>Made publishing enumerable actually enumerate items, so far they are just nulls though.</PackageReleaseNotes>
+      <PackageReleaseNotes>Following fixes of CBAM.NATS project, and also updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
       <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
       <Title>CBAM NATS Client</Title>
       <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

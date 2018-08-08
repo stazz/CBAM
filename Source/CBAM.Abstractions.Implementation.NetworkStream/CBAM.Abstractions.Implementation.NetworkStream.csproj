@@ -27,7 +27,7 @@
   </ItemGroup>
   
   <PropertyGroup>
-    <VersionPrefix>0.5.1</VersionPrefix>
+    <VersionPrefix>0.5.3</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -58,7 +58,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Patch release for typo in class name.</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous network stream connection factory skeleton</PackageTags>
     <Title>CBAM NetworkStream Factory Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>

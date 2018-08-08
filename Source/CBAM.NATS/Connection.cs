@@ -45,6 +45,7 @@ namespace CBAM.NATS
 
    }
 
+   // TODO this interface might not be required after all - it might encourage 'bad' behaviour (i.e. the exact moment when subscription protocol message is sent is not the moment when server recognizes and registers the subscription)
    public interface NATSConnectionObservability
    {
       event GenericEventHandler<AfterSubscriptionSentArgs> AfterSubscriptionSent;

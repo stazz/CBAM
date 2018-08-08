@@ -90,7 +90,7 @@ namespace CBAM.NATS
          this.Subject = ArgumentValidator.ValidateNotEmpty( nameof( subject ), subject );
          this.Data = data;
          this.Offset = Math.Max( 0, offset );
-         this.Count = Math.Max( ( data?.Length ?? 0 ) - this.Offset, count );
+         this.Count = count < 0 ? Math.Max( 0, ( data?.Length ?? 0 ) - this.Offset ) : count;
          this.ReplySubject = String.IsNullOrEmpty( replySubject ) ? null : replySubject;
       }
 
