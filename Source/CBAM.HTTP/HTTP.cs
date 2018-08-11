@@ -395,7 +395,7 @@ namespace CBAM.HTTP
       {
          HTTPRequest retVal = new HTTPRequestImpl()
          {
-            Method = METHOD_GET,
+            Method = method,
             Path = path
          };
 
@@ -535,15 +535,20 @@ namespace CBAM.HTTP
       /// </summary>
       /// <param name="aState">The <see cref="BufferAdvanceState"/>.</param>
       /// <param name="buffer">The <see cref="ResizableArray{T}"/> buffer.</param>
+      /// <param name="isFirstRead">Whether this is first read (the status line of HTTP message).</param>
       public static void EraseReadData(
          BufferAdvanceState aState,
-         ResizableArray<Byte> buffer
+         ResizableArray<Byte> buffer,
+         Boolean isFirstRead = false
          )
       {
          var end = aState.BufferOffset;
          var preReadLength = aState.BufferTotal;
-         // Messages end with CRLF
-         end += 2;
+         // Message parts end with CRLF
+         if ( !isFirstRead )
+         {
+            end += 2;
+         }
          var remainingData = preReadLength - end;
          if ( remainingData > 0 )
          {

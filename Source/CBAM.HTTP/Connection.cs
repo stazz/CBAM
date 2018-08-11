@@ -215,6 +215,7 @@ public static partial class E_CBAM
       Encoding defaultEncoding = default
       )
    {
+
       return connection
          .PrepareStatementForExecution( new HTTPRequestInfo<TRequestMetaData>( request, metaData ) )
          .Select( async responseInfo => await responseInfo.Response.CreateTextualResponseInfo( defaultEncoding ) )

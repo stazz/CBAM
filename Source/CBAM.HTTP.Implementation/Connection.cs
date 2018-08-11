@@ -357,7 +357,7 @@ public static partial class E_CBAM
          {
             if ( bodySize.HasValue )
             {
-               buffer.CurrentMaxCapacity = (Int32) Math.Min( bodySize.Value, buffer.MaximumSize );
+               buffer.CurrentMaxCapacity = buffer.MaximumSize < 0 ? (Int32) bodySize.Value : (Int32) Math.Min( bodySize.Value, buffer.MaximumSize );
             }
 
             await body.WriteToStream( new HTTPWriterImpl( buffer, stream, token ), bodySize );
@@ -399,7 +399,7 @@ public static partial class E_CBAM
       // Read first line
       if ( aState.BufferTotal > 0 )
       {
-         HTTPUtils.EraseReadData( aState, buffer );
+         HTTPUtils.EraseReadData( aState, buffer, true );
       }
       await stream.ReadUntilMaybeAsync( buffer, aState, CRLF_BYTES, streamReadCount );
       var array = buffer.Array;
@@ -462,6 +462,7 @@ public static partial class E_CBAM
       HTTPResponseContent responseContent;
       if ( hasContent )
       {
+
          if ( headers.TryGetValue( "Content-Length", out var headerValues )
             && headerValues.Count > 0
             && Int64.TryParse( headerValues[0], out var contentLengthInt )

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>0.5.3</VersionPrefix>
+    <VersionPrefix>0.5.4</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <Authors>Stanislav Muhametsin</Authors>
     <Company>Cometa Solutions Ltd</Company>
@@ -48,7 +48,7 @@
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixed a bug which occurred on second response read with the same connection (incorrect assumption of CRLF at the end of the previously read data).</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection http client request api</PackageTags>
     <Title>CBAM HTTP Client Implementation</Title>
     <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
