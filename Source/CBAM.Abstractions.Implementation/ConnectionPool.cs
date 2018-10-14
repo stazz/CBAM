@@ -23,18 +23,18 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
-using UtilPack.ResourcePooling;
 using UtilPack.AsyncEnumeration;
+using UtilPack.ResourcePooling;
 
 namespace CBAM.Abstractions.Implementation
 {
    /// <summary>
-   /// This class implements <see cref="AsyncResourceFactory{TResource, TParams}"/> in order to create instances of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> as resource instances.
+   /// This class implements <see cref="AsyncResourceFactory{TResource, TParams}"/> in order to create instances of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TActualVendorFunctionality, TConnectionFunctionality}"/> as resource instances.
    /// </summary>
-   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality,  TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    public abstract class DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : DefaultBoundAsyncResourceFactory<TConnection, TConnectionCreationParameters> // AsyncResourceFactory<TConnection>
       where TConnection : class
       where TPrivateConnection : class, TConnection
@@ -98,24 +98,24 @@ namespace CBAM.Abstractions.Implementation
 
 
       /// <summary>
-      /// This method is called by <see cref="AcquireResourceAsync(CancellationToken)"/> initially, to create <see cref="PooledConnectionFunctionality"/> for the <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.
+      /// This method is called by <see cref="AcquireResourceAsync(CancellationToken)"/> initially, to create <see cref="PooledConnectionFunctionality"/> for the <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.
       /// </summary>
       /// <param name="token">The <see cref="CancellationToken"/> to use.</param>
       /// <returns>A task which will result in <see cref="PooledConnectionFunctionality"/> when completed.</returns>
       protected abstract ValueTask<TConnectionFunctionality> CreateConnectionFunctionality( CancellationToken token );
 
       /// <summary>
-      /// This method is called after <see cref="CreateConnectionFunctionality(CancellationToken)"/>, in order to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> after <see cref="PooledConnectionFunctionality"/> has been created.
+      /// This method is called after <see cref="CreateConnectionFunctionality(CancellationToken)"/>, in order to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> after <see cref="PooledConnectionFunctionality"/> has been created.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality"/> created by <see cref="CreateConnectionFunctionality(CancellationToken)"/> method.</param>
-      /// <returns>A task which will result in <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> when completed.</returns>
+      /// <returns>A task which will result in <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> when completed.</returns>
       protected abstract ValueTask<TPrivateConnection> CreateConnection( TConnectionFunctionality functionality );
 
       /// <summary>
       /// This method is called after <see cref="CreateConnection(TConnectionFunctionality)"/> in order to create instance of <see cref="AsyncResourceAcquireInfo{TResource}"/> to be returned from <see cref="AcquireResourceAsync(CancellationToken)"/> method.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality"/> created by <see cref="CreateConnectionFunctionality(CancellationToken)"/> method.</param>
-      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> created by <see cref="CreateConnection(TConnectionFunctionality)"/> method.</param>
+      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> created by <see cref="CreateConnection(TConnectionFunctionality)"/> method.</param>
       /// <returns>A new instance of <see cref="AsyncResourceAcquireInfo{TResource}"/>.</returns>
       protected abstract AsyncResourceAcquireInfo<TPrivateConnection> CreateConnectionAcquireInfo( TConnectionFunctionality functionality, TPrivateConnection connection );
 
@@ -123,7 +123,7 @@ namespace CBAM.Abstractions.Implementation
       /// This method is called whenever an error occurs within <see cref="AcquireResourceAsync(CancellationToken)"/> method.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality"/> or <c>null</c> if error occurred during <see cref="CreateConnectionFunctionality(CancellationToken)"/> method.</param>
-      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="CreateConnection(TConnectionFunctionality)"/>.</param>
+      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="CreateConnection(TConnectionFunctionality)"/>.</param>
       /// <param name="token">The <see cref="CancellationToken"/> passed to <see cref="AcquireResourceAsync(CancellationToken)"/>.</param>
       /// <param name="error">The error which occurred.</param>
       /// <returns>A task which completes after error handling is done.</returns>
@@ -164,7 +164,7 @@ namespace CBAM.Abstractions.Implementation
       protected TConnectionFunctionality Functionality { get; }
 
       /// <summary>
-      /// This method overrides <see cref="AbstractDisposable.Dispose(bool)"/> and will dispose this <see cref="AsyncResourceAcquireInfoImpl{TPublicResource, TPrivateResource}.Channel"/> if <paramref name="disposing"/> is <c>true</c>.
+      /// This method overrides <see cref="AbstractDisposable.Dispose(Boolean)"/> and will dispose this <see cref="AsyncResourceAcquireInfoImpl{TPublicResource, TPrivateResource}.Channel"/> if <paramref name="disposing"/> is <c>true</c>.
       /// </summary>
       /// <param name="disposing">Whether this method is callsed from <see cref="IDisposable.Dispose"/> method.</param>
       protected override void Dispose( Boolean disposing )
@@ -227,10 +227,10 @@ namespace CBAM.Abstractions.Implementation
    /// <summary>
    /// This class extends <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}"/> to provide functionality which is common for connections operating on a <see cref="System.IO.Stream"/> or other <see cref="IDisposable"/> object.
    /// </summary>
-   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    public abstract class ConnectionFactoryStream<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters> : DefaultConnectionFactory<TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters>
       where TConnection : class
       where TPrivateConnection : class, TConnection
@@ -250,7 +250,7 @@ namespace CBAM.Abstractions.Implementation
       /// This task overrides <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.OnConnectionAcquirementError(TConnectionCreationParameters, TPrivateConnection, CancellationToken, Exception)"/> and calls <see cref="ExtractStreamOnConnectionAcquirementError(TConnectionFunctionality, TPrivateConnection, CancellationToken, Exception)"/> in order to then safely synchronously dispose it.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnectionFunctionality"/> method.</param>
-      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnection"/>.</param>
+      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnection"/>.</param>
       /// <param name="token">The <see cref="CancellationToken"/> passed to <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.AcquireResourceAsync"/>.</param>
       /// <param name="error">The error which occurred.</param>
       /// <returns>A completed task.</returns>
@@ -264,7 +264,7 @@ namespace CBAM.Abstractions.Implementation
       /// This method should be implemented by derived class in order to extract underlying stream or other <see cref="IDisposable"/> object from <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
       /// </summary>
       /// <param name="functionality">The <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnectionFunctionality"/> method.</param>
-      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnection"/>.</param>
+      /// <param name="connection">The <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> or <c>null</c> if error occurred during <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.CreateConnection"/>.</param>
       /// <param name="token">The <see cref="CancellationToken"/> passed to <see cref="DefaultConnectionFactory{TConnection, TPrivateConnection, TConnectionCreationParameters, TConnectionFunctionality}.AcquireResourceAsync"/>.</param>
       /// <param name="error">The error which occurred.</param>
       /// <returns>The underlying stream or other <see cref="IDisposable"/> object.</returns>

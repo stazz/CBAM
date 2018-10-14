@@ -16,6 +16,9 @@
  * limitations under the License. 
  */
 using CBAM.Abstractions.Implementation;
+using CBAM.Abstractions.Implementation.NetworkStream;
+using CBAM.HTTP;
+using CBAM.HTTP.Implementation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,12 +27,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
+using UtilPack.Configuration.NetworkStream;
 using UtilPack.ResourcePooling;
 using UtilPack.ResourcePooling.NetworkStream;
-using CBAM.Abstractions.Implementation.NetworkStream;
-using UtilPack.Configuration.NetworkStream;
-using CBAM.HTTP;
-using CBAM.HTTP.Implementation;
 
 namespace CBAM.HTTP.Implementation
 {
@@ -205,6 +205,6 @@ public static partial class E_CBAM
          .Factory
          .BindCreationParameters( config )
          .CreateOneTimeUseResourcePool()
-         .UseResourceAsync( async conn => { return await conn.ReceiveOneTextualResponse( request, defaultEncoding: defaultEncoding ); } );
+         .UseResourceAsync( async conn => { return await conn.ReceiveOneTextualResponseAsync( request, defaultEncoding: defaultEncoding ); } );
    }
 }

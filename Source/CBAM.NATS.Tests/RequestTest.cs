@@ -55,7 +55,7 @@ namespace CBAM.NATS.Tests
          {
             var msg = await publishConnection.SubscribeAsync( SUBJECT ).FirstOrDefaultAsync();
             await publishConnection.PublishWithStaticDataProducerForWholeArray( msg.ReplyTo, receivedData, repeatCount: 1 )
-               .EnumerateSequentiallyAsync();
+               .EnumerateAsync();
             return (NATSMessage) null;
          } );
 

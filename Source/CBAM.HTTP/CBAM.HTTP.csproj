@@ -18,27 +18,8 @@
   <PropertyGroup>
     <VersionPrefix>0.5.4</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <Authors>Stanislav Muhametsin</Authors>
-    <Company>Cometa Solutions Ltd</Company>
-    <NeutralLanguage>en-US</NeutralLanguage>
     <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
-    <Product>CBAM</Product>
     <Description>The Connection-Based Asynchronous Messaging (CBAM) HTTP package contains API to send HTTP requests from client to server. The HTTP API itself is minimalistic and easy-to-use.</Description>
-    <Copyright>Stanislav Muhametsin</Copyright>
-    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
-  </PropertyGroup>
-
-  <!-- Assembly signing stuff -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
-    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-
-  <!-- Disable all debug information in release mode-->
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
-    <DebugType>none</DebugType>
-    <DebugSymbols>False</DebugSymbols>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- NuGet package stuff -->
@@ -46,13 +27,9 @@
     <PackageId>$(AssemblyName)</PackageId>
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>The HTTP request factory incorrectly set method always to 'GET'.</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection http client request api</PackageTags>
     <Title>CBAM HTTP Client API</Title>
-    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
-    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
-    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
    
   <PropertyGroup>

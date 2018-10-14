@@ -15,28 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.Abstractions;
+using CBAM.Abstractions.Implementation;
+using CBAM.SQL;
+using CBAM.SQL.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
-using CBAM.SQL;
-using CBAM.SQL.Implementation;
-using CBAM.Abstractions;
-using CBAM.Abstractions.Implementation;
 using UtilPack.AsyncEnumeration;
 using UtilPack.TabularData;
 
 namespace CBAM.SQL.Implementation
 {
    /// <summary>
-   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
+   /// This class extends <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/> and implements <see cref="SQLConnection"/> so that the code that should be common for all SQL vendors is located in this class.
    /// </summary>
    /// <typeparam name="TConnectionFunctionality">The type of object actually implementing the functionality for this facade.</typeparam>
    /// <typeparam name="TVendor">The actual type of vendor.</typeparam>
-   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, IAsyncEnumerable<SQLStatementExecutionResult>, IAsyncEnumerableObservable<SQLStatementExecutionResult, SQLStatementBuilderInformation>, TVendor, TConnectionFunctionality>, SQLConnection
-      where TConnectionFunctionality : DefaultConnectionFunctionality<SQLStatementBuilder, SQLStatementBuilderInformation, String, TVendor, IAsyncEnumerable<SQLStatementExecutionResult>>
+   public abstract class SQLConnectionImpl<TConnectionFunctionality, TVendor> : ConnectionImpl<SQLStatementBuilder, SQLStatementBuilderInformation, String, SQLStatementExecutionResult, SQLConnectionVendorFunctionality, TVendor, TConnectionFunctionality>, SQLConnection
+      where TConnectionFunctionality : DefaultConnectionFunctionality<SQLStatementBuilder, SQLStatementBuilderInformation, String, TVendor, SQLStatementExecutionResult>
       where TVendor : SQLConnectionVendorFunctionality
    {
       private Object _isReadOnly;
@@ -45,7 +45,7 @@ namespace CBAM.SQL.Implementation
       /// <summary>
       /// Creates a new instance of <see cref="SQLConnectionImpl{TConnectionFunctionality, TVendor}"/> with given parameters.
       /// </summary>
-      /// <param name="connectionFunctionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> implementation.</param>
+      /// <param name="connectionFunctionality">The object containing the actual <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> implementation.</param>
       /// <param name="metaData">The <see cref="SQL.DatabaseMetadata"/> object containing metadata functionality.</param>
       /// <exception cref="ArgumentNullException">If either of <paramref name="connectionFunctionality"/> or <paramref name="metaData"/> is <c>null</c>.</exception>
       public SQLConnectionImpl(
@@ -56,16 +56,6 @@ namespace CBAM.SQL.Implementation
          this.DatabaseMetadata = ArgumentValidator.ValidateNotNull( nameof( metaData ), metaData );
       }
 
-      /// <summary>
-      /// This method implements <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}.CreateObservable"/> by calling <see cref="M:E_UtilPack.AsObservable{T,TMetadata}(System.Collections.Generic.IAsyncEnumerable{T},TMetadata)"/>.
-      /// </summary>
-      /// <param name="enumerable">The <see cref="IAsyncEnumerable{T}"/>.</param>
-      /// <param name="info">The <see cref="SQLStatementBuilderInformation"/>.</param>
-      /// <returns>A new instance of <see cref="IAsyncEnumerableObservable{T, TMetadata}"/>.</returns>
-      protected override IAsyncEnumerableObservable<SQLStatementExecutionResult, SQLStatementBuilderInformation> CreateObservable( IAsyncEnumerable<SQLStatementExecutionResult> enumerable, SQLStatementBuilderInformation info )
-      {
-         return enumerable.AsObservable( info );
-      }
 
       /// <summary>
       /// Implements <see cref="SQLConnection.DatabaseMetadata"/> and gets the <see cref="SQL.DatabaseMetadata"/> object of this connection.
@@ -122,7 +112,7 @@ namespace CBAM.SQL.Implementation
       }
 
       /// <summary>
-      /// Implements <see cref="SQLConnection.SetReadOnlyAsync(bool)"/> and asynchronously sets connection read-only mode.
+      /// Implements <see cref="SQLConnection.SetReadOnlyAsync(Boolean)"/> and asynchronously sets connection read-only mode.
       /// </summary>
       /// <param name="isReadOnly">Whether connection should be in read-only mode.</param>
       /// <returns>Asynchronously returns either <c>-1</c>, if current read-only mode is same as given <paramref name="isReadOnly"/>, or other number if SQL for setting read-only mode was executed.</returns>
@@ -235,10 +225,10 @@ namespace CBAM.SQL.Implementation
       public abstract String EscapeLiteral( String str );
 
       /// <summary>
-      /// Implements <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> and will check that <paramref name="sql"/> is not <c>null</c> and not empty, and then parse it using <see cref="TryParseStatementSQL(string, out int[])"/>, and finally return result of <see cref="CreateStatementBuilder(string, int[])"/>.
+      /// Implements <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}.CreateStatementBuilder(TStatementCreationArgs)"/> and will check that <paramref name="sql"/> is not <c>null</c> and not empty, and then parse it using <see cref="TryParseStatementSQL(String, out Int32[])"/>, and finally return result of <see cref="CreateStatementBuilder(String, Int32[])"/>.
       /// </summary>
       /// <param name="sql">The textual SQL statement.</param>
-      /// <returns>Will return <c>null</c> if <paramref name="sql"/> is <c>null</c> or empty, or can not be parsed into SQL. Otherwise will returns result of <see cref="CreateStatementBuilder(string, int[])"/>.</returns>
+      /// <returns>Will return <c>null</c> if <paramref name="sql"/> is <c>null</c> or empty, or can not be parsed into SQL. Otherwise will returns result of <see cref="CreateStatementBuilder(String, Int32[])"/>.</returns>
       public SQLStatementBuilder CreateStatementBuilder( String sql )
       {
          SQLStatementBuilder retVal;
@@ -274,10 +264,10 @@ namespace CBAM.SQL.Implementation
       }
 
       /// <summary>
-      /// Provides default implementation for <see cref="SQLConnectionVendorFunctionality.CanTrimBegin(char)"/> and returns <c>true</c> if <see cref="Char.IsWhiteSpace(char)"/> returns <c>true</c>.
+      /// Provides default implementation for <see cref="SQLConnectionVendorFunctionality.CanTrimBegin(Char)"/> and returns <c>true</c> if <see cref="Char.IsWhiteSpace(Char)"/> returns <c>true</c>.
       /// </summary>
       /// <param name="c">The character to check.</param>
-      /// <returns><c>true</c> if <see cref="Char.IsWhiteSpace(char)"/> returns <c>true</c>.</returns>
+      /// <returns><c>true</c> if <see cref="Char.IsWhiteSpace(Char)"/> returns <c>true</c>.</returns>
       /// <remarks>
       /// Subclasses may override this method.
       /// </remarks>
@@ -287,10 +277,10 @@ namespace CBAM.SQL.Implementation
       }
 
       /// <summary>
-      /// Provides default implementation for <see cref="SQLConnectionVendorFunctionality.CanTrimEnd(char)"/> and returns <c>true</c> if <see cref="Char.IsWhiteSpace(char)"/> returns <c>true</c>, or if <paramref name="c"/> is <c>;</c> character.
+      /// Provides default implementation for <see cref="SQLConnectionVendorFunctionality.CanTrimEnd(Char)"/> and returns <c>true</c> if <see cref="Char.IsWhiteSpace(Char)"/> returns <c>true</c>, or if <paramref name="c"/> is <c>;</c> character.
       /// </summary>
       /// <param name="c">The character to check.</param>
-      /// <returns><c>true</c> if <see cref="Char.IsWhiteSpace(char)"/> returns <c>true</c>, or if <paramref name="c"/> is <c>;</c> character-</returns>
+      /// <returns><c>true</c> if <see cref="Char.IsWhiteSpace(Char)"/> returns <c>true</c>, or if <paramref name="c"/> is <c>;</c> character-</returns>
       /// <remarks>
       /// Subclasses may override this method.
       /// </remarks>
@@ -300,7 +290,7 @@ namespace CBAM.SQL.Implementation
       }
 
       /// <summary>
-      /// This method is called by <see cref="CreateStatementBuilder(string)"/> and should try to parse textual SQL string so that indices of parameter characters (<c>?</c>) are known.
+      /// This method is called by <see cref="CreateStatementBuilder(String)"/> and should try to parse textual SQL string so that indices of parameter characters (<c>?</c>) are known.
       /// </summary>
       /// <param name="sql">The textual SQL to parse.</param>
       /// <param name="parameterIndices">This parameter should have indices of legal parameter characters (<c>?</c>) in <paramref name="sql"/>.</param>

@@ -18,11 +18,11 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
-using System.Reflection;
 using UtilPack.AsyncEnumeration.LINQ;
-using System.Threading;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -65,7 +65,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          {
             await conn.PrepareStatementForExecution( "SELECT * FROM( VALUES( 1, 2 ), (3, 4), (5, 6) ) AS tmp" )
             .IncludeDataRowsOnly()
-            .EnumerateSequentiallyAsync( async row =>
+            .EnumerateAsync( async row =>
                {
                   switch ( Interlocked.Increment( ref rowsSeen ) )
                   {

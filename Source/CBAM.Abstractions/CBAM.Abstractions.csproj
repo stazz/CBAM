@@ -16,48 +16,24 @@
   </ItemGroup>
   
   <ItemGroup>
-     <PackageReference Include="UtilPack" Version="1.5.1" />
-    <PackageReference Include="UtilPack.AsyncEnumeration" Version="1.0.0" />
+    <PackageReference Include="UtilPack.AsyncEnumeration" Version="2.0.0" />
   </ItemGroup>
   
   <PropertyGroup>
     <VersionPrefix>0.5.3</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <Authors>Stanislav Muhametsin</Authors>
-    <Company>Cometa Solutions Ltd</Company>
-    <NeutralLanguage>en-US</NeutralLanguage>
     <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
-    <Product>CBAM</Product>
     <Description>The Connection-Based Asynchronous Messaging (CBAM) Abstractions assembly contains types which are common for any workflow which communicates with e.g. SQL or LDAP processes using some kind of IPC connection.</Description>
-    <Copyright>Stanislav Muhametsin</Copyright>
-    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
   </PropertyGroup>
-  
-  <!-- Assembly signing stuff -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
-    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  
-  <!-- Disable all debug information in release mode-->
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
-    <DebugType>none</DebugType>
-    <DebugSymbols>False</DebugSymbols>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  
+   
   <!-- NuGet package stuff -->
   <PropertyGroup>
     <PackageId>$(AssemblyName)</PackageId>
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection</PackageTags>
     <Title>Common CBAM Abstractions</Title>
-    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
-    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
-    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 
   <PropertyGroup>

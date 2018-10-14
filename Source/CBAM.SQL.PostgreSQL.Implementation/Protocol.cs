@@ -15,27 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.Abstractions;
+using CBAM.Abstractions.Implementation;
 using CBAM.SQL.Implementation;
+using CBAM.SQL.PostgreSQL;
+using CBAM.SQL.PostgreSQL.Implementation;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 using UtilPack;
-using CBAM.SQL.PostgreSQL.Implementation;
-using CBAM.SQL.PostgreSQL;
-using System.Net;
-using TBoundTypeInfo = System.ValueTuple<System.Type, CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
-using CBAM.Abstractions;
-
-using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
-using CBAM.Abstractions.Implementation;
 using UtilPack.AsyncEnumeration;
 using UtilPack.Cryptography.Digest;
 using UtilPack.Cryptography.SASL;
 using UtilPack.Cryptography.SASL.SCRAM;
+using MessageIOArgs = System.ValueTuple<CBAM.SQL.PostgreSQL.BackendABIHelper, System.IO.Stream, System.Threading.CancellationToken, UtilPack.ResizableArray<System.Byte>>;
+using TBoundTypeInfo = System.ValueTuple<System.Type, CBAM.SQL.PostgreSQL.PgSQLTypeFunctionality, CBAM.SQL.PostgreSQL.PgSQLTypeDatabaseData>;
 
 #if !NETSTANDARD1_0
 using System.Net.Sockets;
@@ -43,8 +42,8 @@ using System.Net.Sockets;
 
 namespace CBAM.SQL.PostgreSQL.Implementation
 {
-   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>>;
    using TSASLAuthState = System.ValueTuple<SASLMechanism, SASLCredentialsSCRAMForClient, ResizableArray<Byte>, IEncodingInfo>;
+   using TStatementExecutionSimpleTaskParameter = System.ValueTuple<SQLStatementExecutionResult, Func<ValueTask<(Boolean, SQLStatementExecutionResult)>>>;
 
    internal sealed partial class PostgreSQLProtocol : SQLConnectionFunctionalitySU<PgSQLConnectionVendorFunctionality>
    {
@@ -645,7 +644,8 @@ namespace CBAM.SQL.PostgreSQL.Implementation
          {
             // Then wait for RFQ
             // This happens for non-simple statements, or simple statements which cause exception when iterated over.
-            BackendMessageObject msg; Int32 remaining;
+            BackendMessageObject msg;
+            Int32 remaining;
             while ( ( (msg, remaining) = ( await this.ReadMessagesUntilMeaningful( null, dontThrowExceptions: true ) ) ).Item1.Code != BackendMessageCode.ReadyForQuery )
             {
                if ( remaining > 0 )
@@ -820,7 +820,7 @@ namespace CBAM.SQL.PostgreSQL.Implementation
             .AsObservable();
          // Use GetEnqueuedNotifications while we are still inside statement reservation region, by registering to BeforeEnumerationEnd
          enumerable.BeforeEnumerationEnd += ( eArgs ) => args = GetEnqueuedNotifications();
-         await enumerable.EnumerateSequentiallyAsync();
+         await enumerable.EnumerateAsync();
 #if !NETSTANDARD1_0
          }
          else

@@ -49,7 +49,7 @@ namespace CBAM.NATS.Tests
 
          var subscribeTask = pool.UseResourceAsync( async natsConn =>
          {
-            await natsConn.SubscribeAsync( SUBJECT, autoUnsubscribeAfter: 1 ).EnumerateSequentiallyAsync( msg =>
+            await natsConn.SubscribeAsync( SUBJECT, autoUnsubscribeAfter: 1 ).EnumerateAsync( msg =>
             {
                receivedMessage = msg;
             } );
@@ -57,7 +57,7 @@ namespace CBAM.NATS.Tests
          var publishTask = pool.UseResourceAsync( async publishConnection =>
          {
             await Task.Delay( 500 );
-            await publishConnection.PublishWithStaticDataProducerForWholeArray( SUBJECT, expectedData, repeatCount: 1 ).EnumerateSequentiallyAsync();
+            await publishConnection.PublishWithStaticDataProducerForWholeArray( SUBJECT, expectedData, repeatCount: 1 ).EnumerateAsync();
          } );
 
          await Task.WhenAll( subscribeTask, publishTask );

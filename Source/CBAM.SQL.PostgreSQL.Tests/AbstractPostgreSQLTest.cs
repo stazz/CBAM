@@ -80,7 +80,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
       protected static async Task AssertThatQueryProducesSameResults( PgSQLConnection connection, String query, params Object[] values )
       {
          var queryCount = 0;
-         await connection.PrepareStatementForExecution( query ).EnumerateSequentiallyAsync( async item =>
+         await connection.PrepareStatementForExecution( query ).EnumerateAsync( async item =>
          {
             Assert.AreEqual( values[queryCount++], await ( (SQLDataRow) item ).GetValueAsObjectAsync( 0 ) );
          } );
@@ -93,7 +93,7 @@ namespace CBAM.SQL.PostgreSQL.Tests
          var valuesSet = new HashSet<Object>( values );
          var querySet = new HashSet<Object>();
          var queryCount = 0;
-         await connection.PrepareStatementForExecution( query ).EnumerateSequentiallyAsync( async item =>
+         await connection.PrepareStatementForExecution( query ).EnumerateAsync( async item =>
          {
             querySet.Add( await ( (SQLDataRow) item ).GetValueAsObjectAsync( 0 ) );
             ++queryCount;

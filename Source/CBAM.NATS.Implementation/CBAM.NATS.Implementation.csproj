@@ -9,6 +9,7 @@
       <TreatSpecificWarningsAsErrors />
       <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
       <LangVersion>latest</LangVersion>
+      <GenerateDocumentationFile>false</GenerateDocumentationFile>
    </PropertyGroup>
 
    <ItemGroup>
@@ -23,27 +24,8 @@
    <PropertyGroup>
       <VersionPrefix>0.5.3</VersionPrefix>
       <VersionSuffix></VersionSuffix>
-      <Authors>Stanislav Muhametsin</Authors>
-      <Company>Cometa Solutions Ltd</Company>
-      <NeutralLanguage>en-US</NeutralLanguage>
       <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
-      <Product>CBAM</Product>
       <Description>The Connection-Based Asynchronous Messaging (CBAM) NATS.Implementation assembly contains implementation for NATS ( https://nats.io/ ) messaging protocol.</Description>
-      <Copyright>Stanislav Muhametsin</Copyright>
-      <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
-   </PropertyGroup>
-
-   <!-- Assembly signing stuff -->
-   <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
-      <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
-      <SignAssembly>true</SignAssembly>
-   </PropertyGroup>
-
-   <!-- Disable all debug information in release mode-->
-   <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
-      <DebugType>full</DebugType>
-      <DebugSymbols>True</DebugSymbols>
-      <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
    </PropertyGroup>
 
    <!-- NuGet package stuff -->
@@ -51,13 +33,9 @@
       <PackageId>$(AssemblyName)</PackageId>
       <PackageVersion>$(VersionPrefix)</PackageVersion>
       <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
-      <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
       <PackageReleaseNotes>Following fixes of CBAM.NATS project, and also updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
       <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
       <Title>CBAM NATS Client</Title>
-      <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
-      <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
-      <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
    </PropertyGroup>
 
    <PropertyGroup>

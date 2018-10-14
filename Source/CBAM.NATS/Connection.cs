@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.Abstractions;
+using CBAM.NATS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CBAM.Abstractions;
-using CBAM.NATS;
 using UtilPack;
-
 using TDataProducerResult = System.Threading.Tasks.ValueTask<System.Collections.Generic.IEnumerable<CBAM.NATS.NATSPublishData>>;
 
 namespace CBAM.NATS
@@ -31,8 +30,8 @@ namespace CBAM.NATS
    using TDataProducerFactory = Func<Func<TDataProducerResult>>;
 
    public interface NATSConnection :
-      Connection<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSMessage>>,
-      Connection<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSPublishCompleted, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSPublishCompleted>>,
+      Connection<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality>,
+      Connection<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSPublishCompleted, NATSConnectionVendorFunctionality>,
       NATSConnectionObservability
    {
       Task<NATSMessage> RequestAsync( String subject, Byte[] data, Int32 offset, Int32 count );
@@ -104,7 +103,7 @@ public static partial class E_CBAM
 
    public static NATSSubscribeStatement CreateSubscribeStatementBuilder( this NATSConnection connection, String subject )
    {
-      return ( (Connection<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSMessage>>) connection ).VendorFunctionality.CreateSubscribeStatementBuilder( subject );
+      return ( (Connection<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality>) connection ).VendorFunctionality.CreateSubscribeStatementBuilder( subject );
    }
 
    public static IAsyncEnumerable<NATSMessage> SubscribeAsync( this NATSConnection connection, String subject, Int64 autoUnsubscribeAfter = 0, String queue = null )
@@ -124,7 +123,7 @@ public static partial class E_CBAM
 
    public static NATSPublishStatement CreatePublishStatementBuilder( this NATSConnection connection, Func<Func<TDataProducerResult>> dataProducer )
    {
-      return ( (Connection<NATSPublishStatement, NATSPublishStatementInformation, Func<Func<TDataProducerResult>>, NATSPublishCompleted, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSPublishCompleted>>) connection ).VendorFunctionality.CreatePublishStatementBuilder( dataProducer );
+      return ( (Connection<NATSPublishStatement, NATSPublishStatementInformation, Func<Func<TDataProducerResult>>, NATSPublishCompleted, NATSConnectionVendorFunctionality>) connection ).VendorFunctionality.CreatePublishStatementBuilder( dataProducer );
    }
 
    public static Task<NATSMessage> RequestAsync( this NATSConnection connection, String subject, Byte[] data )

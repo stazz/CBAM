@@ -45,31 +45,21 @@ namespace CBAM.NATS
       internal sealed class NATSConnectionImpl : NATSConnection
       {
 
-         public sealed class NATSSubscribeConnectionImpl : ConnectionImpl<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSMessage>, IAsyncEnumerableObservable<NATSMessage, NATSSubscribeStatementInformation>, NATSConnectionVendorFunctionalityImpl, NATSSubscribeConnectionFunctionality>
+         public sealed class NATSSubscribeConnectionImpl : ConnectionImpl<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSMessage, NATSConnectionVendorFunctionality, NATSConnectionVendorFunctionalityImpl, NATSSubscribeConnectionFunctionality>
          {
             public NATSSubscribeConnectionImpl(
                NATSSubscribeConnectionFunctionality functionality
                ) : base( functionality )
             {
             }
-
-            protected override IAsyncEnumerableObservable<NATSMessage, NATSSubscribeStatementInformation> CreateObservable( IAsyncEnumerable<NATSMessage> enumerable, NATSSubscribeStatementInformation info )
-            {
-               return enumerable.AsObservable( info );
-            }
          }
 
-         public sealed class NATSPublishConnectionImpl : ConnectionImpl<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSPublishCompleted, NATSConnectionVendorFunctionality, IAsyncEnumerable<NATSPublishCompleted>, IAsyncEnumerableObservable<NATSPublishCompleted, NATSPublishStatementInformation>, NATSConnectionVendorFunctionalityImpl, NATSPublishConnectionFunctionality>
+         public sealed class NATSPublishConnectionImpl : ConnectionImpl<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSPublishCompleted, NATSConnectionVendorFunctionality, NATSConnectionVendorFunctionalityImpl, NATSPublishConnectionFunctionality>
          {
             public NATSPublishConnectionImpl(
                NATSPublishConnectionFunctionality functionality
                ) : base( functionality )
             {
-            }
-
-            protected override IAsyncEnumerableObservable<NATSPublishCompleted, NATSPublishStatementInformation> CreateObservable( IAsyncEnumerable<NATSPublishCompleted> enumerable, NATSPublishStatementInformation info )
-            {
-               return enumerable.AsObservable( info );
             }
          }
 
@@ -418,7 +408,7 @@ namespace CBAM.NATS
 
       }
 
-      internal sealed class NATSSubscribeConnectionFunctionality : DefaultConnectionFunctionality<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSConnectionVendorFunctionalityImpl, IAsyncEnumerable<NATSMessage>>
+      internal sealed class NATSSubscribeConnectionFunctionality : DefaultConnectionFunctionality<NATSSubscribeStatement, NATSSubscribeStatementInformation, String, NATSConnectionVendorFunctionalityImpl, NATSMessage>
       {
 
          private readonly ClientProtocol _protocol;
@@ -491,7 +481,7 @@ namespace CBAM.NATS
 
       }
 
-      internal sealed class NATSPublishConnectionFunctionality : DefaultConnectionFunctionality<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSConnectionVendorFunctionalityImpl, IAsyncEnumerable<NATSPublishCompleted>>
+      internal sealed class NATSPublishConnectionFunctionality : DefaultConnectionFunctionality<NATSPublishStatement, NATSPublishStatementInformation, TDataProducerFactory, NATSConnectionVendorFunctionalityImpl, NATSPublishCompleted>
       {
          private readonly ClientProtocol _protocol;
 

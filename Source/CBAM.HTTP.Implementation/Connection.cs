@@ -15,37 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
-using System;
-
 using CBAM.Abstractions.Implementation;
+using CBAM.HTTP;
+using CBAM.HTTP.Implementation;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UtilPack;
 using UtilPack.AsyncEnumeration;
 using UtilPack.ResourcePooling;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Threading;
-using System.IO;
-using CBAM.HTTP;
-using System.Text;
-using CBAM.HTTP.Implementation;
-using System.Collections.Generic;
 
 namespace CBAM.HTTP.Implementation
 {
-   internal sealed class HTTPConnectionImpl<TRequestMetaData> : ConnectionImpl<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorFunctionality<TRequestMetaData>, IAsyncEnumerable<HTTPResponseInfo<TRequestMetaData>>, IAsyncEnumerableObservable<HTTPResponseInfo<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>>, HTTPConnectionVendorImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>>, HTTPConnection<TRequestMetaData>
+   internal sealed class HTTPConnectionImpl<TRequestMetaData> : ConnectionImpl<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorFunctionality<TRequestMetaData>, HTTPConnectionVendorImpl<TRequestMetaData>, HTTPConnectionFunctionalityImpl<TRequestMetaData>>, HTTPConnection<TRequestMetaData>
    {
       public HTTPConnectionImpl(
          HTTPConnectionFunctionalityImpl<TRequestMetaData> functionality
          ) : base( functionality )
       {
-      }
-
-      protected override IAsyncEnumerableObservable<HTTPResponseInfo<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>> CreateObservable(
-         IAsyncEnumerable<HTTPResponseInfo<TRequestMetaData>> enumerable,
-         HTTPStatementInformation<TRequestMetaData> info
-         )
-      {
-         return enumerable.AsObservable( info );
       }
 
       public String ProtocolVersion => HTTPFactory.VERSION_HTTP1_1;
@@ -128,7 +119,8 @@ namespace CBAM.HTTP.Implementation
          HTTPResponseContent prevResponseContent;
          if ( ( prevResponseContent = prevResponse?.Content ) != null )
          {
-            while ( ( await prevResponseContent.ReadToBuffer( buffer.Array, 0, buffer.CurrentMaxCapacity ) ) > 0 ) ;
+            while ( ( await prevResponseContent.ReadToBuffer( buffer.Array, 0, buffer.CurrentMaxCapacity ) ) > 0 )
+               ;
          }
 
          HTTPResponse retVal;

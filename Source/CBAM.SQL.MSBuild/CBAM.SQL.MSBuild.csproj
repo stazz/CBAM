@@ -16,27 +16,8 @@
   <PropertyGroup>
     <VersionPrefix>0.5.3</VersionPrefix>
     <VersionSuffix></VersionSuffix>
-    <Authors>Stanislav Muhametsin</Authors>
-    <Company>Cometa Solutions Ltd</Company>
-    <NeutralLanguage>en-US</NeutralLanguage>
     <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
-    <Product>CBAM</Product>
     <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL.MSbuild assembly contains abstract SQL-oriented MSBuild task, and task which reads file and executes SQL statements contained within.</Description>
-    <Copyright>Stanislav Muhametsin</Copyright>
-    <AssemblyOriginatorKeyFilePath>$(MSBuildProjectDirectory)\..\..\Keys\$(Product).snk</AssemblyOriginatorKeyFilePath>
-  </PropertyGroup>
-
-  <!-- Assembly signing stuff -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' and Exists('$(AssemblyOriginatorKeyFilePath)')">
-    <AssemblyOriginatorKeyFile>$(AssemblyOriginatorKeyFilePath)</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-
-  <!-- Disable all debug information in release mode-->
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release'">
-    <DebugType>none</DebugType>
-    <DebugSymbols>False</DebugSymbols>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- NuGet package stuff -->
@@ -44,13 +25,9 @@
     <PackageId>$(AssemblyName)</PackageId>
     <PackageVersion>$(VersionPrefix)</PackageVersion>
     <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
     <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
     <Title>SQL-Oriented MSBuild Tasks</Title>
-    <RepositoryUrl>https://github.com/CometaSolutions/CBAM</RepositoryUrl>
-    <PackageProjectUrl>$(RepositoryUrl)/tree/develop/Source/$(AssemblyName)</PackageProjectUrl>
-    <PackageLicenseUrl>https://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -16,21 +16,21 @@
  * limitations under the License. 
  */
 using CBAM.Abstractions;
-using UtilPack.AsyncEnumeration;
-using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using UtilPack;
 using CBAM.HTTP;
+using System;
+using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
+using UtilPack;
+using UtilPack.AsyncEnumeration;
 
 namespace CBAM.HTTP
 {
    /// <summary>
-   /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to server.
+   /// This interface extends <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/> to provide a way to create statements which enable sending <see cref="HTTPRequest"/>s to server.
    /// </summary>
    /// <typeparam name="TRequestMetaData">The type of metadata associated with each request, used in identifying the request that response is associated with. Typically this is <see cref="Guid"/> or <see cref="Int64"/>.</typeparam>
-   public interface HTTPConnection<TRequestMetaData> : Connection<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorFunctionality<TRequestMetaData>, IAsyncEnumerable<HTTPResponseInfo<TRequestMetaData>>>
+   public interface HTTPConnection<TRequestMetaData> : Connection<HTTPStatement<TRequestMetaData>, HTTPStatementInformation<TRequestMetaData>, HTTPRequestInfo<TRequestMetaData>, HTTPResponseInfo<TRequestMetaData>, HTTPConnectionVendorFunctionality<TRequestMetaData>>
    {
       /// <summary>
       /// Gets the HTTP protocol version used by this <see cref="HTTPConnection{TRequestMetaData}"/>.
@@ -118,7 +118,7 @@ namespace CBAM.HTTP
    /// <summary>
    /// This class is meant to be used in simple situations, when the textual content of the HTTP response is meant to be created, without handling memory and performance or stream copying manually.
    /// </summary>
-   /// <seealso cref="E_CBAM.CreateTextualResponseInfo"/>
+   /// <seealso cref="E_CBAM.CreateTextualResponseInfoAsync"/>
    public sealed class HTTPTextualResponseInfo
    {
       private static readonly Encoding DefaultTextEncoding = new UTF8Encoding( false, false );
@@ -145,7 +145,9 @@ namespace CBAM.HTTP
          String textualContent;
          if ( !content.IsNullOrEmpty() )
          {
-            String cType; Int32 charsetIndex; Int32 charsetEndIdx;
+            String cType;
+            Int32 charsetIndex;
+            Int32 charsetEndIdx;
             var encoding = response.Headers.TryGetValue( "Content-Type", out var cTypes ) && cTypes.Count > 0 && ( charsetIndex = ( cType = cTypes[0] ).IndexOf( "charset=" ) ) >= 0 ?
                Encoding.GetEncoding( cType.Substring( charsetIndex + 8, ( ( charsetEndIdx = cType.IndexOf( ';', charsetIndex + 9 ) ) > 0 ? charsetEndIdx : cType.Length ) - charsetIndex - 8 ) ) :
                ( defaultEncoding ?? DefaultTextEncoding );
@@ -208,7 +210,7 @@ public static partial class E_CBAM
    /// <param name="defaultEncoding">The default encoding to use when deserializing response contents to string. By default, it is <see cref="UTF8Encoding"/>.</param>
    /// <returns>Potentially asynchronously creates constructed <see cref="HTTPTextualResponseInfo"/>.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="HTTPConnection{TRequestMetaData}"/> is <c>null</c>.</exception>
-   public static ValueTask<HTTPTextualResponseInfo> ReceiveOneTextualResponse<TRequestMetaData>(
+   public static Task<HTTPTextualResponseInfo> ReceiveOneTextualResponseAsync<TRequestMetaData>(
       this HTTPConnection<TRequestMetaData> connection,
       HTTPRequest request,
       TRequestMetaData metaData = default,
@@ -218,7 +220,7 @@ public static partial class E_CBAM
 
       return connection
          .PrepareStatementForExecution( new HTTPRequestInfo<TRequestMetaData>( request, metaData ) )
-         .Select( async responseInfo => await responseInfo.Response.CreateTextualResponseInfo( defaultEncoding ) )
+         .Select( async responseInfo => await responseInfo.Response.CreateTextualResponseInfoAsync( defaultEncoding ) )
          .FirstAsync();
    }
 
@@ -229,7 +231,7 @@ public static partial class E_CBAM
    /// <param name="defaultEncoding">The <see cref="Encoding"/> to use if <see cref="HTTPResponse"/> does not contain any encoding information. By default, it is <see cref="UTF8Encoding"/>.</param>
    /// <returns>Potentially asynchronously creates constructed <see cref="HTTPTextualResponseInfo"/>.</returns>
    /// <exception cref="NullReferenceException">If this <see cref="HTTPResponse"/> is <c>null</c>.</exception>
-   public static async ValueTask<HTTPTextualResponseInfo> CreateTextualResponseInfo(
+   public static async ValueTask<HTTPTextualResponseInfo> CreateTextualResponseInfoAsync(
       this HTTPResponse response,
       Encoding defaultEncoding = default
       )

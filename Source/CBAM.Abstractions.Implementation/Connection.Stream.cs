@@ -97,7 +97,7 @@ namespace CBAM.Abstractions.Implementation
    /// <typeparam name="TStatementCreationArgs">The type of arguments to create a new statement.</typeparam>
    /// <typeparam name="TEnumerableItem">The type of items enumerated by statement.</typeparam>
    /// <typeparam name="TVendor">The type of <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</typeparam>
-   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : PooledConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, IAsyncEnumerable<TEnumerableItem>>, ConnectionFunctionalitySU
+   public abstract class ConnectionFunctionalitySU<TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor> : PooledConnectionFunctionality<TStatement, TStatementInformation, TStatementCreationArgs, TVendor, TEnumerableItem>, ConnectionFunctionalitySU
       where TStatement : TStatementInformation
       where TVendor : ConnectionVendorFunctionality<TStatement, TStatementCreationArgs>
    {
@@ -119,19 +119,29 @@ namespace CBAM.Abstractions.Implementation
       /// Creates a new instance of <see cref="ConnectionFunctionalitySU{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.
       /// </summary>
       /// <param name="vendor">The <see cref="ConnectionVendorFunctionality{TStatement, TStatementCreationArgs}"/>.</param>
-      public ConnectionFunctionalitySU( TVendor vendor )
+      /// <param name="asyncProvider">The optional custom <see cref="IAsyncProvider"/>.</param>
+      public ConnectionFunctionalitySU(
+         TVendor vendor,
+         IAsyncProvider asyncProvider = null
+         )
          : base( vendor )
       {
          this._currentlyExecutingStatement = NotInUse.Instance;
+         this.AsyncProvider = asyncProvider ?? DefaultAsyncProvider.Instance;
       }
 
       /// <summary>
-      /// Implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CreateEnumerable"/> by creating sequential exclusive enumerator (<see cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T})"/>).
+      /// Gets the <see cref="IAsyncProvider"/> that is used for creating <see cref="IAsyncEnumerable{T}"/>s. Will be <see cref="DefaultAsyncProvider.Instance"/> if <c>null</c> is passed as parameter for constructor.
+      /// </summary>
+      protected IAsyncProvider AsyncProvider { get; }
+
+      /// <summary>
+      /// Implements <see cref="DefaultConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}.CreateEnumerable"/> by creating sequential exclusive enumerator (<see cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T}, IAsyncProvider)"/>).
       /// The <see cref="ExecuteStatement(TStatementInformation, ReservedForStatement)"/> method will be used to perform initial execution, after which the callback returned by the method will be used.
       /// </summary>
       /// <param name="metadata">The statement information.</param>
       /// <returns>The <see cref="IAsyncEnumerable{T}"/> that can sequentially enumerate items from underlying stream.</returns>
-      /// <seealso cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T})"/>
+      /// <seealso cref="AsyncEnumerationFactory.CreateExclusiveSequentialEnumerable{T}(SequentialEnumerationStartInfo{T}, IAsyncProvider)"/>
       protected override IAsyncEnumerable<TEnumerableItem> CreateEnumerable(
          TStatementInformation metadata
          )
@@ -175,7 +185,9 @@ namespace CBAM.Abstractions.Implementation
                   Interlocked.Exchange( ref moveNext, null );
 
                   return this.DisposeStatementAsync( seenReservation );
-               } ) );
+               } ),
+               this.AsyncProvider
+               );
 
       }
 

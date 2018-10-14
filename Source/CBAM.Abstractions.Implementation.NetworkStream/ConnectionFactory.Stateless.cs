@@ -38,10 +38,10 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
    /// This class extends <see cref="ConnectionFactoryStream{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters}"/> in order to implement socket and stream creation using <see cref="T:UtilPack.ResourcePooling.NetworkStream.NetworkStreamFactory"/>, such that there is no intermediate state used during connection initialization.
    /// Notice that this need for state does not always correlate whether the underlying protocol itself is stateless or stateful.
    /// </summary>
-   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    /// <typeparam name="TCreationData">The type holding passive data about the remote endpoint and protocol configuration.</typeparam>
    /// <typeparam name="TConnectionConfiguration">The type holding passive data about the socket connection.</typeparam>
    /// <typeparam name="TInitializationConfiguration">The type holding passive data about protocol initialization.</typeparam>
@@ -228,10 +228,10 @@ namespace CBAM.Abstractions.Implementation.NetworkStream
    /// <summary>
    /// This class extends and implements all missing functionality from <see cref="StatelessProtocolConnectionFactory{TConnection, TPrivateConnection, TConnectionFunctionality, TConnectionCreationParameters, TCreationData, TConnectionConfiguration, TInitializationConfiguration, TProtocolConfiguration, TPoolingConfiguration}"/> by using callbacks that are passed to constructor.
    /// </summary>
-   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
-   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable}"/>.</typeparam>
+   /// <typeparam name="TConnection">The public type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
+   /// <typeparam name="TPrivateConnection">The actual type of <see cref="Connection{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality}"/>.</typeparam>
    /// <typeparam name="TConnectionFunctionality">The actual type of <see cref="PooledConnectionFunctionality{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendor}"/>.</typeparam>
-   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TEnumerable, TEnumerableObservable, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
+   /// <typeparam name="TConnectionCreationParameters">The type of parameter containing enough information to create an instance of <see cref="ConnectionImpl{TStatement, TStatementInformation, TStatementCreationArgs, TEnumerableItem, TVendorFunctionality, TActualVendorFunctionality, TConnectionFunctionality}"/>.</typeparam>
    /// <typeparam name="TCreationData">The type holding passive data about the remote endpoint and protocol configuration.</typeparam>
    /// <typeparam name="TConnectionConfiguration">The type holding passive data about the socket connection.</typeparam>
    /// <typeparam name="TInitializationConfiguration">The type holding passive data about protocol initialization.</typeparam>
