@@ -24,6 +24,12 @@
     <ProjectReference Include="..\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <!--<Reference Include="System.Runtime" />
+    <Reference Include="System.Threading.Tasks" />-->
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+
   <PropertyGroup>
     <VersionPrefix>0.6.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
