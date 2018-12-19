@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+      <TargetFrameworks>netstandard1.3;netstandard2.0;netcoreapp1.1;netcoreapp2.0;net45;net40</TargetFrameworks>
+   </PropertyGroup>
+
+   <PropertyGroup>
+      <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors />
+      <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+      <LangVersion>latest</LangVersion>
+      <GenerateDocumentationFile>false</GenerateDocumentationFile>
+   </PropertyGroup>
+
+   <ItemGroup>
+     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+     <PackageReference Include="AsyncEnumeration.Implementation.Provider" Version="1.0.0" />
+     <PackageReference Include="ResourcePooling.Async.Implementation" Version="1.1.0" />
+   </ItemGroup>
+   
+   <ItemGroup>
+     <ProjectReference Include="..\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj" />
+     <ProjectReference Include="..\CBAM.NATS\CBAM.NATS.csproj" />
+   </ItemGroup>
+
+   <PropertyGroup>
+      <VersionPrefix>0.6.0</VersionPrefix>
+      <VersionSuffix></VersionSuffix>
+      <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+      <Description>The Connection-Based Asynchronous Messaging (CBAM) NATS.Implementation assembly contains implementation for NATS ( https://nats.io/ ) messaging protocol.</Description>
+   </PropertyGroup>
+
+   <!-- NuGet package stuff -->
+   <PropertyGroup>
+      <PackageId>$(AssemblyName)</PackageId>
+      <PackageVersion>$(VersionPrefix)</PackageVersion>
+      <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+      <PackageReleaseNotes>Following fixes of CBAM.NATS project, and also updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+      <PackageTags>binary serialization async asynchronous connection nats cloud message protocol client</PackageTags>
+      <Title>CBAM NATS Client</Title>
+   </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+
+</Project>

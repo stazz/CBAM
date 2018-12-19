@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.0;netstandard2.0;net40;net45</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net40' ">
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.SQL\CBAM.SQL.csproj" />
+  </ItemGroup>
+  
+  <PropertyGroup>
+    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL.PostgreSQL assembly contains types which further specialize and augment the types of CBAM.SQL, in order to provide intuitive and easy-to-use API for communicating with PostgreSQL database. The support for notifications exists, alongside with customizable PostgreSQL type registry system.</Description>
+  </PropertyGroup>
+  
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection tabular sql data postgresql pgsql</PackageTags>
+    <Title>CBAM PostgreSQL API</Title>
+  </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+  
+</Project>

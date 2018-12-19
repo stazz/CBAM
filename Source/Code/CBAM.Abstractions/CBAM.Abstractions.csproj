@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.0;netstandard2.0;net40;net45</TargetFrameworks>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net40' ">
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.3.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+     <PackageReference Include="AsyncEnumeration.Observability" Version="1.0.0" />
+  </ItemGroup>
+  
+  <PropertyGroup>
+    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) Abstractions assembly contains types which are common for any workflow which communicates with e.g. SQL or LDAP processes using some kind of IPC connection.</Description>
+  </PropertyGroup>
+   
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection</PackageTags>
+    <Title>Common CBAM Abstractions</Title>
+  </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+
+</Project>

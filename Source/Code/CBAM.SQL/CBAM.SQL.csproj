@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.0;netstandard2.0;net40;net45</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+   
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
+    <PackageReference Include="UtilPack.TabularData" Version="1.1.0" />
+  </ItemGroup>
+  
+  <PropertyGroup>
+    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL assembly contains types which further specialize and augment the types of CBAM.Abstractions and CBAM.Tabular, in order to provide intuitive and easy-to-use API for communicating with any SQL database.</Description>
+  </PropertyGroup>
+   
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection tabular sql data</PackageTags>
+    <Title>CBAM SQL API</Title>
+  </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+
+</Project>

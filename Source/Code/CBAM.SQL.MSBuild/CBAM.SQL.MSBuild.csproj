@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.3</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.SQL.ExecuteStatements.Library\CBAM.SQL.ExecuteStatements.Library.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ResourcePooling.Async.MSBuild" Version="2.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) SQL.MSbuild assembly contains abstract SQL-oriented MSBuild task, and task which reads file and executes SQL statements contained within.</Description>
+  </PropertyGroup>
+
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageReleaseNotes>Updated to newer UtilPack version because the fixed bug is critical for CBAM (underlying stream would not always get closed when cancellation token was canceled).</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection sql msbuild task dump statement execute</PackageTags>
+    <Title>SQL-Oriented MSBuild Tasks</Title>
+  </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+  
+</Project>

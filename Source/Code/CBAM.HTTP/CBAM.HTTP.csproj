@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.0;netstandard2.0;net40;net45</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBAM.Abstractions\CBAM.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>0.6.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyTitle>$(AssemblyName)</AssemblyTitle>
+    <Description>The Connection-Based Asynchronous Messaging (CBAM) HTTP package contains API to send HTTP requests from client to server. The HTTP API itself is minimalistic and easy-to-use.</Description>
+  </PropertyGroup>
+
+  <!-- NuGet package stuff -->
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <PackageVersion>$(VersionPrefix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' != ''">$(PackageVersion)-$(VersionSuffix)</PackageVersion>
+    <PackageReleaseNotes>The HTTP request factory incorrectly set method always to 'GET'.</PackageReleaseNotes>
+    <PackageTags>binary serialization async asynchronous connection http client request api</PackageTags>
+    <Title>CBAM HTTP Client API</Title>
+  </PropertyGroup>
+
+  <!--<PropertyGroup>
+    <NuGetPushOnBuildFile>$([MSBuild]::GetPathOfFileAbove(NuGetPushOnBuild.targets))</NuGetPushOnBuildFile>
+  </PropertyGroup>
+  <Import Project="$(NuGetPushOnBuildFile)" Condition="Exists('$(NuGetPushOnBuildFile)')" /> -->
+  <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
+
+</Project>

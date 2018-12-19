@@ -3,39 +3,43 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2000
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions", "CBAM.Abstractions\CBAM.Abstractions.csproj", "{E07D7ACC-3915-4B37-B113-790BE6987E11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions", "Code\CBAM.Abstractions\CBAM.Abstractions.csproj", "{E07D7ACC-3915-4B37-B113-790BE6987E11}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation", "CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj", "{B032D33B-8FAB-4577-8939-2127DAC444F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation", "Code\CBAM.Abstractions.Implementation\CBAM.Abstractions.Implementation.csproj", "{B032D33B-8FAB-4577-8939-2127DAC444F1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation.Tabular", "CBAM.Abstractions.Implementation.Tabular\CBAM.Abstractions.Implementation.Tabular.csproj", "{8D9514AA-5EAB-462D-9C61-710C9A07E86F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation.Tabular", "Code\CBAM.Abstractions.Implementation.Tabular\CBAM.Abstractions.Implementation.Tabular.csproj", "{8D9514AA-5EAB-462D-9C61-710C9A07E86F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.HTTP", "CBAM.HTTP\CBAM.HTTP.csproj", "{E66B9EA0-F2BF-475E-AE89-E25BEE946053}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.HTTP", "Code\CBAM.HTTP\CBAM.HTTP.csproj", "{E66B9EA0-F2BF-475E-AE89-E25BEE946053}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.HTTP.Implementation", "CBAM.HTTP.Implementation\CBAM.HTTP.Implementation.csproj", "{2B2B0D27-C212-4D45-8917-C72479BC3F0F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.HTTP.Implementation", "Code\CBAM.HTTP.Implementation\CBAM.HTTP.Implementation.csproj", "{2B2B0D27-C212-4D45-8917-C72479BC3F0F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.HTTP.Tests", "CBAM.HTTP.Tests\CBAM.HTTP.Tests.csproj", "{3DECB982-F192-4C4B-8013-FC277F96E1D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.CBAM.HTTP.Implementation", "Tests\Tests.CBAM.HTTP.Implementation\Tests.CBAM.HTTP.Implementation.csproj", "{3DECB982-F192-4C4B-8013-FC277F96E1D8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.NATS", "CBAM.NATS\CBAM.NATS.csproj", "{83E0DC94-B978-40CA-B903-9F57E8142574}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.NATS", "Code\CBAM.NATS\CBAM.NATS.csproj", "{83E0DC94-B978-40CA-B903-9F57E8142574}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.NATS.Implementation", "CBAM.NATS.Implementation\CBAM.NATS.Implementation.csproj", "{21D475D8-576B-4EBD-898A-72339D1CF98E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.NATS.Implementation", "Code\CBAM.NATS.Implementation\CBAM.NATS.Implementation.csproj", "{21D475D8-576B-4EBD-898A-72339D1CF98E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.NATS.Tests", "CBAM.NATS.Tests\CBAM.NATS.Tests.csproj", "{3494BFE4-6E48-497E-981B-445F21E01659}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.CBAM.NATS.Implementation", "Tests\Tests.CBAM.NATS.Implementation\Tests.CBAM.NATS.Implementation.csproj", "{3494BFE4-6E48-497E-981B-445F21E01659}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL", "CBAM.SQL\CBAM.SQL.csproj", "{D9A562EF-882F-4CEA-BA20-CE7845D1202C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL", "Code\CBAM.SQL\CBAM.SQL.csproj", "{D9A562EF-882F-4CEA-BA20-CE7845D1202C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.Implementation", "CBAM.SQL.Implementation\CBAM.SQL.Implementation.csproj", "{584063BC-FB32-4B2C-944D-C7D0D57274A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.Implementation", "Code\CBAM.SQL.Implementation\CBAM.SQL.Implementation.csproj", "{584063BC-FB32-4B2C-944D-C7D0D57274A0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.MSBuild", "CBAM.SQL.MSBuild\CBAM.SQL.MSBuild.csproj", "{B88AD963-8F70-42A6-A468-99244A9EE29C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.MSBuild", "Code\CBAM.SQL.MSBuild\CBAM.SQL.MSBuild.csproj", "{B88AD963-8F70-42A6-A468-99244A9EE29C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL", "CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj", "{086C7CF2-806F-4D2D-929F-8294CB98B727}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL", "Code\CBAM.SQL.PostgreSQL\CBAM.SQL.PostgreSQL.csproj", "{086C7CF2-806F-4D2D-929F-8294CB98B727}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.Implementation", "CBAM.SQL.PostgreSQL.Implementation\CBAM.SQL.PostgreSQL.Implementation.csproj", "{A865129C-122E-4101-82FE-873AC1680BFD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.Implementation", "Code\CBAM.SQL.PostgreSQL.Implementation\CBAM.SQL.PostgreSQL.Implementation.csproj", "{A865129C-122E-4101-82FE-873AC1680BFD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.JSON", "CBAM.SQL.PostgreSQL.JSON\CBAM.SQL.PostgreSQL.JSON.csproj", "{2CE7ED92-9469-4C3A-9BDF-DD4D48F3A790}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.JSON", "Code\CBAM.SQL.PostgreSQL.JSON\CBAM.SQL.PostgreSQL.JSON.csproj", "{2CE7ED92-9469-4C3A-9BDF-DD4D48F3A790}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.PostgreSQL.Tests", "CBAM.SQL.PostgreSQL.Tests\CBAM.SQL.PostgreSQL.Tests.csproj", "{68FF2FD9-EEAE-4454-B85E-0AEDEAB69A8E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests.CBAM.SQL.PostgreSQL.Implementation", "Tests\Tests.CBAM.SQL.PostgreSQL.Implementation\Tests.CBAM.SQL.PostgreSQL.Implementation.csproj", "{68FF2FD9-EEAE-4454-B85E-0AEDEAB69A8E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBAM.Abstractions.Implementation.NetworkStream", "CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj", "{2BA447E3-CB20-4855-8C42-CCF4BF539049}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.Abstractions.Implementation.NetworkStream", "Code\CBAM.Abstractions.Implementation.NetworkStream\CBAM.Abstractions.Implementation.NetworkStream.csproj", "{2BA447E3-CB20-4855-8C42-CCF4BF539049}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CBAM.SQL.ExecuteStatements.Library", "Code\CBAM.SQL.ExecuteStatements.Library\CBAM.SQL.ExecuteStatements.Library.csproj", "{153CE628-3693-495D-8A6D-5401B9C7C2AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CBAM.SQL.ExecuteStatements.Application", "Code\CBAM.SQL.ExecuteStatements.Application\CBAM.SQL.ExecuteStatements.Application.csproj", "{6AC44D87-B4F5-49E7-BDD0-DB7C5292C873}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -111,6 +115,14 @@ Global
 		{2BA447E3-CB20-4855-8C42-CCF4BF539049}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BA447E3-CB20-4855-8C42-CCF4BF539049}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2BA447E3-CB20-4855-8C42-CCF4BF539049}.Release|Any CPU.Build.0 = Release|Any CPU
+		{153CE628-3693-495D-8A6D-5401B9C7C2AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{153CE628-3693-495D-8A6D-5401B9C7C2AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{153CE628-3693-495D-8A6D-5401B9C7C2AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{153CE628-3693-495D-8A6D-5401B9C7C2AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AC44D87-B4F5-49E7-BDD0-DB7C5292C873}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AC44D87-B4F5-49E7-BDD0-DB7C5292C873}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AC44D87-B4F5-49E7-BDD0-DB7C5292C873}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AC44D87-B4F5-49E7-BDD0-DB7C5292C873}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
