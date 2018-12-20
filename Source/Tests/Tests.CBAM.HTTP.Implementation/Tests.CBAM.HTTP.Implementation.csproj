@@ -12,6 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
     <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
@@ -20,28 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Code\CBAM.HTTP.Implementation\CBAM.HTTP.Implementation.csproj" />
   </ItemGroup>
-
-  <Target Name="CreateConstsFile" BeforeTargets="BeforeBuild">
-    <PropertyGroup>
-      <ConstsFilePath>$(MSBuildThisFileDirectory)TestHTTP.Consts.cs</ConstsFilePath>
-      <ConstsFileContent>
-        <![CDATA[using System%3B
-
-namespace CBAM.HTTP.Tests
-{
-   public partial class TestHTTP
-   {
-      private const String UNENCRYPTED_HOST = "your-unencrypted-host"%3B
-      private const String ENCRYPTED_HOST = "your-encrypted-host"%3B
-
-      private const Int32 UNENCRYPTED_PORT = 80%3B
-      private const Int32 ENCRYPTED_PORT = 443%3B
-
-   }
-}]]></ConstsFileContent>
-    </PropertyGroup>
-    <WriteLinesToFile Condition="!Exists('$(ConstsFilePath)')" Lines="$(ConstsFileContent)" File="$(ConstsFilePath)" />
-  </Target>
 
   <Import Project="$(CIPropsFilePath)" Condition=" '$(CIPropsFilePath)' != '' and Exists('$(CIPropsFilePath)') " />
 </Project>

@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ResourcePooling.Async.Abstractions" Version="1.1.0" />
+    <PackageReference Include="ResourcePooling.Async.Abstractions" Version="1.2.0" />
     <PackageReference Include="AsyncEnumeration.Implementation.Enumerable" Version="1.0.0" />
   </ItemGroup>
   

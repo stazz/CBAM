@@ -1,0 +1,7 @@
+{
+  "ConnectionConfiguration": {
+    "Host": "www.google.com",
+    "Port": 443,
+    "IsSecure": true
+  }
+}

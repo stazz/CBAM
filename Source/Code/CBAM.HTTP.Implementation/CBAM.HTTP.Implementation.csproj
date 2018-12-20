@@ -18,7 +18,7 @@
 
    <ItemGroup>
       <PackageReference Include="AsyncEnumeration.Implementation.Provider" Version="1.0.0" />
-     <PackageReference Include="ResourcePooling.Async.Implementation" Version="1.1.0" />
+     <PackageReference Include="ResourcePooling.Async.Implementation" Version="1.2.0" />
    </ItemGroup>
 
   <PropertyGroup>

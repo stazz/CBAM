@@ -16,6 +16,7 @@
  * limitations under the License. 
  */
 using CBAM.HTTP.Implementation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -31,24 +32,25 @@ namespace CBAM.HTTP.Tests
    [TestClass]
    public partial class TestHTTP
    {
-
-
       public const Int32 DEFAULT_TIMEOUT = 10000;
 
       [
       DataTestMethod,
-      DataRow( UNENCRYPTED_HOST, UNENCRYPTED_PORT, false, "" ),
-      DataRow( ENCRYPTED_HOST, ENCRYPTED_PORT, true, "" ),
+      DataRow( "CBAM_TEST_HTTP_GET_UNENCRYPTED" ),
+      DataRow( "CBAM_TEST_HTTP_GET_ENCRYPTED" ),
       Timeout( DEFAULT_TIMEOUT )
       ]
-      public async Task TestHTTPRequestSending( String host, Int32 port, Boolean isSecure, String path )
+      public async Task TestHTTPRequestSending(
+         String configFileLocationEnvName
+         )
       {
-         var response = await new SimpleHTTPConfiguration()
-         {
-            Host = host,
-            Port = port,
-            IsSecure = isSecure
-         }.CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( path ) );
+         var configuration = new ConfigurationBuilder()
+            .AddJsonFile( System.IO.Path.GetFullPath( Environment.GetEnvironmentVariable( configFileLocationEnvName ) ) )
+            .Build()
+            .Get<HTTPTestConfiguration>();
+         var response = await configuration
+            .ConnectionConfiguration
+            .CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( configuration.Path ) );
 
          AssertResponse( response );
       }
@@ -126,5 +128,12 @@ namespace CBAM.HTTP.Tests
 
          return true;
       }
+   }
+
+   public sealed class HTTPTestConfiguration
+   {
+      public SimpleHTTPConfiguration ConnectionConfiguration { get; set; }
+
+      public String Path { get; set; }
    }
 }

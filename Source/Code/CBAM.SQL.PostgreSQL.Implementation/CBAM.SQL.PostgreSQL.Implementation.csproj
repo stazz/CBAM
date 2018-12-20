@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="FluentCryptography.SASL.SCRAM" Version="1.0.0" />
-    <PackageReference Include="ResourcePooling.Async.Implementation" Version="1.1.0" />
+    <PackageReference Include="ResourcePooling.Async.Implementation" Version="1.2.0" />
     <PackageReference Include="AsyncEnumeration.Implementation.Provider" Version="1.0.0" />
   </ItemGroup>
 
