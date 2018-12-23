@@ -33,6 +33,7 @@ find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'd
 
 # Wait till all endpoints respond
 set +e
+ls -al "${STATE_DIR}"
 docker exec cbam_test_pgsql_ssl ls -al /etc/postgresql_secret/
 "${SCRIPTDIR}/wait-for.sh" -t 60 cbam_test_nats:4222 cbam_test_pgsql:5432 cbam_test_pgsql_ssl:5432
 set -e
