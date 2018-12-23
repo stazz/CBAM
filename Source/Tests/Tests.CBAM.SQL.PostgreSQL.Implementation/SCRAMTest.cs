@@ -33,8 +33,8 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 
          var selectResult = await GetPool( creationInfo ).UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );
-         Assert.IsTrue( saslCalled );
-         Assert.IsNotNull( saslDigest );
+         Assert.IsNotNull( saslDigest, "SASL byte digest must've been seen." );
+         Assert.IsTrue( saslCalled, "SASL callback must've been called" );
 
          // Now do test with just sasl digest
          creationInfo.CreationData.Initialization.Authentication.Password = null;

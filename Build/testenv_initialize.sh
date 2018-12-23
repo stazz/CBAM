@@ -14,7 +14,7 @@ PG_SSL_CRT="${STATE_DIR}/pg_ssl_crt"
 # We must first create all required containers...
 docker create --expose 4222 --name cbam_test_nats --cidfile "${STATE_DIR}/cid_nats" nats:1.3.0-linux
 docker create --expose 5432 --name cbam_test_pgsql -e POSTGRES_PASSWORD=postgres --cidfile "${STATE_DIR}/cid_pgsql" postgres:11.1-alpine
-docker create --expose 5432 --name cbam_test_pgsql_scram -e POSTGRES_PASSWORD=postgres -v "${SCRIPTDIR}/postgresql.conf.scram:/etc/postgresql/postgresql.conf:ro" --cidfile "${STATE_DIR}/cid_pgsql_scram" postgres:11.1-alpine -c 'config_file=/etc/postgresql/postgresql.conf'
+docker create --expose 5432 --name cbam_test_pgsql_scram -e POSTGRES_PASSWORD=postgres -v "${SCRIPTDIR}/postgresql.conf.scram:/etc/postgresql/postgresql.conf:ro" -v "${SCRIPTDIR}/pg_hba.conf.scram:/etc/postgresql/pg_hba.conf:ro" --cidfile "${STATE_DIR}/cid_pgsql_scram" postgres:11.1-alpine -c 'config_file=/etc/postgresql/postgresql.conf'
 openssl req -newkey rsa:4096 -nodes -keyout "${PG_SSL_KEY}" -x509 -days 9999 -out "${PG_SSL_CRT}" -subj "/CN=cbam_test_pgsql_ssl"
 chmod u=rw,g=,o= "${PG_SSL_KEY}"
 chmod u=rw,g=,o= "${PG_SSL_CRT}"
