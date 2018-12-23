@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.HTTP;
 using CBAM.HTTP.Implementation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -27,7 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-namespace CBAM.HTTP.Tests
+namespace Tests.CBAM.HTTP.Implementation
 {
    [TestClass]
    public partial class TestHTTP
@@ -36,8 +37,8 @@ namespace CBAM.HTTP.Tests
 
       [
       DataTestMethod,
-      DataRow( "CBAM_TEST_HTTP_GET_UNENCRYPTED" ),
-      DataRow( "CBAM_TEST_HTTP_GET_ENCRYPTED" ),
+      DataRow( "CBAM_TEST_HTTP_CONFIG" ),
+      DataRow( "CBAM_TEST_HTTP_CONFIG_ENCRYPTED" ),
       Timeout( DEFAULT_TIMEOUT )
       ]
       public async Task TestHTTPRequestSending(

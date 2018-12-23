@@ -15,22 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
    [TestClass]
    public class NotificationTest : AbstractPostgreSQLTest
    {
-      [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestNotificationCheck( String connectionConfigFileLocation )
+      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestNotificationCheck( PgSQLConfigurationKind configurationKind )
       {
          const String NOTIFICATION_NAME = "testing";
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          await pool.UseResourceAsync( async conn =>
          {
 

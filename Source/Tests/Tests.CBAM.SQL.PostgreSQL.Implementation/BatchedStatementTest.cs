@@ -28,12 +28,12 @@ namespace CBAM.SQL.PostgreSQL.Tests
    {
       [
          DataTestMethod,
-         DataRow( DEFAULT_CONFIG_FILE_LOCATION ),
+         DataRow( PgSQLConfigurationKind.Normal ),
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestBatchedStatement( String connectionConfigFileLocation )
+      public async Task TestBatchedStatement( PgSQLConfigurationKind configurationKind )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
@@ -71,12 +71,12 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [
          DataTestMethod,
-         DataRow( DEFAULT_CONFIG_FILE_LOCATION ),
+         DataRow( PgSQLConfigurationKind.Normal ),
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestBatchedStatementWithoutParameters( String connectionConfigFileLocation )
+      public async Task TestBatchedStatementWithoutParameters( PgSQLConfigurationKind configurationKind )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
 
          await pool.UseResourceAsync( async conn =>
          {

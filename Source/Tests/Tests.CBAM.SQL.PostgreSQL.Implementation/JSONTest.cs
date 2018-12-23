@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.SQL.PostgreSQL.JSON;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using CBAM.SQL.PostgreSQL.JSON;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
@@ -59,18 +59,18 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION,
+         PgSQLConfigurationKind.Normal,
          typeof( DefaultJSONDataGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONReading(
-         String connectionConfigFileLocation,
+         PgSQLConfigurationKind configurationKind,
          Type jsonGenerator
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {
@@ -85,18 +85,18 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION,
+         PgSQLConfigurationKind.Normal,
          typeof( DefaultJSONDataGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONWriting(
-         String connectionConfigFileLocation,
+         PgSQLConfigurationKind configurationKind,
          Type jsonGenerator
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {
@@ -119,15 +119,15 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION
+         PgSQLConfigurationKind.Normal
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONCasting(
-         String connectionConfigFileLocation
+         PgSQLConfigurationKind configurationKind
          )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {

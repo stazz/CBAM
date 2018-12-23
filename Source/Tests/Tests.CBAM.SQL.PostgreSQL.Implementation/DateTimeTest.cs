@@ -27,10 +27,10 @@ namespace CBAM.SQL.PostgreSQL.Tests
    [TestClass]
    public class DateTimeTest : AbstractPostgreSQLTest
    {
-      [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestSelectTimestamp( String connectionConfigFileLocation )
+      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestSelectTimestamp( PgSQLConfigurationKind configurationKind )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          var dtStr = "2018-05-05 11:45:08.33855";
          var dt = DateTime.ParseExact( dtStr, "yyyy-MM-dd HH:mm:ss.fffff", null );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<DateTime>( $"SELECT '{ dtStr }'::TIMESTAMP WITHOUT TIME ZONE" ); } );

@@ -16,6 +16,7 @@
  * limitations under the License. 
  */
 using CBAM.SQL;
+using CBAM.SQL.PostgreSQL.Tests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ResourcePooling.Async.Abstractions;
@@ -28,31 +29,27 @@ using UtilPack;
 
 namespace CBAM.SQL.PostgreSQL.Tests
 {
+
    public class AbstractPostgreSQLTest
    {
-      private const String COMMON_PREFIX = "../../../../../TestConfigFiles/";
-      public const String DEFAULT_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config.json";
-      public const String DEFAULT_CONFIG_FILE_LOCATION_SSL = COMMON_PREFIX + "test_config_ssl.json";
-      public const String SCRAM_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config_scram.json";
-      public const String SCRAM_DIGEST_CONFIG_FILE_LOCATION = COMMON_PREFIX + "test_config_scram_digest.json";
 
       public const Int32 DEFAULT_TIMEOUT = 10000;
 
       protected static PgSQLConnectionCreationInfoData GetConnectionCreationInfoData(
-         String connectionConfigFileLocation
+         PgSQLConfigurationKind configurationKind = PgSQLConfigurationKind.Normal
          )
       {
          return new ConfigurationBuilder()
-            .AddJsonFile( System.IO.Path.GetFullPath( connectionConfigFileLocation ) )
+            .AddJsonFile( System.IO.Path.GetFullPath( Environment.GetEnvironmentVariable( $"CBAM_TEST_PGSQL_CONFIG{ configurationKind.GetSuffix() }" ) ) )
             .Build()
             .Get<PgSQLConnectionCreationInfoData>();
       }
 
       protected static PgSQLConnectionCreationInfo GetConnectionCreationInfo(
-         String connectionConfigFileLocation
+         PgSQLConfigurationKind configurationKind
          )
       {
-         return new PgSQLConnectionCreationInfo( GetConnectionCreationInfoData( connectionConfigFileLocation ) );
+         return new PgSQLConnectionCreationInfo( GetConnectionCreationInfoData( configurationKind ) );
       }
 
 
@@ -103,11 +100,11 @@ namespace CBAM.SQL.PostgreSQL.Tests
       }
 
       protected static async Task TestWithAndWithoutBinaryReceive(
-         String connectionConfigFileLocation,
-         Func<PgSQLConnection, Task> performTest
+         Func<PgSQLConnection, Task> performTest,
+         PgSQLConfigurationKind configurationKind
          )
       {
-         var data = GetConnectionCreationInfoData( connectionConfigFileLocation );
+         var data = GetConnectionCreationInfoData( configurationKind );
          var enabled = data.CreateCopy();
          enabled.Initialization.Protocol.DisableBinaryProtocolReceive = false;
          var disabled = data.CreateCopy();
@@ -120,11 +117,11 @@ namespace CBAM.SQL.PostgreSQL.Tests
       }
 
       protected static async Task TestWithAndWithoutBinarySend(
-         String connectionConfigFileLocation,
-         Func<PgSQLConnection, Task> performTest
+         Func<PgSQLConnection, Task> performTest,
+         PgSQLConfigurationKind configurationKind
          )
       {
-         var data = GetConnectionCreationInfoData( connectionConfigFileLocation );
+         var data = GetConnectionCreationInfoData( configurationKind );
          var enabled = data.CreateCopy();
          enabled.Initialization.Protocol.DisableBinaryProtocolSend = false;
          var disabled = data.CreateCopy();
@@ -189,6 +186,14 @@ namespace CBAM.SQL.PostgreSQL.Tests
          }
       }
    }
+
+   public enum PgSQLConfigurationKind
+   {
+      Normal,
+      Encrypted,
+      SCRAM,
+      SCRAM_Digest
+   }
 }
 
 public static partial class E_CBAM
@@ -198,6 +203,30 @@ public static partial class E_CBAM
 
    public static Task<T> UseResourceAsync<TResource, T>( this AsyncResourcePool<TResource> pool, Func<TResource, Task<T>> user )
       => pool.UseResourceAsync( user, default );
+
+   public static String GetSuffix( this PgSQLConfigurationKind kind )
+   {
+      String retVal;
+      switch ( kind )
+      {
+         case PgSQLConfigurationKind.Normal:
+            retVal = "";
+            break;
+         case PgSQLConfigurationKind.Encrypted:
+            retVal = "_ENCRYPTED";
+            break;
+         case PgSQLConfigurationKind.SCRAM:
+            retVal = "_SCRAM";
+            break;
+         case PgSQLConfigurationKind.SCRAM_Digest:
+            retVal = "_SCRAM_DIGEST";
+            break;
+         default:
+            throw new InvalidOperationException( $"Unsupported { nameof( PgSQLConfigurationKind ) }: { kind }" );
+      }
+
+      return retVal;
+   }
 
    //public static SQLDataRow GetDataRow( this AsyncEnumerator<SQLStatementExecutionResult> args, Int64? token )
    //{

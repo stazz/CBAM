@@ -1,0 +1,6 @@
+﻿{
+  "Connection": {
+    "Host": "cbam_test_nats",
+    "Port": 4222
+  }
+}

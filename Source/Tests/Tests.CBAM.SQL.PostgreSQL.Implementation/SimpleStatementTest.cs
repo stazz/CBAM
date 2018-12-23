@@ -29,21 +29,21 @@ namespace CBAM.SQL.PostgreSQL.Tests
    public class SimpleStatementTest : AbstractPostgreSQLTest
    {
 
-      [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestSelect1( String connectionConfigFileLocation )
+      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestSelect1( PgSQLConfigurationKind configurationKind )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );
       }
 
-      [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestSelectMultipleValues( String connectionConfigFileLocation )
+      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestSelectMultipleValues( PgSQLConfigurationKind configurationKind )
       {
          var first = 1;
          var second = 2;
          var third = 3;
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          var integers = await pool.UseResourceAsync( async conn =>
             {
                return await conn.PrepareStatementForExecution( $"SELECT * FROM( VALUES( {first} ), ( {second} ), ( {third} ) ) AS tmp" )
@@ -55,10 +55,10 @@ namespace CBAM.SQL.PostgreSQL.Tests
          Assert.IsTrue( ArrayEqualityComparer<Int32>.ArrayEquality( new[] { first, second, third }, integers ) );
       }
 
-      [DataTestMethod, DataRow( DEFAULT_CONFIG_FILE_LOCATION ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestNotReadingAllColumns( String connectionConfigFileLocation )
+      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestNotReadingAllColumns( PgSQLConfigurationKind configurationKind )
       {
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          var rowsSeen = 0;
          await pool.UseResourceAsync( async conn =>
          {
@@ -89,18 +89,18 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION,
+         PgSQLConfigurationKind.Normal,
          typeof( TextArrayGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestArrays(
-         String connectionConfigFileLocation,
+         PgSQLConfigurationKind configurationKind,
          Type arrayGenerator
          )
       {
          var generator = (SimpleArrayDataGenerator) Activator.CreateInstance( arrayGenerator );
-         var pool = GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) );
+         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
          await pool.UseResourceAsync( async conn =>
          {
             foreach ( var arrayInfo in generator.GenerateArrays() )
@@ -112,17 +112,17 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION
+         PgSQLConfigurationKind.Normal
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestMultipleSimpleStatements(
-         String connectionConfigFileLocation
+         PgSQLConfigurationKind configurationKind
          )
       {
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
-         var integers = await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) )
+         var integers = await GetPool( GetConnectionCreationInfo( configurationKind ) )
             .UseResourceAsync( async conn =>
          {
             return await conn.PrepareStatementForExecution( "SELECT " + FIRST + "; SELECT " + SECOND + ";" )
@@ -135,17 +135,17 @@ namespace CBAM.SQL.PostgreSQL.Tests
 
       [DataTestMethod,
          DataRow(
-         DEFAULT_CONFIG_FILE_LOCATION
+         PgSQLConfigurationKind.Normal
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestMultipleHeterogenousSimpleStatements(
-         String connectionConfigFileLocation
+         PgSQLConfigurationKind configurationKind
          )
       {
          const Int32 TEST_INT = 1;
          const String TEST_STRING = "testString";
-         var objects = await GetPool( GetConnectionCreationInfo( connectionConfigFileLocation ) )
+         var objects = await GetPool( GetConnectionCreationInfo( configurationKind ) )
             .UseResourceAsync( async conn =>
          {
             return await conn.PrepareStatementForExecution( "SELECT " + TEST_INT + "; SELECT '" + TEST_STRING + "';" )

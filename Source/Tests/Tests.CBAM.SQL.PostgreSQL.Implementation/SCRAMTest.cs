@@ -11,13 +11,13 @@ namespace CBAM.SQL.PostgreSQL.Tests
    {
       [
          DataTestMethod,
-         DataRow( SCRAM_CONFIG_FILE_LOCATION ), // File containing cleartext password
-         DataRow( SCRAM_DIGEST_CONFIG_FILE_LOCATION ), // File containing password_s, after the PBKDF2 applied to it
+         DataRow( PgSQLConfigurationKind.SCRAM ), // File containing cleartext password
+         DataRow( PgSQLConfigurationKind.SCRAM_Digest ), // File containing password_s, after the PBKDF2 applied to it
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestSCRAM( String connectionConfigFileLocation )
+      public async Task TestSCRAM( PgSQLConfigurationKind configurationKind )
       {
-         var creationInfo = GetConnectionCreationInfo( connectionConfigFileLocation );
+         var creationInfo = GetConnectionCreationInfo( configurationKind );
          var pool = GetPool( creationInfo );
          var selectResult = await pool.UseResourceAsync( async conn => { return await conn.GetFirstOrDefaultAsync<Int32>( "SELECT 1" ); } );
          Assert.AreEqual( 1, selectResult );

@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.NATS;
 using CBAM.NATS.Implementation;
 using IOUtils.Network.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -24,28 +25,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-namespace CBAM.NATS.Tests
+namespace Tests.CBAM.NATS.Implementation
 {
    [TestClass]
-   public class SimplePublishSubscribeTest
+   public class SimplePublishSubscribeTest : AbstractNATSTest
    {
-      // , Timeout( 10000 )
-      [TestMethod]
+      [TestMethod, Timeout( TIMEOUT )]
       public async Task PerformTest()
       {
          const String SUBJECT = "MyTestSubject";
          var expectedData = new Byte[] { 1, 2, 3 };
          NATSMessage receivedMessage = null;
 
-         var pool = NATSConnectionPoolProvider.Factory.BindCreationParameters( new NATSConnectionCreationInfo( new NATSConnectionCreationInfoData()
-         {
-            Connection = new NATSConnectionConfiguration()
-            {
-               Host = "localhost",
-               Port = 4222,
-               ConnectionSSLMode = ConnectionSSLMode.NotRequired
-            }
-         } ) ).CreateOneTimeUseResourcePool();
+         var pool = NATSConnectionPoolProvider
+            .Factory
+            .BindCreationParameters( new NATSConnectionCreationInfo( GetNATSConfiguration() ) )
+            .CreateOneTimeUseResourcePool();
 
          var subscribeTask = pool.UseResourceAsync( async natsConn =>
          {

@@ -15,36 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  */
+using CBAM.NATS;
 using CBAM.NATS.Implementation;
 using IOUtils.Network.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UtilPack;
 
-namespace CBAM.NATS.Tests
+namespace Tests.CBAM.NATS.Implementation
 {
    [TestClass]
-   public class RequestTest
+   public class RequestTest : AbstractNATSTest
    {
-      [TestMethod]
+
+      [TestMethod, Timeout( TIMEOUT )]
       public async Task PerformTest()
       {
          const String SUBJECT = "MyTestSubject";
          var sentData = new Byte[] { 1, 2, 3 };
          var receivedData = new Byte[] { 4, 5, 6 };
 
-         var pool = NATSConnectionPoolProvider.Factory.BindCreationParameters( new NATSConnectionCreationInfo( new NATSConnectionCreationInfoData()
-         {
-            Connection = new NATSConnectionConfiguration()
-            {
-               Host = "localhost",
-               Port = 4222,
-               ConnectionSSLMode = ConnectionSSLMode.NotRequired
-            }
-         } ) ).CreateOneTimeUseResourcePool();
+         Console.WriteLine( "LULUL " + GetNATSConfiguration().Connection );
+         Console.WriteLine( "LELEL " + GetNATSConfiguration().Connection.Host );
+
+         var pool = NATSConnectionPoolProvider
+            .Factory
+            .BindCreationParameters( new NATSConnectionCreationInfo( GetNATSConfiguration() ) )
+            .CreateOneTimeUseResourcePool();
 
          var subscribeTask = pool.UseResourceAsync( async natsConn =>
          {
@@ -67,3 +68,4 @@ namespace CBAM.NATS.Tests
       }
    }
 }
+

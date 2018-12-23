@@ -1,0 +1,15 @@
+﻿{
+   "Connection": {
+      "Host": "cbam_test_pgsql_ssl",
+      "Port": 5432
+   },
+   "Initialization": {
+      "Database": {
+         "Name": "postgres"
+      },
+      "Authentication": {
+         "Username": "postgres",
+         "Password": "postgres"
+      }
+   }
+}
