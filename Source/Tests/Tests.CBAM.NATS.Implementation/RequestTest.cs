@@ -39,9 +39,6 @@ namespace Tests.CBAM.NATS.Implementation
          var sentData = new Byte[] { 1, 2, 3 };
          var receivedData = new Byte[] { 4, 5, 6 };
 
-         Console.WriteLine( "LULUL " + GetNATSConfiguration().Connection );
-         Console.WriteLine( "LELEL " + GetNATSConfiguration().Connection.Host );
-
          var pool = NATSConnectionPoolProvider
             .Factory
             .BindCreationParameters( new NATSConnectionCreationInfo( GetNATSConfiguration() ) )
