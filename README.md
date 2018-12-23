@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/e9yafu9qvuup6kg6/branch/develop?svg=true)](https://ci.appveyor.com/project/stazz/cbam/branch/develop)
+
 # CBAM
 Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with remote resources, e.g. SQL, HTTP, LDAP servers, etc.
 
