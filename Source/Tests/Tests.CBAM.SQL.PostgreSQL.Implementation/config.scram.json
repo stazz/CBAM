@@ -7,9 +7,9 @@
     "Database": {
       "Name": "postgres"
     },
-    "Authentication": {
-      "Username": "postgres",
-      "Password": "postgres"
-    }
+   "Authentication": {
+     "Username": "scram_user",
+     "Password": "scram_user_password"
+   }
   }
 }

@@ -36,4 +36,6 @@ find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'd
 # Wait till all endpoints respond
 set +e
 "${SCRIPTDIR}/wait-for.sh" -t 60 cbam_test_nats:4222 cbam_test_pgsql:5432 cbam_test_pgsql_ssl:5432
+# We must create SCRAM-enabled user only now, after the server has loaded its configuration and is aware that SCRAM should be used
+docker exec --interactive --user postgres cbam_test_pgsql_scram psql < "${SCRIPTDIR}/create_scram_user.sql"
 set -e
