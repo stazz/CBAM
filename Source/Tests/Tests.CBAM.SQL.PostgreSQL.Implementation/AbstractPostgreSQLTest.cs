@@ -16,7 +16,7 @@
  * limitations under the License. 
  */
 using CBAM.SQL;
-using CBAM.SQL.PostgreSQL.Tests;
+using CBAM.SQL.PostgreSQL;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ResourcePooling.Async.Abstractions;
@@ -25,9 +25,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tests.CBAM.SQL.PostgreSQL.Implementation;
 using UtilPack;
 
-namespace CBAM.SQL.PostgreSQL.Tests
+namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 {
 
    public class AbstractPostgreSQLTest

@@ -22,7 +22,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UtilPack;
 
-namespace CBAM.SQL.PostgreSQL.Tests
+namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 {
    [TestClass]
    public class PreparedStatementTest : AbstractPostgreSQLTest

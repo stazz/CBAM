@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CBAM.SQL.PostgreSQL.Tests
+namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 {
    [TestClass]
    public class SCRAMTest : AbstractPostgreSQLTest
