@@ -1,6 +1,6 @@
 ﻿{
   "Connection": {
-    "Host": "cbam_test_pgsql",
+    "Host": "cbam_test_pgsql_scram",
     "Port": 5432
   },
   "Initialization": {

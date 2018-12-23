@@ -192,8 +192,7 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    {
       Normal,
       Encrypted,
-      SCRAM,
-      SCRAM_Digest
+      SCRAM
    }
 }
 
@@ -218,9 +217,6 @@ public static partial class E_CBAM
             break;
          case PgSQLConfigurationKind.SCRAM:
             retVal = "_SCRAM";
-            break;
-         case PgSQLConfigurationKind.SCRAM_Digest:
-            retVal = "_SCRAM_DIGEST";
             break;
          default:
             throw new InvalidOperationException( $"Unsupported { nameof( PgSQLConfigurationKind ) }: { kind }" );
