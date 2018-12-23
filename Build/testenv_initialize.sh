@@ -19,7 +19,7 @@ chmod u=rw,g=r,o= "${PG_SSL_KEY}"
 chmod u=rw,g=r,o= "${PG_SSL_CRT}"
 # Since we are running under this UID, the data directory will need to be owned by this user, otherwise we'll get "initdb: could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted"
 mkdir "${STATE_DIR}/pdata_ssl/"
-docker create --expose 5432 --name cbam_test_pgsql_ssl -e POSTGRES_PASSWORD=postgres -v "${PG_SSL_KEY}:/etc/postgresql/server.key:ro" -v "${PG_SSL_CRT}:/etc/postgresql/server.crt:ro" -v "${SCRIPTDIR}/postgresql.conf.ssl:/etc/postgresql/postgresql.conf:ro" -v /etc/passwd:/etc/passwd:ro -v "${STATE_DIR}/pdata_ssl/:/var/lib/postgresql/data/:rw" --cidfile "${STATE_DIR}/cid_pgsql_ssl" --user "$(id -u):$(id -g)" postgres:11.1-alpine -c 'config_file=/etc/postgresql/postgresql.conf'
+docker create --expose 5432 --name cbam_test_pgsql_ssl -e POSTGRES_PASSWORD=postgres -v "${PG_SSL_KEY}:/etc/postgresql_secret/server.key:ro" -v "${PG_SSL_CRT}:/etc/postgresql_secret/server.crt:ro" -v "${SCRIPTDIR}/postgresql.conf.ssl:/etc/postgresql/postgresql.conf:ro" -v /etc/passwd:/etc/passwd:ro -v "${STATE_DIR}/pdata_ssl/:/var/lib/postgresql/data/:rw" --cidfile "${STATE_DIR}/cid_pgsql_ssl" --user "$(id -u):$(id -g)" postgres:11.1-alpine -c 'config_file=/etc/postgresql/postgresql.conf'
 # TODO create nginx/apache/other webserver so the CBAM HTTP tests won't need to use google.com
 
 # Create common network
@@ -33,5 +33,6 @@ find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'd
 
 # Wait till all endpoints respond
 set +e
+docker exec cbam_test_pgsql_ssl ls -al /etc/postgresql_secret/
 "${SCRIPTDIR}/wait-for.sh" -t 60 cbam_test_nats:4222 cbam_test_pgsql:5432 cbam_test_pgsql_ssl:5432
 set -e

@@ -96,8 +96,8 @@ listen_addresses = '*'
 # - SSL -
 
 ssl = on
-ssl_key_file = '/etc/postgresql/server.key'
-ssl_cert_file = '/etc/postgresql/server.crt'
+ssl_key_file = '/etc/postgresql_secret/server.key'
+ssl_cert_file = '/etc/postgresql_secret/server.crt'
 #ssl_ca_file = ''
 #ssl_crl_file = ''
 #ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL' # allowed SSL ciphers
