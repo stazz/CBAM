@@ -16,7 +16,7 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
          ]
       public async Task TestSCRAM()
       {
-         var creationInfo = GetConnectionCreationInfo();
+         var creationInfo = GetConnectionCreationInfo( PgSQLConfigurationKind.SCRAM );
          var defaultCreateSASLMechanism = creationInfo.CreateSASLMechanism;
          var saslCalled = false;
          Byte[] saslDigest = null;
