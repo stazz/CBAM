@@ -28,16 +28,15 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    public class PreparedStatementTest : AbstractPostgreSQLTest
    {
       [
-         DataTestMethod,
-         DataRow( PgSQLConfigurationKind.Normal ),
+         TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestPreparedStatement_Integers( PgSQLConfigurationKind configurationKind )
+      public async Task TestPreparedStatement_Integers()
       {
          const Int32 FIRST = 1;
          const Int32 SECOND = 2;
          const Int32 THIRD = 3;
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
 
          var integers = await pool.UseResourceAsync( async conn =>
          {
@@ -56,16 +55,15 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
       }
 
       [
-         DataTestMethod,
-         DataRow( PgSQLConfigurationKind.Normal ),
+         TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestPreparedStatement_Strings( PgSQLConfigurationKind configurationKind )
+      public async Task TestPreparedStatement_Strings()
       {
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          var strings = await pool.UseResourceAsync( async conn =>
          {
             var stmt = conn.CreateStatementBuilder( "SELECT * FROM( VALUES( ? ), ( ? ), ( ? ) ) AS tmp" );
@@ -86,13 +84,11 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 
       [DataTestMethod,
          DataRow(
-         PgSQLConfigurationKind.Normal,
          typeof( TextArrayGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestPreparedStatement_Arrays_TestReceive(
-         PgSQLConfigurationKind configurationKind,
          Type arrayGenerator
          )
       {
@@ -107,18 +103,16 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
                stmt.SetParameterObjectWithType( 0, array, array.GetType().GetElementType().MakeArrayType() );
                ValidateArrays( array, await conn.GetFirstOrDefaultAsync<Array>( stmt ) );
             }
-         }, configurationKind );
+         }, PgSQLConfigurationKind.Normal );
       }
 
       [DataTestMethod,
          DataRow(
-         PgSQLConfigurationKind.Normal,
          typeof( TextArrayGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestPreparedStatement_Arrays_TestSend(
-         PgSQLConfigurationKind configurationKind,
          Type arrayGenerator
          )
       {
@@ -132,20 +126,15 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
                stmt.SetParameterObjectWithType( 0, array, array.GetType().GetElementType().MakeArrayType() );
                ValidateArrays( array, await conn.GetFirstOrDefaultAsync<Array>( stmt ) );
             }
-         }, configurationKind );
+         }, PgSQLConfigurationKind.Normal );
       }
 
-      [DataTestMethod,
-         DataRow(
-         PgSQLConfigurationKind.Normal
-         ),
+      [TestMethod,
       Timeout( DEFAULT_TIMEOUT )
       ]
-      public async Task TestByteA(
-         PgSQLConfigurationKind configurationKind
-         )
+      public async Task TestByteA()
       {
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
 
          var bytez = new Byte[256];
          FluentCryptography.Digest.DigestBasedRandomGenerator.CreateAndSeedWithDefaultLogic( new FluentCryptography.Digest.SHA512() ).NextBytes( bytez );

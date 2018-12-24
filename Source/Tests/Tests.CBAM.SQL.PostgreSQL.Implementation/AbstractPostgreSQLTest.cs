@@ -47,7 +47,7 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
       }
 
       protected static PgSQLConnectionCreationInfo GetConnectionCreationInfo(
-         PgSQLConfigurationKind configurationKind
+         PgSQLConfigurationKind configurationKind = PgSQLConfigurationKind.Normal
          )
       {
          return new PgSQLConnectionCreationInfo( GetConnectionCreationInfoData( configurationKind ) );

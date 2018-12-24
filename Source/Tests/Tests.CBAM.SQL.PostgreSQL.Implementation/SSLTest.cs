@@ -27,11 +27,11 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    [TestClass]
    public class SSLTest : AbstractPostgreSQLTest
    {
-      [DataTestMethod, DataRow( PgSQLConfigurationKind.Encrypted ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestSimpleSSL( PgSQLConfigurationKind configurationKind )
+      [TestMethod, Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestSimpleSSL()
       {
          // No other proper way to ensure SSL actually works
-         var creationInfo = GetConnectionCreationInfo( configurationKind );
+         var creationInfo = GetConnectionCreationInfo( PgSQLConfigurationKind.Encrypted );
          // Since server needs to be configured for SSL mode as well, a separate config file is most generic option (in case SSL-enabled server is in different end-point than normal server used in tests)
          creationInfo.CreationData.Connection.ConnectionSSLMode = ConnectionSSLMode.Required;
          var pool = GetPool( creationInfo );

@@ -11,13 +11,12 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    public class SCRAMTest : AbstractPostgreSQLTest
    {
       [
-         DataTestMethod,
-         DataRow( PgSQLConfigurationKind.SCRAM ),
+         TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestSCRAM( PgSQLConfigurationKind configurationKind )
+      public async Task TestSCRAM()
       {
-         var creationInfo = GetConnectionCreationInfo( configurationKind );
+         var creationInfo = GetConnectionCreationInfo();
          var defaultCreateSASLMechanism = creationInfo.CreateSASLMechanism;
          var saslCalled = false;
          Byte[] saslDigest = null;

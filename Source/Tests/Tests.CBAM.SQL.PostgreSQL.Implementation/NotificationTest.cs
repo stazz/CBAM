@@ -26,11 +26,11 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    [TestClass]
    public class NotificationTest : AbstractPostgreSQLTest
    {
-      [DataTestMethod, DataRow( PgSQLConfigurationKind.Normal ), Timeout( DEFAULT_TIMEOUT )]
-      public async Task TestNotificationCheck( PgSQLConfigurationKind configurationKind )
+      [TestMethod, Timeout( DEFAULT_TIMEOUT )]
+      public async Task TestNotificationCheck()
       {
          const String NOTIFICATION_NAME = "testing";
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          await pool.UseResourceAsync( async conn =>
          {
 

@@ -59,18 +59,16 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 
       [DataTestMethod,
          DataRow(
-         PgSQLConfigurationKind.Normal,
          typeof( DefaultJSONDataGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONReading(
-         PgSQLConfigurationKind configurationKind,
          Type jsonGenerator
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {
@@ -85,18 +83,16 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
 
       [DataTestMethod,
          DataRow(
-         PgSQLConfigurationKind.Normal,
          typeof( DefaultJSONDataGenerator )
          ),
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONWriting(
-         PgSQLConfigurationKind configurationKind,
          Type jsonGenerator
          )
       {
          var generator = (SimpleJSONDataGenerator) Activator.CreateInstance( jsonGenerator );
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {
@@ -117,17 +113,13 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
          Assert.IsTrue( JToken.DeepEquals( value, valueFromDB ) );
       }
 
-      [DataTestMethod,
-         DataRow(
-         PgSQLConfigurationKind.Normal
-         ),
+      [TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
       public async Task TestJSONCasting(
-         PgSQLConfigurationKind configurationKind
          )
       {
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          pool.EnableJSONSupport();
          await pool.UseResourceAsync( async conn =>
          {

@@ -27,13 +27,12 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
    public class BatchedStatementTest : AbstractPostgreSQLTest
    {
       [
-         DataTestMethod,
-         DataRow( PgSQLConfigurationKind.Normal ),
+         TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestBatchedStatement( PgSQLConfigurationKind configurationKind )
+      public async Task TestBatchedStatement()
       {
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
          const String FIRST = "first";
          const String SECOND = "second";
          const String THIRD = "third";
@@ -70,13 +69,12 @@ namespace Tests.CBAM.SQL.PostgreSQL.Implementation
       }
 
       [
-         DataTestMethod,
-         DataRow( PgSQLConfigurationKind.Normal ),
+         TestMethod,
          Timeout( DEFAULT_TIMEOUT )
          ]
-      public async Task TestBatchedStatementWithoutParameters( PgSQLConfigurationKind configurationKind )
+      public async Task TestBatchedStatementWithoutParameters()
       {
-         var pool = GetPool( GetConnectionCreationInfo( configurationKind ) );
+         var pool = GetPool( GetConnectionCreationInfo() );
 
          await pool.UseResourceAsync( async conn =>
          {
