@@ -8,7 +8,7 @@ set -xe
 STATE_DIR="$1"
 
 # Stop and remove all running containers
-find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'docker logs $(cat "{}")' \;
+find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'echo "Printing logs for {}"; docker logs $(cat "{}")' \;
 find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'cid_*' -exec sh -c 'docker rm -f $(cat "{}")' \;
 
 # Remove the network as well

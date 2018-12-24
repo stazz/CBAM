@@ -1,7 +1,8 @@
 {
-  "ConnectionConfiguration": {
-    "Host": "www.google.com",
-    "Port": 443,
-    "IsSecure": true
-  }
+   "ConnectionConfiguration": {
+      "Host": "cbam_test_http",
+      "Port": 443,
+      "IsSecure": true
+   },
+   "ExpectedContentPath": "/repo-dir/contents/Source/Tests/Tests.CBAM.HTTP.Implementation/test_content.html"
 }

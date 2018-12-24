@@ -59,6 +59,8 @@ before_build:
   - sh: '"${APPVEYOR_BUILD_FOLDER}/git/${CI_FOLDER}/appveyor/sync_docker_image.sh" "microsoft/dotnet:${DOTNET_VERSION}-sdk-alpine" "${APPVEYOR_BUILD_FOLDER}/docker-images/dotnet-sdk.tar"'
   - sh: '"${APPVEYOR_BUILD_FOLDER}/git/${CI_FOLDER}/appveyor/sync_docker_image.sh" "nats:1.3.0-linux" "${APPVEYOR_BUILD_FOLDER}/docker-images/nats.tar"'
   - sh: '"${APPVEYOR_BUILD_FOLDER}/git/${CI_FOLDER}/appveyor/sync_docker_image.sh" "postgres:11.1-alpine" "${APPVEYOR_BUILD_FOLDER}/docker-images/pgsql.tar"'
+  - sh: '"${APPVEYOR_BUILD_FOLDER}/git/${CI_FOLDER}/appveyor/sync_docker_image.sh" "nginx:1.15.7-alpine" "${APPVEYOR_BUILD_FOLDER}/docker-images/nginx.tar"'
+
 
 build_script:
   - sh: '"${APPVEYOR_BUILD_FOLDER}/git/${CI_FOLDER}/build.sh"'

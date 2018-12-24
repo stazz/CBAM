@@ -22,6 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -53,7 +54,7 @@ namespace Tests.CBAM.HTTP.Implementation
             .ConnectionConfiguration
             .CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( configuration.Path ) );
 
-         AssertResponse( response );
+         AssertResponse( response, configuration );
       }
 
       //[
@@ -118,14 +119,17 @@ namespace Tests.CBAM.HTTP.Implementation
 
       //}
 
-      private static void AssertResponses( IEnumerable<HTTPTextualResponseInfo> bag )
-      {
-         Assert.IsTrue( bag.All( AssertResponse ) );
-      }
+      //private static void AssertResponses( IEnumerable<HTTPTextualResponseInfo> bag )
+      //{
+      //   Assert.IsTrue( bag.All( AssertResponse ) );
+      //}
 
-      private static Boolean AssertResponse( HTTPTextualResponseInfo info )
+      private static Boolean AssertResponse( HTTPTextualResponseInfo info, HTTPTestConfiguration config )
       {
-         Assert.IsNotNull( info.TextualContent );
+         Assert.AreEqual(
+            File.ReadAllText( config.ExpectedContentPath ),
+            info.TextualContent
+            );
 
          return true;
       }
@@ -136,5 +140,7 @@ namespace Tests.CBAM.HTTP.Implementation
       public SimpleHTTPConfiguration ConnectionConfiguration { get; set; }
 
       public String Path { get; set; }
+
+      public String ExpectedContentPath { get; set; }
    }
 }
