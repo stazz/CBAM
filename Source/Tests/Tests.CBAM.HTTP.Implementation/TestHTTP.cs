@@ -52,7 +52,10 @@ namespace Tests.CBAM.HTTP.Implementation
             .Get<HTTPTestConfiguration>();
          var response = await configuration
             .ConnectionConfiguration
-            .CreatePoolAndReceiveTextualResponseAsync( HTTPFactory.CreateGETRequest( configuration.Path ) );
+            .CreatePoolAndReceiveTextualResponseAsync(
+               HTTPFactory.CreateGETRequest( configuration.Path )
+               .WithHeader( "Host", configuration.ConnectionConfiguration.Host ) // The Host is required by HTTP spec ( http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.23 ). Nginx returns 400 otherwise.
+            );
 
          AssertResponse( response, configuration );
       }
