@@ -8,7 +8,7 @@ Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous t
 
 The [CBAM.Abstractions](#cbamabstractions) project defines an interface `Connection` which represents stateful or stateless connection to some kind of remote endpoint, e.g. SQL/HTTP server.
 The `Connection` interface allows to prepare a statement for execution: e.g. string containing SQL, an object which contains HTTP request, etc.
-This prepared statement is exposed as [`IAsyncEnumerable<T>`](https://github.com/CometaSolutions/UtilPack/tree/develop/Source/UtilPack.AsyncEnumeration), which can be asynchronously enumerated using e.g. `EnumerateSequentiallyAsync` extension method.
+This prepared statement is exposed as [`IAsyncEnumerable<T>`](https://github.com/stazz/AsyncEnumeration), which can be asynchronously enumerated using e.g. `EnumerateSequentiallyAsync` extension method.
 Each item encountered during enumeration may be e.g. SQL statement execution result (statement execution information, or data row), or HTTP response (with all headers read, but content not read).
 
 # Examples
@@ -90,4 +90,4 @@ The most interesting projects, from end-user point of view, are most likely [CBA
 
 ## Portability
 CBAM projects aim to be as portable as possible.
-The CBAM.SQL.MSBuild project targets .NET Standard 1.3, while the other projects target .NET Standard 1.0 and .NET 4.0 as their most portable target frameworks.
+The CBAM.SQL.MSBuild project targets .NET Standard 1.3, while the other projects target .NET Standard 1.0 and .NET 4.0, among others, as their most portable target frameworks.
