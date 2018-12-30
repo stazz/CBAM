@@ -1,5 +1,6 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/e9yafu9qvuup6kg6/branch/develop?svg=true)](https://ci.appveyor.com/project/stazz/cbam/branch/develop)
-[![Code coverage](https://codecov.io/gh/stazz/CBAM/branch/develop/graph/badge.svg)](https://codecov.io/gh/stazz/CBAM)
+[![Line coverage](https://raw.githubusercontent.com/stazz/ci-codecov-pages/master/badges/CBAM/total/badge_linecoverage.svg?sanitize=true)](https://stazz.github.io/ci-codecov-pages/CBAM/)
+[![Branch coverage](https://raw.githubusercontent.com/stazz/ci-codecov-pages/master/badges/CBAM/total/badge_branchcoverage.svg?sanitize=true)](https://stazz.github.io/ci-codecov-pages/CBAM/)
 
 # CBAM
 Connection-Based Asynchronous Messaging (CBAM) framework provides asynchronous task-based API and implementation for workflow which communicates with remote resources, e.g. SQL, HTTP, LDAP servers, etc.
